@@ -17,7 +17,7 @@
   cargoDeps = pkgs.rustPlatform.importCargoLock {
     lockFile = ./Cargo.lock;
     outputHashes = {
-      "nix-data-0.0.2" = "sha256-yts2bkp9cn4SuYPYjgTNbOwTtpFxps3TU8zmS/ftN/Q=";
+      "nix-data-0.0.3" = "sha256-7JUMDnFMQUWr7XM2ZWhbXBnFZNAmnc49JLzXURSv15o=";
     };
   };
 
