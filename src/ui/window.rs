@@ -609,7 +609,9 @@ impl Component for AppModel {
             let preferencespage = model.preferencespage.widget().clone();
             let config = model.config.clone();
             RelmAction::new_stateless(move |_| {
-                sender.send(PreferencesPageMsg::Show(config.clone())).unwrap();
+                sender
+                    .send(PreferencesPageMsg::Show(config.clone()))
+                    .unwrap();
                 preferencespage.present();
             })
         };
@@ -1771,7 +1773,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 let appdata = self.appdata.clone();
                 let installeduser = self.installeduserpkgs.clone();
                 let installedsystem = self.installedsystempkgs.clone();
-                let category = category;
+                // let category = category;
                 sender.oneshot_command(async move {
                     let mut catrec = vec![];
                     let mut catall = vec![];
