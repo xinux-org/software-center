@@ -48,7 +48,7 @@ impl SimpleComponent for AboutPageModel {
             .modal(true)
             .transient_for(&dialog.parent_window)
             .version(config::VERSION)
-            .website("https://github.com/orzklv/software-center")
+            .website("https://github.com/xinux-org/software-center")
             .build();
         dialog.present();
     }
