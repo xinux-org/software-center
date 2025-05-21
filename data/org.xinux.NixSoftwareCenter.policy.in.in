@@ -2,8 +2,8 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
-    <vendor>Orzklv</vendor>
-    <vendor_url>https://github.com/orzklv</vendor_url>
+    <vendor>Xinux Developers</vendor>
+    <vendor_url>https://github.com/xinux-org</vendor_url>
     <action id="org.orzklv.NixSoftwareCenter">
         <description>Give Nix Software Center root access</description>
         <message>Authentication is required to install NixOS system packages</message>

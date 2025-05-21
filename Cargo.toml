@@ -3,6 +3,10 @@ name = "nix-software-center"
 version = "0.1.2"
 edition = "2021"
 default-run = "nix-software-center"
+authors = [
+  "Sokhibjon Orzikulov <sakhib@orzklv.uz>",
+  "Victor Fuentes <vlinkz@snowflakeos.org>",
+]
 
 [dependencies]
 relm4 = { version = "0.6", features = ["libadwaita", "macros"] }
@@ -22,16 +26,12 @@ tokio = { version = "1.28", features = [
   "process",
 ] }
 tracker = "0.2"
-
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-
 nix-editor = "0.3.0"
 nix-data = { git = "https://github.com/xinux-org/nix-data" }
-
 sqlx = { version = "0.8.3", features = ["runtime-tokio-native-tls", "sqlite"] }
-
 html2pango = "0.5"
 log = "0.4"
 pretty_env_logger = "0.5"
@@ -42,7 +42,6 @@ reqwest = { version = "0.11", features = ["blocking"] }
 sha256 = "1.1"
 image = "0.24"
 spdx = "0.10"
-
 anyhow = "1.0"
 
 [workspace]
