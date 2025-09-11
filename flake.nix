@@ -28,7 +28,7 @@
         checks = self.packages.${system};
         hydraJobs = self.packages.${system};
 
-        devShell = pkgs.mkShell {
+        devShell.${system} = pkgs.mkShell {
           buildInputs = with pkgs; [
             cargo
             clippy
