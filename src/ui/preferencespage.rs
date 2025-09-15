@@ -1,6 +1,7 @@
 use std::path::{PathBuf, Path};
 use super::window::AppMsg;
 use adw::prelude::*;
+use gettextrs::gettext;
 use nix_data::config::configfile::NixDataConfig;
 use relm4::*;
 use relm4_components::open_dialog::*;
@@ -47,7 +48,7 @@ impl SimpleComponent for PreferencesPageModel {
                     // set_title: "Preferences",
                     set_visible: Path::new("/etc/NIXOS").exists(),
                     add = &adw::ActionRow {
-                        set_title: "Configuration file",
+                        set_title: &gettext("Configuration file"),
                         add_suffix = &gtk::Box {
                             set_orientation: gtk::Orientation::Horizontal,
                             set_halign: gtk::Align::End,
@@ -85,7 +86,7 @@ impl SimpleComponent for PreferencesPageModel {
                         }
                     },
                     add = &adw::ActionRow {
-                        set_title: "Use nix flakes",
+                        set_title: &gettext("Use nix flakes"),
                         add_suffix = &gtk::Switch {
                             set_valign: gtk::Align::Center,
                             connect_state_set[sender] => move |_, b| {
@@ -103,7 +104,7 @@ impl SimpleComponent for PreferencesPageModel {
                         }
                     },
                     add = &adw::ActionRow {
-                        set_title: "Flake file",
+                        set_title: &gettext("Flake file"),
                         #[watch]
                         set_visible: model.flake.is_some(),
                         add_suffix = &gtk::Box {
@@ -150,7 +151,7 @@ impl SimpleComponent for PreferencesPageModel {
                     add = &adw::EntryRow {
                         #[watch]
                         set_visible: model.flake.is_some(),
-                        set_title: "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)",
+                        set_title: &gettext("Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"),
                         set_use_markup: false,
                         set_use_markup: false,
                         connect_changed[sender] => move |x| {

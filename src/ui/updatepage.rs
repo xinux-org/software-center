@@ -2,6 +2,7 @@ use crate::{APPINFO, ui::unavailabledialog::UnavailableDialogModel, parse::util}
 
 use super::{pkgpage::InstallType, window::*, updateworker::{UpdateAsyncHandler, UpdateAsyncHandlerMsg, UpdateAsyncHandlerInit}, rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg};
 use adw::prelude::*;
+use gettextrs::gettext;
 use nix_data::config::configfile::NixDataConfig;
 use relm4::{factory::*, gtk::pango, *};
 use std::{path::Path, convert::identity, collections::HashMap};
@@ -79,7 +80,7 @@ impl SimpleComponent for UpdatePageModel {
                 if !model.online {
                     adw::StatusPage {
                         set_icon_name: Some("nsc-network-offline-symbolic"),
-                        set_title: "No internet connection",
+                        set_title: &gettext("No internet connection"),
                         set_description: Some("Please connect to the internet to update your system"),
                         gtk::Button {
                             add_css_class: "pill",

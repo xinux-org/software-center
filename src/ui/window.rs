@@ -13,6 +13,7 @@ use crate::{
     APPINFO,
 };
 use adw::prelude::*;
+use gettextrs::gettext;
 use log::*;
 use nix_data::config::configfile::NixDataConfig;
 use relm4::{
@@ -217,7 +218,7 @@ impl Component for AppModel {
                         add_css_class: "flat",
                         #[wrap(Some)]
                         set_title_widget = &gtk::Label {
-                            set_label: "Nix Software Center"
+                            set_label: &gettext("Nix Software Center")
                         }
                     },
                     gtk::Box {
@@ -269,7 +270,7 @@ impl Component for AppModel {
                                 #[name(viewswitchertitle)]
                                 #[wrap(Some)]
                                 set_title_widget = &adw::ViewSwitcherTitle {
-                                    set_title: "Nix Software Center",
+                                    set_title: &gettext("Nix Software Center"),
                                     set_stack: Some(viewstack),
                                     connect_title_visible_notify[sender] => move |x| {
                                         sender.input(AppMsg::SetVsBar(x.is_title_visible()))
@@ -629,13 +630,13 @@ impl Component for AppModel {
         let installedvs = widgets.viewstack.page(model.installedpage.widget());
         let updatesvs = widgets.viewstack.page(model.updatepage.widget());
         let searchvs = widgets.viewstack.page(model.searchpage.widget());
-        frontvs.set_title(Some("Explore"));
-        installedvs.set_title(Some("Installed"));
-        updatesvs.set_title(Some("Updates"));
-        frontvs.set_name(Some("explore"));
-        installedvs.set_name(Some("installed"));
-        searchvs.set_name(Some("search"));
-        updatesvs.set_name(Some("updates"));
+        frontvs.set_title(Some(&gettext("Explore")));
+        installedvs.set_title(Some(&gettext("Installed")));
+        updatesvs.set_title(Some(&gettext("Updates")));
+        frontvs.set_name(Some(&gettext("explore")));
+        installedvs.set_name(Some(&gettext("installed")));
+        searchvs.set_name(Some(&gettext("search")));
+        updatesvs.set_name(Some(&gettext("updates")));
         frontvs.set_icon_name(Some("nsc-home-symbolic"));
         installedvs.set_icon_name(Some("nsc-installed-symbolic"));
         updatesvs.set_icon_name(Some("nsc-update-symbolic"));

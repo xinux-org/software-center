@@ -7,6 +7,7 @@ use adw::prelude::*;
 use crate::{APPINFO, ui::{window::REBUILD_BROKER, rebuild::RebuildMsg}};
 
 use super::updatepage::{UpdatePageMsg, UpdateType};
+use gettextrs::gettext;
 
 #[derive(Debug)]
 pub struct UnavailableDialogModel {
@@ -44,7 +45,7 @@ impl SimpleComponent for UnavailableDialogModel {
                 adw::PreferencesGroup {
                     #[watch]
                     set_visible: !model.unavailableuseritems.is_empty(),
-                    set_title: "User Packages",
+                    set_title: &gettext("User Packages"),
                     #[local_ref]
                     unavailableuserlist -> gtk::ListBox {
                         add_css_class: "boxed-list",
@@ -54,7 +55,7 @@ impl SimpleComponent for UnavailableDialogModel {
                 adw::PreferencesGroup {
                     #[watch]
                     set_visible: !model.unavailablesysitems.is_empty(),
-                    set_title: "System Packages",
+                    set_title: &gettext("System Packages"),
                     #[local_ref]
                     unavailablesyslist -> gtk::ListBox {
                         add_css_class: "boxed-list",

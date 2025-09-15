@@ -1,0 +1,62 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-15 16:53+0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/ui/unavailabledialog.rs:48
+msgid "User Packages"
+msgstr ""
+
+#: src/ui/unavailabledialog.rs:58
+msgid "System Packages"
+msgstr ""
+
+#: src/ui/preferencespage.rs:51 src/ui/welcome.rs:75
+msgid "Configuration file"
+msgstr ""
+
+#: src/ui/preferencespage.rs:89
+msgid "Use nix flakes"
+msgstr ""
+
+#: src/ui/preferencespage.rs:107 src/ui/welcome.rs:120
+msgid "Flake file"
+msgstr ""
+
+#: src/ui/preferencespage.rs:154
+msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
+msgstr ""
+
+#: src/ui/updatepage.rs:83
+msgid "No internet connection"
+msgstr ""
+
+#: src/ui/window.rs:221 src/ui/window.rs:273
+msgid "Nix Software Center"
+msgstr ""
+
+#: src/ui/window.rs:633
+msgid "Explore"
+msgstr ""
+
+#: src/ui/window.rs:634
+msgid "Installed"
+msgstr ""
+
+#: src/ui/window.rs:635
+msgid "Updates"
+msgstr ""

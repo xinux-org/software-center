@@ -1,6 +1,7 @@
 use std::path::{PathBuf, Path};
 
 use adw::prelude::*;
+use gettextrs::gettext;
 use log::info;
 use nix_data::config::configfile::NixDataConfig;
 use relm4::*;
@@ -71,7 +72,7 @@ impl SimpleComponent for WelcomeModel {
                         set_halign: gtk::Align::Fill,
                         set_selection_mode: gtk::SelectionMode::None,
                         adw::ActionRow {
-                            set_title: "Configuration file",
+                            set_title: &gettext("Configuration file"),
                             add_suffix = &gtk::Button {
                                 set_halign: gtk::Align::Center,
                                 set_valign: gtk::Align::Center,
@@ -116,7 +117,7 @@ impl SimpleComponent for WelcomeModel {
                         set_halign: gtk::Align::Fill,
                         set_selection_mode: gtk::SelectionMode::None,
                         adw::ActionRow {
-                            set_title: "Flake file",
+                            set_title: &gettext("Flake file"),
                             set_subtitle: "If you are using flakes, you can specify the path to your flake.nix file here.",
                             add_suffix = &gtk::Button {
                                 set_halign: gtk::Align::Center,

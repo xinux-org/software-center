@@ -1,4 +1,6 @@
-data/org.xinux.NixSoftwareCenter.policy.in.in
-data/org.xinux.NixSoftwareCenter.desktop.in.in
-data/org.xinux.NixSoftwareCenter.metainfo.xml.in.in
-data/org.xinux.NixSoftwareCenter.metainfo.gschema.xml.in
+src/ui/unavailabledialog.rs
+src/ui/preferencespage.rs
+src/ui/updatepage.rs
+src/ui/caregories.rs
+src/ui/welcome.rs
+src/ui/window.rs
