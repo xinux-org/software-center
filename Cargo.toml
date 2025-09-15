@@ -9,6 +9,7 @@ authors = [
 ]
 
 [dependencies]
+gettext-rs = { version = "0.7", features = ["gettext-system"] }
 relm4 = { version = "0.6", features = ["libadwaita", "macros"] }
 relm4-components = { package = "relm4-components", version = "0.6" }
 adw = { package = "libadwaita", version = "0.4", features = [

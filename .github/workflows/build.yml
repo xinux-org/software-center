@@ -17,20 +17,3 @@ jobs:
 
       - name: Build the package
         run: nix build .
-
-      - name: Store & configure signing key
-        run: |
-          # Store signing key
-          mkdir -p ~/.config/nix
-          echo "$NIX_KEY" >> ~/.config/nix/sign.key
-          echo "secret-key-files = ~/.config/nix/sign.key" >> ~/.config/nix/nix.conf
-        env:
-          NIX_KEY: ${{ secrets.NIX_KEY }}
-
-      - name: Sign & copy output package
-        run: |
-          # Sign the build
-          store_path=$(readlink -f result)
-          nix store sign -k ~/.config/nix/sign.key $store_path
-          # nix-store --query --substitute 'ssh://https://cache.xinux.uz' $store_path
-          nix copy --to ssh://ns2.kolyma.uz $store_path
