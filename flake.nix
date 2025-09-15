@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:xinux-org/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
     nixos-appstream-data = {
       url = "github:korfuri/nixos-appstream-data/flake";
