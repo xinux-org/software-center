@@ -14,12 +14,10 @@
   ,pkg-config
   ,polkit
   ,wrapGAppsHook4
-  # ,nixos-appstream-data
-  # ,system
   ,rustPlatform
 }:
 stdenv.mkDerivation rec {
-  pname = "nixos-conf-editor";
+  pname = "software-center";
   version = "0.1";
 
   src = [ ../.. ];
@@ -33,7 +31,6 @@ stdenv.mkDerivation rec {
   
 
   nativeBuildInputs = [
-    # nixos-appstream-data.packages."${system}".nixos-appstream-data
     desktop-file-utils
     gdk-pixbuf
     gtk4
