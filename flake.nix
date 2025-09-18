@@ -15,8 +15,8 @@
   outputs = inputs:
     inputs.xinux-lib.mkFlake {
       inherit inputs;
-      alias.packages.default = "software-center";
-      alias.shells.default = "software-center";
+      alias.packages.default = "nix-software-center";
+      alias.shells.default = "nix-software-center";
       src = ./.;
   };
 }

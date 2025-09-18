@@ -17,7 +17,7 @@
   ,rustPlatform
 }:
 stdenv.mkDerivation rec {
-  pname = "software-center";
+  pname = "nix-software-center";
   version = "0.1";
 
   src = [ ../.. ];
