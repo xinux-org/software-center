@@ -56,8 +56,4 @@ stdenv.mkDerivation rec {
     libadwaita
     openssl
   ];
-
-  postInstall = ''
-    wrapProgram $out/bin/nixos-conf-editor --prefix PATH : '${lib.makeBinPath [ pandoc ]}'
-  '';
 }
