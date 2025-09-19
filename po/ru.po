@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-15 16:53+0500\n"
-"PO-Revision-Date: 2025-09-15 17:06+0500\n"
+"POT-Creation-Date: 2025-09-19 13:53+0500\n"
+"PO-Revision-Date: 2025-09-19 14:15+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -32,7 +32,7 @@ msgstr "Файл конфигурации"
 
 #: src/ui/preferencespage.rs:89
 msgid "Use nix flakes"
-msgstr "Используйте хлопья nix"
+msgstr "Используйте флейк nix"
 
 #: src/ui/preferencespage.rs:107 src/ui/welcome.rs:120
 msgid "Flake file"
@@ -42,13 +42,101 @@ msgstr "Файл флейк"
 msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
 msgstr "Флейк аргументы (--flake path/to/flake.nix#<THIS ENTRY>)"
 
+#: src/ui/installedpage.rs:76 src/ui/updatepage.rs:167
+msgid "System (configuration.nix)"
+msgstr "Система (configuration.nix)"
+
 #: src/ui/updatepage.rs:83
 msgid "No internet connection"
 msgstr "Нет подключения к Интернету"
 
+#: src/ui/updatepage.rs:90
+msgid "Refresh"
+msgstr "Обновить"
+
+#: src/ui/updatepage.rs:109 src/ui/window.rs:635
+msgid "Updates"
+msgstr "Обновления"
+
+#: src/ui/updatepage.rs:116
+msgid "Update Everything"
+msgstr "Обновить всё"
+
+#: src/ui/updatepage.rs:140
+msgid "Update All"
+msgstr "Обновить все"
+
+#: src/ui/updatepage.rs:174
+msgid "Update"
+msgstr "Обновление"
+
+#: src/ui/updatepage.rs:209
+msgid "Everything is up to date!"
+msgstr "Всё актуально!"
+
+#: src/ui/welcome.rs:165
+msgid "Continue"
+msgstr "Продолжить"
+
+#: src/ui/rebuild.rs:74
+msgid "Building..."
+msgstr "Строится..."
+
+#: src/ui/rebuild.rs:88
+msgid "Done!"
+msgstr "Готово!"
+
+#: src/ui/rebuild.rs:92
+msgid "Rebuild successful!"
+msgstr "Пересборка завершена успешно!"
+
+#: src/ui/rebuild.rs:106
+msgid "Error!"
+msgstr "Ошибка!"
+
+#: src/ui/rebuild.rs:110
+msgid "Rebuild failed! See below for error message."
+msgstr "Сборка не удалась! Сообщение об ошибке смотрите ниже."
+
+#: src/ui/rebuild.rs:149
+msgid "Close"
+msgstr "Закрыть"
+
+#: src/ui/pkgpage.rs:340 src/ui/pkgpage.rs:444
+msgid "Cancel"
+msgstr "Отменить"
+
+#: src/ui/pkgpage.rs:396 src/ui/pkgpage.rs:504
+msgid "Offline"
+msgstr "Офлайн"
+
+#: src/ui/pkgpage.rs:414 src/ui/pkgpage.rs:522
+msgid "Install"
+msgstr "Установить"
+
+#: src/ui/pkgpage.rs:734
+msgid "Homepage"
+msgstr "Главная страница"
+
+#: src/ui/pkgpage.rs:868
+msgid "Platforms"
+msgstr "Платформы"
+
 #: src/ui/window.rs:221 src/ui/window.rs:273
 msgid "Nix Software Center"
 msgstr "Центр программного обеспечения Nix"
+
+#: src/ui/window.rs:237
+msgid "Loading..."
+msgstr "Загрузка..."
+
+#: src/ui/window.rs:330
+msgid "Categories"
+msgstr "Категории"
+
+#: src/ui/window.rs:348
+msgid "Recommended"
+msgstr "Рекомендуется"
 
 #: src/ui/window.rs:633
 msgid "Explore"
@@ -58,6 +146,18 @@ msgstr "Исследовать"
 msgid "Installed"
 msgstr "Установлено"
 
-#: src/ui/window.rs:635
-msgid "Updates"
-msgstr "Обновления"
+#: src/ui/window.rs:636
+msgid "explore"
+msgstr "исследовать"
+
+#: src/ui/window.rs:637
+msgid "installed"
+msgstr "yстановлено"
+
+#: src/ui/window.rs:638
+msgid "search"
+msgstr "поиск"
+
+#: src/ui/window.rs:639
+msgid "updates"
+msgstr "обновления"
