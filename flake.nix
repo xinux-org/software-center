@@ -18,5 +18,7 @@
       alias.packages.default = "nix-software-center";
       alias.shells.default = "nix-software-center";
       src = ./.;
+      # this should be implemented because it's left over previous flake.nix setup
+      # hydraJobs = self.packages.${system}; 
   };
 }
