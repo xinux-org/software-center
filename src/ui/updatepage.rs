@@ -87,7 +87,7 @@ impl SimpleComponent for UpdatePageModel {
                             set_halign: gtk::Align::Center,
                             adw::ButtonContent {
                                 set_icon_name: "nsc-refresh-symbolic",
-                                set_label: "Refresh",
+                                set_label: &gettext("Refresh"),
                             },
                             connect_clicked[sender] => move |_| {
                                 sender.output(AppMsg::CheckNetwork);
@@ -106,14 +106,14 @@ impl SimpleComponent for UpdatePageModel {
                             gtk::Label {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "title-2",
-                                set_label: "Updates",
+                                set_label: &gettext("Updates"),
                             },
                             gtk::Button {
                                 add_css_class: "suggested-action",
                                 set_halign: gtk::Align::End,
                                 set_valign: gtk::Align::Center,
                                 set_hexpand: true,
-                                set_label: "Update Everything",
+                                set_label: &gettext("Update Everything"),
                                 connect_clicked[sender] => move |_| {
                                     sender.input(UpdatePageMsg::UpdateAll);
                                 }
@@ -137,7 +137,7 @@ impl SimpleComponent for UpdatePageModel {
                                 set_halign: gtk::Align::End,
                                 set_valign: gtk::Align::Center,
                                 set_hexpand: true,
-                                set_label: "Update All",
+                                set_label: &gettext("Update All"),
                                 connect_clicked[sender] => move |_| {
                                     sender.input(UpdatePageMsg::UpdateAllUser);
                                 }
@@ -164,14 +164,14 @@ impl SimpleComponent for UpdatePageModel {
                             gtk::Label {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "title-4",
-                                set_label: "System (configuration.nix)",
+                                set_label: &gettext("System (configuration.nix)"),
                             },
                             gtk::Button {
                                 add_css_class: "suggested-action",
                                 set_halign: gtk::Align::End,
                                 set_hexpand: true,
                                 set_valign: gtk::Align::Center,
-                                set_label: "Update",
+                                set_label: &gettext("Update"),
                                 connect_clicked[sender] => move |_|{
                                     sender.input(UpdatePageMsg::UpdateSystem);
                                 },
@@ -206,7 +206,7 @@ impl SimpleComponent for UpdatePageModel {
                         },
                         gtk::Label {
                             add_css_class: "title-1",
-                            set_label: "Everything is up to date!"
+                            set_label: &gettext("Everything is up to date!")
                         }
                     }
                 }

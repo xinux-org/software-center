@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-15 16:53+0500\n"
+"POT-Creation-Date: 2025-09-19 13:53+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,12 +41,100 @@ msgstr ""
 msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
 msgstr ""
 
+#: src/ui/installedpage.rs:76 src/ui/updatepage.rs:167
+msgid "System (configuration.nix)"
+msgstr ""
+
 #: src/ui/updatepage.rs:83
 msgid "No internet connection"
 msgstr ""
 
+#: src/ui/updatepage.rs:90
+msgid "Refresh"
+msgstr ""
+
+#: src/ui/updatepage.rs:109 src/ui/window.rs:635
+msgid "Updates"
+msgstr ""
+
+#: src/ui/updatepage.rs:116
+msgid "Update Everything"
+msgstr ""
+
+#: src/ui/updatepage.rs:140
+msgid "Update All"
+msgstr ""
+
+#: src/ui/updatepage.rs:174
+msgid "Update"
+msgstr ""
+
+#: src/ui/updatepage.rs:209
+msgid "Everything is up to date!"
+msgstr ""
+
+#: src/ui/welcome.rs:165
+msgid "Continue"
+msgstr ""
+
+#: src/ui/rebuild.rs:74
+msgid "Building..."
+msgstr ""
+
+#: src/ui/rebuild.rs:88
+msgid "Done!"
+msgstr ""
+
+#: src/ui/rebuild.rs:92
+msgid "Rebuild successful!"
+msgstr ""
+
+#: src/ui/rebuild.rs:106
+msgid "Error!"
+msgstr ""
+
+#: src/ui/rebuild.rs:110
+msgid "Rebuild failed! See below for error message."
+msgstr ""
+
+#: src/ui/rebuild.rs:149
+msgid "Close"
+msgstr ""
+
+#: src/ui/pkgpage.rs:340 src/ui/pkgpage.rs:444
+msgid "Cancel"
+msgstr ""
+
+#: src/ui/pkgpage.rs:396 src/ui/pkgpage.rs:504
+msgid "Offline"
+msgstr ""
+
+#: src/ui/pkgpage.rs:414 src/ui/pkgpage.rs:522
+msgid "Install"
+msgstr ""
+
+#: src/ui/pkgpage.rs:734
+msgid "Homepage"
+msgstr ""
+
+#: src/ui/pkgpage.rs:868
+msgid "Platforms"
+msgstr ""
+
 #: src/ui/window.rs:221 src/ui/window.rs:273
 msgid "Nix Software Center"
+msgstr ""
+
+#: src/ui/window.rs:237
+msgid "Loading..."
+msgstr ""
+
+#: src/ui/window.rs:330
+msgid "Categories"
+msgstr ""
+
+#: src/ui/window.rs:348
+msgid "Recommended"
 msgstr ""
 
 #: src/ui/window.rs:633
@@ -57,6 +145,18 @@ msgstr ""
 msgid "Installed"
 msgstr ""
 
-#: src/ui/window.rs:635
-msgid "Updates"
+#: src/ui/window.rs:636
+msgid "explore"
+msgstr ""
+
+#: src/ui/window.rs:637
+msgid "installed"
+msgstr ""
+
+#: src/ui/window.rs:638
+msgid "search"
+msgstr ""
+
+#: src/ui/window.rs:639
+msgid "updates"
 msgstr ""

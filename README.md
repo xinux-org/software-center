@@ -136,3 +136,8 @@ Some icons in [data/icons](data/icons/) contains assets from [GNOME Software](ht
 [matrix]: https://matrix.to/#/#snowflakeos:matrix.org
 [discord badge]: https://img.shields.io/discord/1021080090676842506?color=7289da&label=Discord&logo=discord&logoColor=ffffff&style=for-the-badge
 [discord]: https://discord.gg/6rWNMmdkgT
+
+## Translation
+
+To create a poedit file for translation run this command into the file where you want to save translations:
+`xgettext --directory=.. --files-from=POTFILES.in --from-code=UTF-8 -kgettext -o translations.pot`

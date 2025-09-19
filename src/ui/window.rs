@@ -234,7 +234,7 @@ impl Component for AppModel {
                         },
                         gtk::Label {
                             add_css_class: "title-1",
-                            set_label: "Loading...",
+                            set_label: &gettext("Loading..."),
                         },
                     }
                 }
@@ -327,7 +327,7 @@ impl Component for AppModel {
                                             gtk::Label {
                                                 set_halign: gtk::Align::Start,
                                                 add_css_class: "title-4",
-                                                set_label: "Categories",
+                                                set_label: &gettext("Categories"),
                                             },
                                             #[local_ref]
                                             categorybox -> gtk::FlowBox {
@@ -345,7 +345,7 @@ impl Component for AppModel {
                                             gtk::Label {
                                                 set_halign: gtk::Align::Start,
                                                 add_css_class: "title-4",
-                                                set_label: "Recommended",
+                                                set_label: &gettext("Recommended"),
                                             },
                                             #[local_ref]
                                             recbox -> gtk::FlowBox {

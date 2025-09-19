@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-15 16:53+0500\n"
-"PO-Revision-Date: 2025-09-15 17:09+0500\n"
+"POT-Creation-Date: 2025-09-19 13:53+0500\n"
+"PO-Revision-Date: 2025-09-19 14:31+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uz@latin\n"
@@ -42,22 +42,122 @@ msgstr "Flake fayli"
 msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
 msgstr "Flake argumentlari (--flake path/to/flake.nix#<THIS ENTRY>)"
 
+#: src/ui/installedpage.rs:76 src/ui/updatepage.rs:167
+msgid "System (configuration.nix)"
+msgstr "Tizim (configuration.nix)"
+
 #: src/ui/updatepage.rs:83
 msgid "No internet connection"
-msgstr "Internet aloqasi yo'q"
+msgstr "Internetga ulanmagansiz"
+
+#: src/ui/updatepage.rs:90
+msgid "Refresh"
+msgstr "Yangilash"
+
+#: src/ui/updatepage.rs:109 src/ui/window.rs:635
+msgid "Updates"
+msgstr "Yangilanishlar"
+
+#: src/ui/updatepage.rs:116
+msgid "Update Everything"
+msgstr "Barchasini yangilash"
+
+#: src/ui/updatepage.rs:140
+msgid "Update All"
+msgstr "Hammasini yangilash"
+
+#: src/ui/updatepage.rs:174
+msgid "Update"
+msgstr "Yangilash"
+
+#: src/ui/updatepage.rs:209
+msgid "Everything is up to date!"
+msgstr "Hammasi yangi!"
+
+#: src/ui/welcome.rs:165
+msgid "Continue"
+msgstr "Davom etish"
+
+#: src/ui/rebuild.rs:74
+msgid "Building..."
+msgstr "Qurilmoqda..."
+
+#: src/ui/rebuild.rs:88
+msgid "Done!"
+msgstr "Tamom!"
+
+#: src/ui/rebuild.rs:92
+msgid "Rebuild successful!"
+msgstr "Qayta qurish muvaffaqiyatli yakunlandi!"
+
+#: src/ui/rebuild.rs:106
+msgid "Error!"
+msgstr "Xatolik!"
+
+#: src/ui/rebuild.rs:110
+msgid "Rebuild failed! See below for error message."
+msgstr "Qayta tiklash muvaffaqiyatsiz tugadi! Xatolik haqidagi ma’lumot uchun pastga qarang."
+
+#: src/ui/rebuild.rs:149
+msgid "Close"
+msgstr "Yopish"
+
+#: src/ui/pkgpage.rs:340 src/ui/pkgpage.rs:444
+msgid "Cancel"
+msgstr "Bekor qilish"
+
+#: src/ui/pkgpage.rs:396 src/ui/pkgpage.rs:504
+msgid "Offline"
+msgstr "Oflayn"
+
+#: src/ui/pkgpage.rs:414 src/ui/pkgpage.rs:522
+msgid "Install"
+msgstr "O‘rnatish"
+
+#: src/ui/pkgpage.rs:734
+msgid "Homepage"
+msgstr "Bosh sahifa"
+
+#: src/ui/pkgpage.rs:868
+msgid "Platforms"
+msgstr "Platformalar"
 
 #: src/ui/window.rs:221 src/ui/window.rs:273
 msgid "Nix Software Center"
 msgstr "Nix dasturiy ta'minot markazi"
 
+#: src/ui/window.rs:237
+msgid "Loading..."
+msgstr "Yuklanmoqda..."
+
+#: src/ui/window.rs:330
+msgid "Categories"
+msgstr "Toifalar"
+
+#: src/ui/window.rs:348
+msgid "Recommended"
+msgstr "Tavsiya etiladi"
+
 #: src/ui/window.rs:633
 msgid "Explore"
-msgstr "Tadqiq qiling"
+msgstr "Kezish"
 
 #: src/ui/window.rs:634
 msgid "Installed"
 msgstr "Oʻrnatilgan"
 
-#: src/ui/window.rs:635
-msgid "Updates"
-msgstr "Yangilanishlar"
+#: src/ui/window.rs:636
+msgid "explore"
+msgstr "kezish"
+
+#: src/ui/window.rs:637
+msgid "installed"
+msgstr "o‘rnatilgan"
+
+#: src/ui/window.rs:638
+msgid "search"
+msgstr "qidirish"
+
+#: src/ui/window.rs:639
+msgid "updates"
+msgstr "yangilashlar"

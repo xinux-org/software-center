@@ -162,7 +162,7 @@ impl SimpleComponent for WelcomeModel {
                     gtk::Button {
                         add_css_class: "pill",
                         add_css_class: "suggested-action",
-                        set_label: "Continue",
+                        set_label: &gettext("Continue"),
                         set_hexpand: false,
                         set_halign: gtk::Align::Center,
                         connect_clicked[sender] => move |_| {
