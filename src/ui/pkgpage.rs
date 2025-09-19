@@ -33,6 +33,8 @@ use super::window::SystemPkgs;
 use super::window::UserPkgs;
 use super::{screenshotfactory::ScreenshotItem, window::AppMsg};
 
+use gettextrs::gettext;
+
 #[tracker::track]
 #[derive(Debug)]
 pub struct PkgModel {
@@ -335,7 +337,7 @@ impl Component for PkgModel {
                                                                 set_valign: gtk::Align::Center,
                                                                 set_can_focus: false,
                                                                 set_width_request: 105,
-                                                                set_label: "Cancel",
+                                                                set_label: &gettext("Cancel"),
                                                                 connect_clicked[sender] => move |_| {
                                                                     sender.input(PkgMsg::Cancel)
                                                                 },
@@ -391,7 +393,7 @@ impl Component for PkgModel {
                                                                 set_halign: gtk::Align::End,
                                                                 set_valign: gtk::Align::Center,
                                                                 add_css_class: "error",
-                                                                set_label: "Offline",
+                                                                set_label: &gettext("Offline"),
                                                                 set_can_target: false,
                                                             },
                                                             gtk::Button {
@@ -409,7 +411,7 @@ impl Component for PkgModel {
                                                             set_halign: gtk::Align::End,
                                                             set_valign: gtk::Align::Center,
                                                             set_can_focus: false,
-                                                            set_label: "Install",
+                                                            set_label: &gettext("Install"),
                                                             set_width_request: 105,
                                                             connect_clicked[sender] => move |_| {
                                                                 sender.input(PkgMsg::InstallUser);
@@ -439,7 +441,7 @@ impl Component for PkgModel {
                                                                 set_valign: gtk::Align::Center,
                                                                 set_can_focus: false,
                                                                 set_width_request: 105,
-                                                                set_label: "Cancel",
+                                                                set_label: &gettext("Cancel"),
                                                                 #[watch]
                                                                 set_sensitive: if let Some(w) = model.workqueue.iter().next() { w.pkg != model.pkg } else {
                                                                     false
@@ -499,7 +501,7 @@ impl Component for PkgModel {
                                                                 set_halign: gtk::Align::End,
                                                                 set_valign: gtk::Align::Center,
                                                                 add_css_class: "error",
-                                                                set_label: "Offline",
+                                                                set_label: &gettext("Offline"),
                                                                 set_can_target: false,
                                                             },
                                                             gtk::Button {
@@ -517,7 +519,7 @@ impl Component for PkgModel {
                                                             set_halign: gtk::Align::End,
                                                             set_valign: gtk::Align::Center,
                                                             set_can_focus: false,
-                                                            set_label: "Install",
+                                                            set_label: &gettext("Install"),
                                                             set_width_request: 105,
                                                             connect_clicked[sender] => move |_| {
                                                                 sender.input(PkgMsg::InstallSystem);
@@ -729,7 +731,7 @@ impl Component for PkgModel {
                                                     set_halign: gtk::Align::Center,
                                                     set_valign: gtk::Align::Center,
                                                     add_css_class: "heading",
-                                                    set_label: "Homepage"
+                                                    set_label: &gettext("Homepage")
                                                 },
                                                 gtk::Label {
                                                     set_halign: gtk::Align::Fill,
@@ -863,7 +865,7 @@ impl Component for PkgModel {
                                                 gtk::Label {
                                                     set_halign: gtk::Align::Center,
                                                     add_css_class: "heading",
-                                                    set_label: "Platforms"
+                                                    set_label: &gettext("Platforms")
                                                 },
                                                 gtk::Label {
                                                     set_halign: gtk::Align::Fill,

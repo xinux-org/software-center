@@ -4,6 +4,7 @@ use crate::APPINFO;
 use super::{window::*, pkgpage::{InstallType, WorkPkg, PkgAction, NotifyPage}};
 use adw::prelude::*;
 use relm4::{factory::*, *, gtk::pango};
+use gettextrs::gettext;
 
 #[tracker::track]
 #[derive(Debug)]
@@ -72,7 +73,7 @@ impl SimpleComponent for InstalledPageModel {
                         set_visible: !model.installedsystemlist.is_empty(),
                         set_halign: gtk::Align::Start,
                         add_css_class: "title-4",
-                        set_label: "System (configuration.nix)",
+                        set_label: &gettext("System (configuration.nix)"),
                     },
                     #[local_ref]
                     installedsystemlist -> gtk::ListBox {

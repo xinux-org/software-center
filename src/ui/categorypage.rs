@@ -2,6 +2,7 @@ use super::{categories::PkgCategory, categorytile::CategoryTile, window::*};
 use adw::prelude::*;
 use log::*;
 use relm4::{factory::*, *};
+use gettextrs::gettext;
 
 #[tracker::track]
 #[derive(Debug)]
@@ -91,7 +92,7 @@ impl Component for CategoryPageModel {
                             gtk::Label {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "title-4",
-                                set_label: "Recommended",
+                                set_label: &gettext("Recommended"),
                             },
                             #[local_ref]
                             recbox -> gtk::FlowBox {
@@ -109,7 +110,7 @@ impl Component for CategoryPageModel {
                             gtk::Label {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "title-4",
-                                set_label: "Other",
+                                set_label: &gettext("Other"),
                             },
                             #[local_ref]
                             allbox -> gtk::FlowBox {

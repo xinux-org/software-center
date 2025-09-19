@@ -1,6 +1,9 @@
 src/ui/unavailabledialog.rs
 src/ui/preferencespage.rs
+src/ui/installedpage.rs
 src/ui/updatepage.rs
-src/ui/caregories.rs
+src/ui/categories.rs
 src/ui/welcome.rs
+src/ui/rebuild.rs
+src/ui/pkgpage.rs
 src/ui/window.rs

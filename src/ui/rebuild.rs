@@ -3,6 +3,7 @@ use adw::prelude::*;
 use log::{info, trace};
 use relm4::*;
 use sourceview5::prelude::*;
+use gettextrs::gettext;
 
 #[tracker::track]
 pub struct RebuildModel {
@@ -70,7 +71,7 @@ impl SimpleComponent for RebuildModel {
                             set_height_request: 60,
                         },
                         gtk::Label {
-                            set_label: "Building...",
+                            set_label: &gettext("Building..."),
                             add_css_class: "title-1",
                         },
                     },
@@ -84,11 +85,11 @@ impl SimpleComponent for RebuildModel {
                             set_pixel_size: 128,
                         },
                         gtk::Label {
-                            set_label: "Done!",
+                            set_label: &gettext("Done!"),
                             add_css_class: "title-1",
                         },
                         gtk::Label {
-                            set_label: "Rebuild successful!",
+                            set_label: &gettext("Rebuild successful!"),
                             add_css_class: "dim-label",
                         }
                     },
@@ -102,11 +103,11 @@ impl SimpleComponent for RebuildModel {
                             set_pixel_size: 128,
                         },
                         gtk::Label {
-                            set_label: "Error!",
+                            set_label: &gettext("Error!"),
                             add_css_class: "title-1",
                         },
                         gtk::Label {
-                            set_label: "Rebuild failed! See below for error message.",
+                            set_label: &gettext("Rebuild failed! See below for error message."),
                             add_css_class: "dim-label",
                         }
                     }
@@ -145,7 +146,7 @@ impl SimpleComponent for RebuildModel {
                     #[track(model.changed(RebuildModel::status()))]
                     set_visible: model.status != RebuildStatus::Building,
                     gtk::Button {
-                        set_label: "Close",
+                        set_label: &gettext("Close"),
                         #[track(model.changed(RebuildModel::status()))]
                         set_visible: model.status != RebuildStatus::Building,
                         connect_clicked[sender] => move |_| {
