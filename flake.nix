@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:xinux-org/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:xinux-org/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
     nixos-appstream-data = {
       url = "github:korfuri/nixos-appstream-data/flake";
@@ -12,13 +12,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = inputs:
+  outputs = {self, ...} @ inputs:
     inputs.xinux-lib.mkFlake {
       inherit inputs;
       alias.packages.default = "nix-software-center";
       alias.shells.default = "nix-software-center";
       src = ./.;
       # this should be implemented because it's left over previous flake.nix setup
-      # hydraJobs = self.packages.${system}; 
-  };
+      hydraJobs = {
+        inherit (self.packages.x86_64-linux) default;
+      };
+    };
 }
