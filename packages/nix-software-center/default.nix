@@ -23,7 +23,7 @@
   nixos-appstream-data = inputs.nixos-appstream-data.packages."${system}".nixos-appstream-data;
 in
   stdenv.mkDerivation rec {
-    pname = "nixos-conf-editor";
+    pname = "nix-software-center";
     version = "0.1";
 
     src = [../..];
