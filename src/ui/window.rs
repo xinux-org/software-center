@@ -632,11 +632,11 @@ impl Component for AppModel {
         let searchvs = widgets.viewstack.page(model.searchpage.widget());
         frontvs.set_title(Some(&gettext("Explore")));
         installedvs.set_title(Some(&gettext("Installed")));
-        updatesvs.set_title(Some(&gettext("Updates")));
-        frontvs.set_name(Some(&gettext("explore")));
-        installedvs.set_name(Some(&gettext("installed")));
-        searchvs.set_name(Some(&gettext("search")));
-        updatesvs.set_name(Some(&gettext("updates")));
+        updatesvs.set_title(Some(("Updates")));
+        frontvs.set_name(Some("explore"));
+        installedvs.set_name(Some(("installed")));
+        searchvs.set_name(Some("search"));
+        updatesvs.set_name(Some("updates"));
         frontvs.set_icon_name(Some("nsc-home-symbolic"));
         installedvs.set_icon_name(Some("nsc-installed-symbolic"));
         updatesvs.set_icon_name(Some("nsc-update-symbolic"));
@@ -1736,7 +1736,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 }
                                 apoints.cmp(&bpoints)
                             });
-                            out.send(AppAsyncMsg::Search(search.to_string(), outpkgs));
+                            let _ = out.send(AppAsyncMsg::Search(search.to_string(), outpkgs));
                         }
                     }).drop_on_shutdown()
                 })
