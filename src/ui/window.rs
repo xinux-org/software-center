@@ -632,7 +632,7 @@ impl Component for AppModel {
         let searchvs = widgets.viewstack.page(model.searchpage.widget());
         frontvs.set_title(Some(&gettext("Explore")));
         installedvs.set_title(Some(&gettext("Installed")));
-        updatesvs.set_title(Some(("Updates")));
+        updatesvs.set_title(Some(&gettext("Updates")));
         frontvs.set_name(Some("explore"));
         installedvs.set_name(Some(("installed")));
         searchvs.set_name(Some("search"));
