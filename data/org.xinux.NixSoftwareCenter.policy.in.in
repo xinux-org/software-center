@@ -4,7 +4,7 @@
 <policyconfig>
     <vendor>Xinux Developers</vendor>
     <vendor_url>https://github.com/xinux-org</vendor_url>
-    <action id="org.orzklv.NixSoftwareCenter">
+    <action id="@app-id@">
         <description>Give Nix Software Center root access</description>
         <message>Authentication is required to install NixOS system packages</message>
         <defaults>
