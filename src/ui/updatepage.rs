@@ -541,13 +541,13 @@ impl FactoryComponent for UpdateItemModel {
                         set_max_width_chars: 0,
                     },
                 },
-                // gtk::Button {
-                //     set_visible: self.item.pkgtype == InstallType::User,
-                //     set_valign: gtk::Align::Center,
-                //     set_halign: gtk::Align::End,
-                //     set_label: "Update",
-                //     set_can_focus: false,
-                // }
+                gtk::Button {
+                    set_visible: self.item.pkgtype == InstallType::User,
+                    set_valign: gtk::Align::Center,
+                    set_halign: gtk::Align::End,
+                    set_label: "Update",
+                    set_can_focus: false,
+                }
             }
         }
     }
