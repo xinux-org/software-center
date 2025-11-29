@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:xinux-org/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:xinux-org/nixpkgs/nixos-25.11";
     utils.url = "github:numtide/flake-utils";
     nixos-appstream-data = {
       url = "github:korfuri/nixos-appstream-data/flake";
@@ -8,7 +8,7 @@
       inputs.flake-utils.follows = "utils";
     };
     xinux-lib = {
-      url = "github:xinux-org/lib";
+      url = "github:xinux-org/lib/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
