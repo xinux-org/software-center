@@ -13,7 +13,8 @@
     };
   };
   outputs = {self, ...} @ inputs:
-    inputs.xinux-lib.mkFlake {
+    inputs.xinux-lib.mkFlake
+    {
       inherit inputs;
       alias.packages.default = "nix-software-center";
       alias.shells.default = "nix-software-center";

@@ -7,7 +7,6 @@
   clippy,
   desktop-file-utils,
   gdk-pixbuf,
-  gettext,
   gobject-introspection,
   graphene,
   gtk4,
@@ -21,7 +20,6 @@
   pkg-config,
   polkit,
   sqlite,
-  rust,
   rust-analyzer,
   rustc,
   rustfmt,
@@ -30,6 +28,7 @@
   system,
   rustPlatform,
   rustup,
+  nixd,
 }:
 mkShell {
   cargoDeps = rustPlatform.importCargoLock {
@@ -39,6 +38,7 @@ mkShell {
     };
   };
   nativeBuildInputs = [
+    nixd
     cargo
     clippy
     rust-analyzer
