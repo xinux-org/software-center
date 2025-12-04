@@ -59,12 +59,12 @@ impl SimpleComponent for WelcomeModel {
                         set_spacing: 10,
                         gtk::Label {
                             add_css_class: "title-1",
-                            set_text: "Welcome the Nix Software Center!",
+                            set_text: &gettext("Welcome the Nix Software Center!"),
                             set_justify: gtk::Justification::Center,
                         },
                         gtk::Label {
                             add_css_class: "dim-label",
-                            set_text: "If your configuration file is not in the default location, you can change it here.",
+                            set_text: &gettext("If your configuration file is not in the default location, you can change it here."),
                         },
                     },
                     gtk::ListBox {
@@ -118,7 +118,7 @@ impl SimpleComponent for WelcomeModel {
                         set_selection_mode: gtk::SelectionMode::None,
                         adw::ActionRow {
                             set_title: &gettext("Flake file"),
-                            set_subtitle: "If you are using flakes, you can specify the path to your flake.nix file here.",
+                            set_subtitle: &gettext("If you are using flakes, you can specify the path to your flake.nix file here."),
                             add_suffix = &gtk::Button {
                                 set_halign: gtk::Align::Center,
                                 set_valign: gtk::Align::Center,

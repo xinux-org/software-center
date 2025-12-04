@@ -444,7 +444,7 @@ impl Worker for WindowAsyncHandler {
             }
             WindowAsyncHandlerMsg::UpdateDB(syspkgs, userpkgs) => {
                 relm4::spawn(async move {
-                    let nixos = Path::new("/etc/NIXOS").exists();
+                    let nixos = Path::new("/etc/nixos").exists();
 
                     let _pkgdb = if nixos {
                         match nix_data::cache::nixos::nixospkgs().await {

@@ -460,7 +460,7 @@ impl Component for AppModel {
         } else {
             UserPkgs::Env
         };
-        let nixos = Path::new("/etc/NIXOS").exists();
+        let nixos = Path::new("/etc/nixos").exists();
         let syspkgtype = if config.systemconfig.is_none() || !nixos {
             SystemPkgs::None
         } else {
@@ -634,7 +634,7 @@ impl Component for AppModel {
         installedvs.set_title(Some(&gettext("Installed")));
         updatesvs.set_title(Some(&gettext("Updates")));
         frontvs.set_name(Some("explore"));
-        installedvs.set_name(Some(("installed")));
+        installedvs.set_name(Some("installed"));
         searchvs.set_name(Some("search"));
         updatesvs.set_name(Some("updates"));
         frontvs.set_icon_name(Some("nsc-home-symbolic"));
@@ -731,7 +731,7 @@ impl Component for AppModel {
                 if editconfig(self.config.clone()).is_err() {
                     warn!("Failed to update config");
                 }
-                let nixos = Path::new("/etc/NIXOS").exists();
+                let nixos = Path::new("/etc/nixos").exists();
                 if systemconfig.is_some() && nixos {
                     if self.syspkgtype == SystemPkgs::None {
                         if self.config.flake.is_some() {
@@ -1257,7 +1257,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 info!("AppMsg::UpdateInstalledPage");
                 let mut installeduseritems = vec![];
                 let mut updateuseritems = vec![];
-                // let pool = SqlitePool::connect(&self.pkgdb).await.unwrap();
+                let pool = SqlitePool::connect(&self.pkgdb).await.unwrap();
                 debug!("Installed user pkgs: {:?}", self.installeduserpkgs);
                 debug!("Installed system pkgs: {:?}", self.installedsystempkgs);
                 if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
