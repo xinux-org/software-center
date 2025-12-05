@@ -217,7 +217,7 @@ impl Worker for InstallAsyncHandler {
                                             .arg("profile")
                                             .arg("remove")
                                             .arg(&format!(
-                                                "legacyPackages.x86_64-linux.{}",
+                                                "{}",
                                                 work.pkg
                                             ))
                                             .kill_on_drop(true)
