@@ -46,7 +46,7 @@ impl SimpleComponent for PreferencesPageModel {
             add = &adw::PreferencesPage {
                 add = &adw::PreferencesGroup {
                     // set_title: "Preferences",
-                    set_visible: Path::new("/etc/NIXOS").exists(),
+                    set_visible: Path::new("/etc/nixos").exists(),
                     add = &adw::ActionRow {
                         set_title: &gettext("Configuration file"),
                         add_suffix = &gtk::Box {
@@ -139,20 +139,19 @@ impl SimpleComponent for PreferencesPageModel {
                                     sender.input(PreferencesPageMsg::OpenFlake);
                                 }
                             },
-                            // gtk::Button {
-                            //     add_css_class: "flat",
-                            //     set_icon_name: "user-trash-symbolic",
-                            //     connect_clicked[sender] => move |_| {
-                            //         sender.input(PreferencesPageMsg::SetFlakePath(PathBuf::new()));
-                            //     }
-                            // }
+                            gtk::Button {
+                                // add_css_class: "flat",
+                                set_icon_name: "user-trash-symbolic",
+                                connect_clicked[sender] => move |_| {
+                                    sender.input(PreferencesPageMsg::SetFlakePath(Some(PathBuf::new())));
+                                }
+                            }
                         }
                     },
                     add = &adw::EntryRow {
                         #[watch]
                         set_visible: model.flake.is_some(),
-                        set_title: &gettext("Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"),
-                        set_use_markup: false,
+                        set_title: "Flake arguments (--flake path/to/flake.nix#ENTRY)",
                         set_use_markup: false,
                         connect_changed[sender] => move |x| {
                             sender.input(PreferencesPageMsg::SetFlakeArg({
