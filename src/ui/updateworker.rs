@@ -87,11 +87,11 @@ impl Worker for UpdateAsyncHandler {
                     let result = runcmd(NscCmd::All, config, syspkgs, None).await;
                     match result {
                         Ok(true) => {
-                            sender.output(UpdatePageMsg::DoneWorking);
+                            let _ = sender.output(UpdatePageMsg::DoneWorking);
                         }
                         _ => {
                             warn!("UPDATE SYSTEM FAILED");
-                            sender.output(UpdatePageMsg::FailedWorking);
+                            let _ = sender.output(UpdatePageMsg::FailedWorking);
                         }
                     }
                 });
