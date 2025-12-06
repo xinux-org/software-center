@@ -239,6 +239,7 @@ fn flake(path: &str) -> Result<(), Box<dyn Error>> {
     let mut cmd = Command::new("nix")
         .arg("flake")
         .arg("update")
+        .arg("--flake")
         .arg(path)
         .spawn()?;
     let x = cmd.wait()?;
