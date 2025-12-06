@@ -2056,7 +2056,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 [[package]]
 name = "nix-data"
 version = "0.0.3"
-source = "git+https://github.com/xinux-org/nix-data#a4ac7f818100e41a961455429ba974a75c5dad07"
+source = "git+https://github.com/xinux-org/nix-data#50639bd2f44b680339d536055b8c54111ffa457c"
 dependencies = [
  "anyhow",
  "brotli 3.5.0",

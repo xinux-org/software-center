@@ -31,7 +31,7 @@ in
     cargoDeps = rustPlatform.importCargoLock {
       lockFile = ../../Cargo.lock;
       outputHashes = {
-        "nix-data-0.0.3" = "sha256-dhEGLa8BXWfAVJXBlpRvP15ke0+PpqYa8I5AuFoV/2Y=";
+        "nix-data-0.0.3" = "sha256-0xp0Z4SemagJl2FSuCaEb+zIWpiT+lvcfv8IWtJqOk0=";
       };
     };
 
