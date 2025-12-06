@@ -13,7 +13,6 @@
   meson,
   ninja,
   openssl,
-  pandoc,
   pkg-config,
   polkit,
   wrapGAppsHook4,
@@ -22,7 +21,7 @@
 }: let
   nixos-appstream-data = inputs.nixos-appstream-data.packages."${system}".nixos-appstream-data;
 in
-  stdenv.mkDerivation rec {
+  stdenv.mkDerivation {
     pname = "nix-software-center";
     version = "0.1";
 
@@ -31,7 +30,7 @@ in
     cargoDeps = rustPlatform.importCargoLock {
       lockFile = ../../Cargo.lock;
       outputHashes = {
-        "nix-data-0.0.3" = "sha256-4VHwvSFaygixxgq852pKhMv1Ajxgtoen4ZaGbAYi8Ik=";
+        "nix-data-0.0.3" = "sha256-SkxKR7Vn91nuKkOQncUfSTp0fT8GM86P3X1CTymTexY=";
       };
     };
 
