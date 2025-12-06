@@ -99,10 +99,17 @@ nix run github:xinux-org/software-center
 nix --extra-experimental-features "nix-command flakes" run github:xinux-org/software-center
 ```
 
-## Debugging
+## Building & Debugging
 
 ```bash
-RUST_LOG=nix_software_center=trace nix-software-center
+nix build . # root of project
+cd .. # use pkexec outside of shell.nix
+
+RUST_LOG=nix_software_center=trace ./software-center/result/bin/nix-software-center
+
+# with inspector
+GTK_DEBUG=interactive RUST_LOG=nix_software_center=trace ./software-center/result/bin/nix-software-center
+
 ```
 
 ## Screenshots
