@@ -90,11 +90,12 @@ impl SimpleComponent for UpdatePageModel {
                                 set_label: &gettext("Refresh"),
                             },
                             connect_clicked[sender] => move |_| {
-                                sender.output(AppMsg::CheckNetwork);
+                                let _ = sender.output(AppMsg::CheckNetwork);
                             }
                         }
                     }
-                } else if model.channelupdate.is_some() || !model.updateuserlist.is_empty() || !model.updatesystemlist.is_empty() {
+                } else if !model.updateuserlist.is_empty() || !model.updatesystemlist.is_empty() {
+                    // model.channelupdate.is_some() ||
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_valign: gtk::Align::Start,
@@ -303,7 +304,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateSystem => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -341,7 +342,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateAllUser => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -352,10 +353,10 @@ impl SimpleComponent for UpdatePageModel {
                     relm4::spawn(async move {
                         let uninstalluser = nix_data::cache::profile::unavailablepkgs().await.unwrap_or_default();
                         if uninstalluser.is_empty() {
-                            workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
+                            let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
                         } else {
                             warn!("Uninstalling unavailable packages: {:?}", uninstalluser);
-                            output.send(AppMsg::GetUnavailableItems(uninstalluser, HashMap::new(), UpdateType::User));
+                            let _ = output.send(AppMsg::GetUnavailableItems(uninstalluser, HashMap::new(), UpdateType::User));
                         }
                     });
     
@@ -370,7 +371,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateAll => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -412,7 +413,15 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::DoneWorking => {
                 let _ = nix_data::utils::refreshicons();
                 REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
-                sender.output(AppMsg::UpdateInstalledPkgs);
+                // Clear nix-data cache to force fresh database download and version check
+                let cache_dir = format!(
+                    "{}/.cache/nix-data",
+                    std::env::var("HOME").unwrap_or_else(|_| String::from("/root"))
+                );
+                let _ = std::fs::remove_dir_all(&cache_dir);
+                let _ = std::fs::create_dir_all(&cache_dir);
+                let _ = sender.output(AppMsg::UpdateInstalledPkgs);
+                let _ = sender.output(AppMsg::UpdateInstalledPage);
             }
             UpdatePageMsg::FailedWorking => {
                 REBUILD_BROKER.send(RebuildMsg::FinishError(None));

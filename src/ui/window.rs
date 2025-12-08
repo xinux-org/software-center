@@ -1264,7 +1264,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
                     match self.userpkgtype {
                         UserPkgs::Env => {
-                            warn!("UserPkgs::Env is staaaaaaaaaaaaaaaaaaarted");
                             for (installedpname, installedver) in &self.installeduserpkgs {
                                 let possibleitems: Vec<(String,)> =
                                     sqlx::query_as("SELECT attribute FROM pkgs WHERE pname = $1")
@@ -1638,6 +1637,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         }
                         SystemPkgs::Flake => {
                             if let Ok(Some((old, new))) = nix_data::cache::flakes::uptodate() {
+                              println!("old flake ver: {old:?}");
+                              println!("new flake ver: {new:?}");
                                 updatesystemitems.insert(
                                     0,
                                     UpdateItem {
