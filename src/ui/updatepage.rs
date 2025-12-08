@@ -288,7 +288,7 @@ impl SimpleComponent for UpdatePageModel {
                     let updateuserlist_guard = self.updateuserlist.guard();
                     if let Some(item) = updateuserlist_guard.get(row) {
                         if let Some(pkg) = &item.item.pkg {
-                            sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                            let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                         }
                     }
                 }
@@ -296,7 +296,7 @@ impl SimpleComponent for UpdatePageModel {
                     let updatesystemlist_guard = self.updatesystemlist.guard();
                     if let Some(item) = updatesystemlist_guard.get(row) {
                         if let Some(pkg) = &item.item.pkg {
-                            sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                            let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                         }
                     }
                 }
@@ -324,10 +324,10 @@ impl SimpleComponent for UpdatePageModel {
                         _ => HashMap::new(),
                     };
                     if uninstallsys.is_empty() {
-                        workersender.send(UpdateAsyncHandlerMsg::UpdateSystem);
+                        let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateSystem);
                     } else {
                         warn!("Uninstalling unavailable packages: {:?}", uninstallsys);
-                        output.send(AppMsg::GetUnavailableItems(HashMap::new(), uninstallsys, UpdateType::System));
+                        let _ = output.send(AppMsg::GetUnavailableItems(HashMap::new(), uninstallsys, UpdateType::System));
                     }
                 });
             }
@@ -398,11 +398,11 @@ impl SimpleComponent for UpdatePageModel {
                         HashMap::new()
                     };
                     if uninstallsys.is_empty() && uninstalluser.is_empty() {
-                        workersender.send(UpdateAsyncHandlerMsg::UpdateAll);
+                        let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateAll);
                     } else {
                         warn!("Uninstalling unavailable user packages: {:?}", uninstalluser);
                         warn!("Uninstalling unavailable system packages: {:?}", uninstallsys);
-                        output.send(AppMsg::GetUnavailableItems(uninstalluser, uninstallsys, UpdateType::All));
+                        let _ = output.send(AppMsg::GetUnavailableItems(uninstalluser, uninstallsys, UpdateType::All));
                     }
                 });
             }
@@ -413,15 +413,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::DoneWorking => {
                 let _ = nix_data::utils::refreshicons();
                 REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
-                // Clear nix-data cache to force fresh database download and version check
-                let cache_dir = format!(
-                    "{}/.cache/nix-data",
-                    std::env::var("HOME").unwrap_or_else(|_| String::from("/root"))
-                );
-                let _ = std::fs::remove_dir_all(&cache_dir);
-                let _ = std::fs::create_dir_all(&cache_dir);
                 let _ = sender.output(AppMsg::UpdateInstalledPkgs);
-                let _ = sender.output(AppMsg::UpdateInstalledPage);
             }
             UpdatePageMsg::FailedWorking => {
                 REBUILD_BROKER.send(RebuildMsg::FinishError(None));

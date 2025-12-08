@@ -2138,7 +2138,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     warn!("Changes needed!");
                     self.installedsystempkgs = installedsystempkgs;
                     self.installeduserpkgs = installeduserpkgs;
-                    sender.input(AppMsg::UpdateInstalledPage);
                     debug!("Getting recommended apps guard");
                     let mut recommendedapps_guard = self.recommendedapps.guard();
                     debug!("Got recommended apps guard");
@@ -2158,6 +2157,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         ));
                     }
                 }
+                // Always refresh the update page
+                sender.input(AppMsg::UpdateInstalledPage);
                 info!("DONE AppAsyncMsg::UpdateInstalledPkgs");
             }
             AppAsyncMsg::LoadCategory(category, catrec, catall) => {
