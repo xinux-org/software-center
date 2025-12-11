@@ -6,16 +6,15 @@
     # # Fresh and new for testing
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    crane.url = "github:ipetkov/crane";
+    crane.url = "github:ipetkov/crane";    
+    # The flake-utils library
+    flake-utils.url = "github:numtide/flake-utils";
     
-    utils.url = "github:numtide/flake-utils";
     nixos-appstream-data = {
       url = "github:korfuri/nixos-appstream-data/flake";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "utils";
+      inputs.flake-utils.follows = "flake-utils";
     };
-    # The flake-utils library
-    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = {
