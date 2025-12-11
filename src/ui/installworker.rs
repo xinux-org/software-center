@@ -126,7 +126,7 @@ impl Worker for InstallAsyncHandler {
                                     self.process = Some(relm4::spawn(async move {
                                         let mut p = tokio::process::Command::new("nix")
                                             .arg("profile")
-                                            .arg("install")
+                                            .arg("add")
                                             .arg(format!("nixpkgs#{}", work.pkg))
                                             .arg("--impure")
                                             .kill_on_drop(true)
@@ -150,18 +150,18 @@ impl Worker for InstallAsyncHandler {
                                                         "Removed user package: {} success",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FinishedProcess(work));
                                                 } else {
                                                     warn!(
                                                         "Removed user package: {} failed",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FailedProcess(work));
                                                 }
                                             }
                                             Err(e) => {
                                                 warn!("Error removing user package: {}", e);
-                                                sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender.output(PkgMsg::FailedProcess(work));
                                             }
                                         }
                                     }));
@@ -195,18 +195,18 @@ impl Worker for InstallAsyncHandler {
                                                         "Removed user package: {} success",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FinishedProcess(work));
                                                 } else {
                                                     warn!(
                                                         "Removed user package: {} failed",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FailedProcess(work));
                                                 }
                                             }
                                             Err(e) => {
                                                 warn!("Error removing user package: {}", e);
-                                                sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender.output(PkgMsg::FailedProcess(work));
                                             }
                                         }
                                     }));
@@ -217,7 +217,7 @@ impl Worker for InstallAsyncHandler {
                                             .arg("profile")
                                             .arg("remove")
                                             .arg(&format!(
-                                                "legacyPackages.x86_64-linux.{}",
+                                                "{}",
                                                 work.pkg
                                             ))
                                             .kill_on_drop(true)
@@ -239,19 +239,19 @@ impl Worker for InstallAsyncHandler {
                                                         "Removed user package: {} success",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FinishedProcess(work));
                                                 } else {
                                                     warn!(
                                                         "Removed user package: {} failed",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FailedProcess(work));
                                                 }
                                             }
 
                                             Err(e) => {
                                                 warn!("Error removing user package: {}", e);
-                                                sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender.output(PkgMsg::FailedProcess(work));
                                             }
                                         }
                                     }));
@@ -277,15 +277,15 @@ impl Worker for InstallAsyncHandler {
                                             Ok(b) => {
                                                 if b {
                                                     REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
-                                                    sender.output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FinishedProcess(work));
                                                 } else {
                                                     REBUILD_BROKER.send(RebuildMsg::FinishError(None));
-                                                    sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FailedProcess(work));
                                                 }
                                             }
                                             Err(e) => {
                                                 REBUILD_BROKER.send(RebuildMsg::FinishError(None));
-                                                sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender.output(PkgMsg::FailedProcess(work));
                                                 warn!("Error installing system package: {}", e);
                                             }
                                         }

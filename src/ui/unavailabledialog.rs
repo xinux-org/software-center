@@ -37,7 +37,7 @@ impl SimpleComponent for UnavailableDialogModel {
             set_transient_for: Some(&parent_window),
             set_modal: true,
             set_heading: Some("Some packages are unavailable!"),
-            set_body: "If you continue this update, some packages will be removed",
+            set_body: &gettext("If you continue this update, some packages will be removed"),
             #[wrap(Some)]
             set_extra_child = &gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,

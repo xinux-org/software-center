@@ -21,7 +21,7 @@ dependency('polkit-gobject-1', version: '>= 0.103')
 glib_compile_resources = find_program('glib-compile-resources', required: true)
 glib_compile_schemas = find_program('glib-compile-schemas', required: true)
 desktop_file_validate = find_program('desktop-file-validate', required: false)
-appstream_util = find_program('appstream-util', required: false)
+appstreamcli = find_program('appstreamcli', required: false)
 cargo = find_program('cargo', required: true)
 
 version = meson.project_version()
@@ -39,7 +39,7 @@ gettext_package = meson.project_name()
 
 if get_option('profile') == 'development'
   profile = 'Devel'
-    vcs_tag = run_command('git', 'rev-parse', '--short', 'HEAD').stdout().strip()
+  vcs_tag = run_command('git', 'rev-parse', '--short', 'HEAD').stdout().strip()
   if vcs_tag == ''
     version_suffix = '-devel'
   else
@@ -54,8 +54,10 @@ endif
 
 meson.add_dist_script(
   'build-aux/dist-vendor.sh',
-  meson.project_build_root() / 'meson-dist' / meson.project_name() + '-' + version,
-  meson.project_source_root()
+  meson.project_build_root() / 'meson-dist' / meson.project_name()
+  + '-'
+  + version,
+  meson.project_source_root(),
 )
 
 subdir('data')

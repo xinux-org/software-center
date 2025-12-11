@@ -50,6 +50,7 @@ impl SimpleComponent for InstalledPageModel {
                         set_visible: !model.installeduserlist.is_empty(),
                         set_halign: gtk::Align::Start,
                         add_css_class: "title-4",
+                        set_lines: 1,
                         set_label: match model.userpkgtype {
                             UserPkgs::Env => "User (nix-env)",
                             UserPkgs::Profile => "User (nix profile)",
@@ -73,6 +74,7 @@ impl SimpleComponent for InstalledPageModel {
                         set_visible: !model.installedsystemlist.is_empty(),
                         set_halign: gtk::Align::Start,
                         add_css_class: "title-4",
+                        set_lines: 1,
                         set_label: &gettext("System (configuration.nix)"),
                     },
                     #[local_ref]
@@ -141,7 +143,7 @@ impl SimpleComponent for InstalledPageModel {
                         let installeduserlist_guard = self.installeduserlist.guard();
                         if let Some(item) = installeduserlist_guard.get(row) {
                             if let Some(pkg) = &item.item.pkg {
-                                sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                                let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                             }
                         }
                     }
@@ -149,7 +151,7 @@ impl SimpleComponent for InstalledPageModel {
                         let installedsystemlist_guard = self.installedsystemlist.guard();
                         if let Some(item) = installedsystemlist_guard.get(row) {
                             if let Some(pkg) = &item.item.pkg {
-                                sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                                let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                             }
                         }
                     }

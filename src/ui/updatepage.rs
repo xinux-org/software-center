@@ -90,11 +90,12 @@ impl SimpleComponent for UpdatePageModel {
                                 set_label: &gettext("Refresh"),
                             },
                             connect_clicked[sender] => move |_| {
-                                sender.output(AppMsg::CheckNetwork);
+                                let _ = sender.output(AppMsg::CheckNetwork);
                             }
                         }
                     }
-                } else if model.channelupdate.is_some() || !model.updateuserlist.is_empty() || !model.updatesystemlist.is_empty() {
+                } else if !model.updateuserlist.is_empty() || !model.updatesystemlist.is_empty() {
+                    // model.channelupdate.is_some() ||
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_valign: gtk::Align::Start,
@@ -287,7 +288,7 @@ impl SimpleComponent for UpdatePageModel {
                     let updateuserlist_guard = self.updateuserlist.guard();
                     if let Some(item) = updateuserlist_guard.get(row) {
                         if let Some(pkg) = &item.item.pkg {
-                            sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                            let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                         }
                     }
                 }
@@ -295,7 +296,7 @@ impl SimpleComponent for UpdatePageModel {
                     let updatesystemlist_guard = self.updatesystemlist.guard();
                     if let Some(item) = updatesystemlist_guard.get(row) {
                         if let Some(pkg) = &item.item.pkg {
-                            sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                            let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                         }
                     }
                 }
@@ -303,7 +304,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateSystem => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -323,10 +324,10 @@ impl SimpleComponent for UpdatePageModel {
                         _ => HashMap::new(),
                     };
                     if uninstallsys.is_empty() {
-                        workersender.send(UpdateAsyncHandlerMsg::UpdateSystem);
+                        let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateSystem);
                     } else {
                         warn!("Uninstalling unavailable packages: {:?}", uninstallsys);
-                        output.send(AppMsg::GetUnavailableItems(HashMap::new(), uninstallsys, UpdateType::System));
+                        let _ = output.send(AppMsg::GetUnavailableItems(HashMap::new(), uninstallsys, UpdateType::System));
                     }
                 });
             }
@@ -341,7 +342,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateAllUser => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -352,10 +353,10 @@ impl SimpleComponent for UpdatePageModel {
                     relm4::spawn(async move {
                         let uninstalluser = nix_data::cache::profile::unavailablepkgs().await.unwrap_or_default();
                         if uninstalluser.is_empty() {
-                            workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
+                            let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
                         } else {
                             warn!("Uninstalling unavailable packages: {:?}", uninstalluser);
-                            output.send(AppMsg::GetUnavailableItems(uninstalluser, HashMap::new(), UpdateType::User));
+                            let _ = output.send(AppMsg::GetUnavailableItems(uninstalluser, HashMap::new(), UpdateType::User));
                         }
                     });
     
@@ -370,7 +371,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateAll => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -397,11 +398,11 @@ impl SimpleComponent for UpdatePageModel {
                         HashMap::new()
                     };
                     if uninstallsys.is_empty() && uninstalluser.is_empty() {
-                        workersender.send(UpdateAsyncHandlerMsg::UpdateAll);
+                        let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateAll);
                     } else {
                         warn!("Uninstalling unavailable user packages: {:?}", uninstalluser);
                         warn!("Uninstalling unavailable system packages: {:?}", uninstallsys);
-                        output.send(AppMsg::GetUnavailableItems(uninstalluser, uninstallsys, UpdateType::All));
+                        let _ = output.send(AppMsg::GetUnavailableItems(uninstalluser, uninstallsys, UpdateType::All));
                     }
                 });
             }
@@ -412,7 +413,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::DoneWorking => {
                 let _ = nix_data::utils::refreshicons();
                 REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
-                sender.output(AppMsg::UpdateInstalledPkgs);
+                let _ = sender.output(AppMsg::UpdateInstalledPkgs);
             }
             UpdatePageMsg::FailedWorking => {
                 REBUILD_BROKER.send(RebuildMsg::FinishError(None));
@@ -541,13 +542,13 @@ impl FactoryComponent for UpdateItemModel {
                         set_max_width_chars: 0,
                     },
                 },
-                // gtk::Button {
-                //     set_visible: self.item.pkgtype == InstallType::User,
-                //     set_valign: gtk::Align::Center,
-                //     set_halign: gtk::Align::End,
-                //     set_label: "Update",
-                //     set_can_focus: false,
-                // }
+                gtk::Button {
+                    set_visible: self.item.pkgtype == InstallType::User,
+                    set_valign: gtk::Align::Center,
+                    set_halign: gtk::Align::End,
+                    set_label: "Update",
+                    set_can_focus: false,
+                }
             }
         }
     }
