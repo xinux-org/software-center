@@ -27,10 +27,9 @@ cargo_build = custom_target(
   # env: cargo_env,
   command: [
     # 'env',
-    # cargo_env,
+    cargo_env,
     cargo, 'build',
     ['--release', '--manifest-path', meson.project_source_root() / 'Cargo.toml'],
-    '&&',
     'cp', '/build/source/target/' / rust_target / 'nsc-helper', '@OUTPUT@',
   ]
 )

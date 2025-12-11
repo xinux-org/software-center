@@ -12,7 +12,6 @@ in
       clippy
       rust-analyzer
       rustc
-      rustup
       rustfmt
       rustPlatform.bindgenHook
     ];

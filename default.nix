@@ -60,13 +60,6 @@ in
       substituteInPlace ./src/lib.rs \
           --replace-fail "/usr/share/app-info" "${nixos-appstream-data}/share/app-info"
     '';
-    postInstall = ''
-      wrapProgram $out/bin/nix-software-center --prefix PATH : '${pkgs.lib.makeBinPath [
-        pkgs.gnome-console
-        pkgs.gtk3 # provides gtk-launch
-        pkgs.sqlite
-      ]}'
-    '';
 
     configurePhase = ''
       mesonConfigurePhase
@@ -85,6 +78,14 @@ in
       runHook postInstall
     '';
 
+    postInstall = ''
+      wrapProgram $out/bin/nix-software-center --prefix PATH : '${pkgs.lib.makeBinPath [
+        pkgs.gnome-console
+        pkgs.gtk3 # provides gtk-launch
+        pkgs.sqlite
+      ]}'
+    '';
+    
     doNotPostBuildInstallCargoBinaries = true;
     checkPhase = false;
   }
