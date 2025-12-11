@@ -82,14 +82,9 @@ in
     installPhase = ''
       runHook preInstall
       mesonInstallPhase
-
-      # ninjaInstallPhase
-
       runHook postInstall
     '';
 
-    # buildPhaseCargoCommand = "cargo build --release";
-    # installPhaseCommand = "";
     doNotPostBuildInstallCargoBinaries = true;
     checkPhase = false;
   }

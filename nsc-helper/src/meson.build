@@ -24,10 +24,10 @@ cargo_build = custom_target(
   install: true,
   install_dir: get_option('libexecdir'),
   depends: resources,
-  env: cargo_env,
+  # env: cargo_env,
   command: [
     # 'env',
-    ; cargo_env,
+    # cargo_env,
     cargo, 'build',
     ['--release', '--manifest-path', meson.project_source_root() / 'Cargo.toml'],
     '&&',
