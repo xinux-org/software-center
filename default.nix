@@ -21,18 +21,16 @@
     wayland
     adwaita-icon-theme
     desktop-file-utils
+    polkit
     nixos-appstream-data
   ];
 
   commonNativeBuildInputs = with pkgs; [
-    appstream-glib
-    polkit
     gettext
     desktop-file-utils
     meson
     ninja
     pkg-config
-    git
     wrapGAppsHook4
   ];
 
@@ -56,12 +54,9 @@ in
     nativeBuildInputs = commonNativeBuildInputs;
     buildInputs = commonBuildInputs;
 
-    patchPhase = ''
+    configurePhase = ''
       substituteInPlace ./src/lib.rs \
           --replace-fail "/usr/share/app-info" "${nixos-appstream-data}/share/app-info"
-    '';
-
-    configurePhase = ''
       mesonConfigurePhase
       runHook postConfigure
     '';
@@ -85,7 +80,7 @@ in
         pkgs.sqlite
       ]}'
     '';
-    
+
     doNotPostBuildInstallCargoBinaries = true;
     checkPhase = false;
   }
