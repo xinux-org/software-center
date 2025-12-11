@@ -1,8 +1,8 @@
 global_conf = configuration_data()
-cargo_options = ['--manifest-path', meson.project_source_root() / 'nsc-helper' / 'Cargo.toml']
+#cargo_options = ['--manifest-path', meson.project_source_root() / 'nsc-helper' / 'Cargo.toml']
 
 if get_option('profile') == 'default'
-  cargo_options += ['--release']
+  cargo_options = ['--release']
   rust_target = 'release'
   message('Building in release mode')
 else
