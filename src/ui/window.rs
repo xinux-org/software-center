@@ -33,7 +33,7 @@ use std::{
 };
 
 use super::{
-    about::{AboutPageModel, AboutPageMsg},
+    about::{AboutPageModel},
     categories::{PkgCategory, PkgGroup},
     categorypage::{CategoryPageModel, CategoryPageMsg},
     categorytile::CategoryTile,
