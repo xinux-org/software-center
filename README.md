@@ -41,7 +41,7 @@ A graphical app store for Nix built with [libadwaita](https://gitlab.gnome.org/G
 
 ```
 environment.systemPackages = with pkgs; [
-    inputs.nix-software-center.packages.${system}.nix-software-center
+    inputs.nix-software-center.packages.${system}.default
     # rest of your packages
 ];
 ```
@@ -59,7 +59,7 @@ let
     owner = "xinux-org";
     repo = "software-center";
     rev = "0.1.2";
-    sha256 = "xiqF1mP8wFubdsAQ1BmfjzCgOD3YZf7EGWl9i69FTls=";
+    sha256 = ""; # add shaa
   }) {};
 in
 
