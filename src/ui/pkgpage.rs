@@ -992,16 +992,16 @@ impl Component for PkgModel {
 
     menu! {
         installtype: {
-            "User (nix-env)" => NixEnvAction,
-            "System (configuration.nix)" => NixSystemAction,
+            &gettext("User (nix-env)") => NixEnvAction,
+            &gettext("System (configuration.nix)") => NixSystemAction,
         },
         installprofiletype: {
-            "User (nix-profile)" => NixProfileAction,
-            "System (configuration.nix)" => NixSystemAction,
+            &gettext("User (nix-profile)") => NixProfileAction,
+            &gettext("System (configuration.nix)") => NixSystemAction,
         },
         runaction: {
-            "Run without installing" => LaunchAction,
-            "Open interactive shell" => TermShellAction,
+            &gettext("Run without installing") => LaunchAction,
+            &gettext("Open interactive shell") => TermShellAction,
         }
     }
 
@@ -1290,9 +1290,9 @@ impl Component for PkgModel {
                                                                         image::load(imgdata, format)?
                                                                     };
                                                                     let scaled = img.resize(640, 360, FilterType::Lanczos3);
-                                                                    let mut output = File::create(&format!("{}.png", scrnpath))?;
+                                                                    let mut output = File::create(format!("{}.png", scrnpath))?;
                                                                     scaled.write_to(&mut output, ImageFormat::Png)?;
-                                                                    if let Err(e) = fs::remove_file(&scrnpath) {
+                                                                    if let Err(e) = fs::remove_file(scrnpath) {
                                                                         warn!("{}", e);
                                                                     }
                                                                     Ok(())
@@ -1338,7 +1338,7 @@ impl Component for PkgModel {
                 info!("PkgMsg::LoadScreenshot {}", u);
                 if pkg == self.pkg {
                     let mut scrn_guard = self.screenshots.guard();
-                    if let Some(mut scrn_widget) = scrn_guard.get_mut(i) {
+                    if let Some(scrn_widget) = scrn_guard.get_mut(i) {
                         scrn_widget.path = Some(u);
                         trace!("GOT PATH")
                     } else {
@@ -1351,7 +1351,7 @@ impl Component for PkgModel {
             PkgMsg::SetError(pkg, i) => {
                 if pkg == self.pkg {
                     let mut scrn_guard = self.screenshots.guard();
-                    if let Some(mut scrn_widget) = scrn_guard.get_mut(i) {
+                    if let Some(scrn_widget) = scrn_guard.get_mut(i) {
                         scrn_widget.error = true;
                     }
                 }
@@ -1370,12 +1370,12 @@ impl Component for PkgModel {
             }
             PkgMsg::Close => {
                 self.set_visible(false);
-                sender.output(AppMsg::FrontPage);
+                let _ = sender.output(AppMsg::FrontPage);
             }
             PkgMsg::InstallUser => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -1409,7 +1409,7 @@ impl Component for PkgModel {
             PkgMsg::InstallSystem => {
                 let online = util::checkonline();
                 if !online {
-                    sender.output(AppMsg::CheckNetwork);
+                    let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
@@ -1494,11 +1494,11 @@ impl Component for PkgModel {
                         }
                     },
                 }
-                sender.output(AppMsg::UpdateInstalledPkgs);
+                let _ = sender.output(AppMsg::UpdateInstalledPkgs);
                 if let Some(n) = &work.notify {
                     match n {
                         NotifyPage::Installed => {
-                            sender.output(AppMsg::RemoveInstalledBusy(work));
+                            let _ = sender.output(AppMsg::RemoveInstalledBusy(work));
                         }
                     }
                 }
@@ -1515,7 +1515,7 @@ impl Component for PkgModel {
                 if let Some(n) = &work.notify {
                     match n {
                         NotifyPage::Installed => {
-                            sender.output(AppMsg::RemoveInstalledBusy(work));
+                            let _ = sender.output(AppMsg::RemoveInstalledBusy(work));
                         }
                     }
                 }
@@ -1581,18 +1581,18 @@ impl Component for PkgModel {
                                         .arg("-p")
                                         .arg(&self.pkg)
                                         .arg("--command")
-                                        .arg(&format!("XDG_DATA_DIRS=$XDG_DATA_DIRS:$buildInputs/share gtk-launch {}", x))
+                                        .arg(format!("XDG_DATA_DIRS=$XDG_DATA_DIRS:$buildInputs/share gtk-launch {}", x))
                                         .spawn();
                             }
                             UserPkgs::Profile => {
                                 debug!("Launching {} with nix shell", x);
                                 let _ = Command::new("nix")
                                         .arg("shell")
-                                        .arg(&format!("nixpkgs#{}", self.pkg))
+                                        .arg(format!("nixpkgs#{}", self.pkg))
                                         .arg("--command")
                                         .arg("bash")
                                         .arg("-c")
-                                        .arg(&format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.pkg, x))
+                                        .arg(format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.pkg, x))
                                         .spawn();
                             }
                         },
@@ -1674,7 +1674,7 @@ impl Component for PkgModel {
 }
 
 fn launchterm(cmd: &str) {
-    let _ = Command::new("kgx").arg("-e").arg(&cmd).spawn();
+    let _ = Command::new("kgx").arg("-e").arg(cmd).spawn();
 }
 
 relm4::new_action_group!(ModeActionGroup, "mode");
