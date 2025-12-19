@@ -1,10 +1,10 @@
-use std::path::{PathBuf, Path};
 use super::window::AppMsg;
 use adw::prelude::*;
 use gettextrs::gettext;
 use nix_data::config::configfile::NixDataConfig;
 use relm4::*;
 use relm4_components::open_dialog::*;
+use std::path::{Path, PathBuf};
 
 #[tracker::track]
 #[derive(Debug)]
@@ -39,7 +39,7 @@ impl SimpleComponent for PreferencesPageModel {
 
     view! {
         adw::PreferencesWindow {
-			set_hide_on_close: true,
+            set_hide_on_close: true,
             set_transient_for: Some(&parent_window),
             set_modal: true,
             set_search_enabled: false,
@@ -63,14 +63,17 @@ impl SimpleComponent for PreferencesPageModel {
                                     },
                                     gtk::Label {
                                         #[watch]
-                                        set_label: {
-                                            let x = if let Some(configpath)  = &model.configpath { configpath.file_name().unwrap_or_default().to_str().unwrap_or_default() } else { "(None)" };
-                                            if x.is_empty() {
-                                                "(None)"
-                                            } else {
-                                                x
-                                            }
-                                        }
+                                        set_label: &model // T1
+                                            .configpath // Option<T2>
+                                            .as_ref() // Option<&T2>
+                                            // Option<&T2> -|.and_then|-> (&T2 -> Option<T5>) -> Option<T5>
+                                            .and_then(|cp| { // cp = &T2
+                                                cp.file_name() // Option<&T3>
+                                                    .and_then(|st| st.to_str()) // Option<&T3> -|.and_then|-> (&T3 -> Option<&T4>) -> Option<&T4>
+                                                    .map(|st| st.to_string()) // Option<&T4> -> (&T4 -> T5) -> Option<T5>
+                                            })
+                                            // Option<T5> -|.unwrap_or(T5)|-> T5
+                                            .unwrap_or(gettext("(None)"))
                                     }
                                 },
                                 connect_clicked[sender] => move |_| {
@@ -121,18 +124,12 @@ impl SimpleComponent for PreferencesPageModel {
                                     },
                                     gtk::Label {
                                         #[watch]
-                                        set_label: {
-                                            let x = if let Some(f) = &model.flake {
-                                                f.file_name().unwrap_or_default().to_str().unwrap_or_default()
-                                            } else {
-                                                ""
-                                            };
-                                            if x.is_empty() {
-                                                "(None)"
-                                            } else {
-                                                x
-                                            }
-                                        }
+                                        set_label: model.flake
+                                          .as_ref()
+                                          .and_then(
+                                            |path| path.file_name()
+                                              .and_then(|file_name| file_name.to_str())
+                                          ).unwrap_or(&gettext("(None)"))
                                     }
                                 },
                                 connect_clicked[sender] => move |_| {
@@ -151,7 +148,7 @@ impl SimpleComponent for PreferencesPageModel {
                     add = &adw::EntryRow {
                         #[watch]
                         set_visible: model.flake.is_some(),
-                        set_title: "Flake arguments (--flake path/to/flake.nix#ENTRY)",
+                        set_title: &gettext("Flake arguments (--flake path/to/flake.nix#ENTRY)"),
                         set_use_markup: false,
                         connect_changed[sender] => move |x| {
                             sender.input(PreferencesPageMsg::SetFlakeArg({
@@ -217,7 +214,9 @@ impl SimpleComponent for PreferencesPageModel {
             PreferencesPageMsg::OpenFlake => self.flake_file_dialog.emit(OpenDialogMsg::Open),
             PreferencesPageMsg::SetConfigPath(path) => {
                 self.configpath = path.clone();
-                sender.output(AppMsg::UpdateSysconfig(path.map(|x| x.to_string_lossy().to_string())));
+                let _ = sender.output(AppMsg::UpdateSysconfig(
+                    path.map(|x| x.to_string_lossy().to_string()),
+                ));
             }
             PreferencesPageMsg::SetFlakePath(path) => {
                 self.flake = path;
@@ -228,7 +227,10 @@ impl SimpleComponent for PreferencesPageModel {
                 sender.input(PreferencesPageMsg::ModifyFlake)
             }
             PreferencesPageMsg::ModifyFlake => {
-                sender.output(AppMsg::UpdateFlake(self.flake.as_ref().map(|x| x.to_string_lossy().to_string()), self.flakearg.clone()));
+                let _ = sender.output(AppMsg::UpdateFlake(
+                    self.flake.as_ref().map(|x| x.to_string_lossy().to_string()),
+                    self.flakearg.clone(),
+                ));
             }
             _ => {}
         }
