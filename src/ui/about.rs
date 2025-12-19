@@ -1,5 +1,6 @@
 use adw::prelude::*;
 use relm4::*;
+use gettextrs::gettext;
 
 use crate::config;
 
@@ -40,8 +41,8 @@ impl SimpleComponent for AboutPageModel {
     fn update_view(&self, dialog: &mut Self::Widgets, _sender: ComponentSender<Self>) {
         let dialog = adw::AboutWindow::builder()
             .application_icon(config::APP_ID)
-            .application_name("Nix Software Center")
-            .developer_name("Xinux Developers")
+            .application_name(gettext("Nix Software Center"))
+            .developer_name(gettext("Xinux Developers"))
             .developers(vec![
                 "Orzklv https://github.com/orzklv",
                 "Victor Fuentes https://github.com/vlinkz",

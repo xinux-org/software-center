@@ -1,7 +1,9 @@
 use adw::gio;
 use adw::prelude::*;
+use gettextrs::gettext;
 use html2pango;
 use image::{imageops::FilterType, ImageFormat};
+use log::*;
 use nix_data::config::configfile::NixDataConfig;
 use relm4::actions::RelmAction;
 use relm4::actions::RelmActionGroup;
@@ -21,7 +23,6 @@ use std::{
     path::Path,
     time::Duration,
 };
-use log::*;
 
 use crate::parse::packages::PkgMaintainer;
 use crate::parse::util;
@@ -32,8 +33,6 @@ use super::installworker::InstallAsyncHandlerInit;
 use super::window::SystemPkgs;
 use super::window::UserPkgs;
 use super::{screenshotfactory::ScreenshotItem, window::AppMsg};
-
-use gettextrs::gettext;
 
 #[tracker::track]
 #[derive(Debug)]
@@ -88,9 +87,8 @@ pub enum NotifyPage {
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub enum PkgAction {
     Install,
-    Remove
+    Remove,
 }
-
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Launch {
@@ -162,7 +160,7 @@ pub enum PkgMsg {
     NixShell,
     SetInstallType(InstallType),
     AddToQueue(WorkPkg),
-    UpdateOnline(bool)
+    UpdateOnline(bool),
 }
 
 #[derive(Debug)]
@@ -176,7 +174,7 @@ pub struct PkgPageInit {
     pub syspkgs: SystemPkgs,
     pub userpkgs: UserPkgs,
     pub config: NixDataConfig,
-    pub online: bool
+    pub online: bool,
 }
 
 #[relm4::component(pub)]
@@ -212,21 +210,21 @@ impl Component for PkgModel {
                     set_visible: model.syspkgtype != SystemPkgs::None,
 
                     #[watch]
-                    set_label: match model.userpkgtype {
+                    set_label: &match model.userpkgtype {
                         UserPkgs::Env => {
                             match model.installtype {
-                                InstallType::User => "User (nix-env)",
-                                InstallType::System => "System (configuration.nix)",
+                                InstallType::User => gettext("User (nix-env)"),
+                                InstallType::System => gettext("System (configuration.nix)"),
                             }
                         }
                         UserPkgs::Profile => {
                             match model.installtype {
-                                InstallType::User => "User (nix profile)",
-                                InstallType::System => "System (configuration.nix)",
+                                InstallType::User =>  gettext("User (nix profile)"),
+                                InstallType::System => gettext("System (configuration.nix)"),
                             }
                         }
                     },
-                        
+
                     #[wrap(Some)]
                     set_popover = &gtk::PopoverMenu::from_model(Some(&match model.userpkgtype {
                         UserPkgs::Env => installtype,
@@ -308,7 +306,7 @@ impl Component for PkgModel {
                                             set_wrap_mode: pango::WrapMode::WordChar,
                                             set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
                                             #[watch]
-                                            set_label: &model.version.clone().unwrap_or_else(|| "Unknown".to_string()),
+                                            set_label: &model.version.clone().unwrap_or_else(||  gettext("Unknown").to_string()),
                                         },
                                     },
                                 },
@@ -342,7 +340,7 @@ impl Component for PkgModel {
                                                                     sender.input(PkgMsg::Cancel)
                                                                 },
                                                             }
-                                                        }                                                   
+                                                        }
                                                     } else if model.installeduserpkgs.contains(match model.userpkgtype { UserPkgs::Env => &model.pname, UserPkgs::Profile => &model.pkg }) {
                                                         gtk::Box {
                                                             set_halign: gtk::Align::End,
@@ -356,7 +354,7 @@ impl Component for PkgModel {
                                                                 set_can_focus: false,
                                                                 set_width_request: 105,
                                                                 #[watch]
-                                                                set_label: if model.launchable.is_some() { "Open" } else { "Installed" },
+                                                                set_label: &if model.launchable.is_some() {  gettext("Open")} else {  gettext("Installed") },
                                                                 #[watch]
                                                                 set_sensitive: model.launchable.is_some(),
                                                                 connect_clicked[sender] => move |_| {
@@ -401,7 +399,7 @@ impl Component for PkgModel {
                                                                 set_valign: gtk::Align::Center,
                                                                 set_icon_name: "nsc-refresh-symbolic",
                                                                 connect_clicked[sender] => move |_| {
-                                                                    sender.output(AppMsg::CheckNetwork);
+                                                                    let _ = sender.output(AppMsg::CheckNetwork);
                                                                 }
                                                             }
                                                         }
@@ -450,7 +448,7 @@ impl Component for PkgModel {
                                                                     sender.input(PkgMsg::Cancel)
                                                                 },
                                                             }
-                                                        }                                                   
+                                                        }
                                                     } else if model.installedsystempkgs.contains(&model.pkg) {
                                                         gtk::Box {
                                                             set_halign: gtk::Align::End,
@@ -464,7 +462,7 @@ impl Component for PkgModel {
                                                                 set_can_focus: false,
                                                                 set_width_request: 105,
                                                                 #[watch]
-                                                                set_label: if model.launchable.is_some() { "Open" } else { "Installed" },
+                                                                set_label: &if model.launchable.is_some() {  gettext("Open") } else {  gettext("Installed") },
                                                                 #[watch]
                                                                 set_sensitive: model.launchable.is_some(),
                                                                 connect_clicked[sender] => move |_| {
@@ -509,7 +507,7 @@ impl Component for PkgModel {
                                                                 set_valign: gtk::Align::Center,
                                                                 set_icon_name: "nsc-refresh-symbolic",
                                                                 connect_clicked[sender] => move |_| {
-                                                                    sender.output(AppMsg::CheckNetwork);
+                                                                    let _ = sender.output(AppMsg::CheckNetwork);
                                                                 }
                                                             }
                                                         }
@@ -621,7 +619,7 @@ impl Component for PkgModel {
                                             let w = scrnfactory.nth_page(i+1);
                                             scrnfactory.scroll_to(&w, true);
                                         }
-                                        let n = scrnfactory.n_pages() as u32;
+                                        let n = scrnfactory.n_pages();
                                         if i == n - 2 {
                                             sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
                                         } else if i <= n - 2 {
@@ -772,7 +770,7 @@ impl Component for PkgModel {
                                                 set_css_classes: &[ if model.licenses.iter().any(|x| x.free == Some(false)) { "error" } else if model.licenses.iter().all(|x| x.free == Some(true)) { "success" } else { "warning" } ],
                                                 set_halign: gtk::Align::Center,
                                                 #[watch]
-                                                set_icon_name : if model.licenses.iter().any(|x| x.free == Some(false)) { Some("dialog-warning-symbolic") } else if model.licenses.iter().all(|x| x.free == Some(true)) { Some("emblem-default-symbolic") } else { Some("dialog-question-symbolic") },
+                                                set_icon_name: if model.licenses.iter().any(|x| x.free == Some(false)) { Some("dialog-warning-symbolic") } else if model.licenses.iter().all(|x| x.free == Some(true)) { Some("emblem-default-symbolic") } else { Some("dialog-question-symbolic") },
                                                 set_pixel_size: 24,
                                             },
                                             gtk::Box {
@@ -784,7 +782,7 @@ impl Component for PkgModel {
                                                     set_halign: gtk::Align::Center,
                                                     add_css_class: "heading",
                                                     #[watch]
-                                                    set_label: if model.licenses.len() > 1 { "Licenses" } else { "License" }
+                                                    set_label: &if model.licenses.len() > 1 { gettext("Licenses") } else { gettext("License") }
                                                 },
                                                 gtk::Label {
                                                     set_halign: gtk::Align::Fill,
@@ -806,7 +804,7 @@ impl Component for PkgModel {
                                                                 } else {
                                                                     s.push_str(&license.fullname)
                                                                 }
-                                                            } else if model.licenses.iter().len() == 2 && model.licenses.get(0) == Some(license) {
+                                                            } else if model.licenses.iter().len() == 2 && model.licenses.first() == Some(license) {
                                                                 if let Some(id) = &license.spdxid {
                                                                     let _ = write!(s, "{} ", id);
                                                                 } else {
@@ -825,7 +823,7 @@ impl Component for PkgModel {
                                                             }
                                                         }
                                                         if model.licenses.is_empty() {
-                                                            s.push_str("Unknown");
+                                                            s.push_str(&gettext("Unknown"));
                                                         }
                                                         &s.to_string()
                                                     },
@@ -883,7 +881,7 @@ impl Component for PkgModel {
                                                         for p in model.platforms.iter() {
                                                             if model.platforms.iter().len() == 1 {
                                                                 s.push_str(p);
-                                                            } else if model.platforms.iter().len() == 2 && model.platforms.get(0) == Some(p) {
+                                                            } else if model.platforms.iter().len() == 2 && model.platforms.first() == Some(p) {
                                                                 let _ = write!(s, "{} ", p);
                                                             } else if Some(p) == model.platforms.iter().last() {
                                                                 let _ = write!(s, "and {}", p);
@@ -892,7 +890,7 @@ impl Component for PkgModel {
                                                             }
                                                         }
                                                         if model.platforms.is_empty() {
-                                                            s.push_str("Unknown");
+                                                            s.push_str(&gettext("Unknown"));
                                                         }
                                                         &s.to_string()
                                                     },
@@ -929,7 +927,7 @@ impl Component for PkgModel {
                                                     set_halign: gtk::Align::Center,
                                                     add_css_class: "heading",
                                                     #[watch]
-                                                    set_label: if model.maintainers.len() > 1 { "Maintainers" } else { "Maintainer" }
+                                                    set_label: &if model.maintainers.len() > 1 { gettext("Maintainers") } else { gettext("Maintainer") }
                                                 },
                                                 gtk::Label {
                                                     set_halign: gtk::Align::Fill,
@@ -952,7 +950,7 @@ impl Component for PkgModel {
                                                                 } else if let Some(g) = &p.github {
                                                                     s.push_str(g);
                                                                 }
-                                                            } else if maintainerlist.len() == 2 && model.maintainers.get(0) == Some(p) {
+                                                            } else if maintainerlist.len() == 2 && model.maintainers.first() == Some(p) {
                                                                 if let Some(n) = &p.name {
                                                                     let _ = write!(s, "{} ", n.as_str());
                                                                 } else if let Some(g) = &p.github {
@@ -971,7 +969,7 @@ impl Component for PkgModel {
                                                             }
                                                         }
                                                         if model.maintainers.is_empty() {
-                                                            s.push_str("Unknown");
+                                                            s.push_str(&gettext("Unknown"));
                                                         }
                                                         &s.to_string()
                                                     }
@@ -1013,7 +1011,10 @@ impl Component for PkgModel {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let installworker = InstallAsyncHandler::builder()
-            .detach_worker(InstallAsyncHandlerInit { syspkgs: initparams.syspkgs.clone(), userpkgs: initparams.userpkgs.clone() })
+            .detach_worker(InstallAsyncHandlerInit {
+                syspkgs: initparams.syspkgs.clone(),
+                userpkgs: initparams.userpkgs.clone(),
+            })
             .forward(sender.input_sender(), identity);
         let config = initparams.config;
         installworker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
@@ -1099,9 +1100,7 @@ impl Component for PkgModel {
 
         let termaction: RelmAction<TermShellAction> = {
             let sender = sender;
-            RelmAction::new_stateless(move |_| {
-                sender.input(PkgMsg::NixShell)
-            })
+            RelmAction::new_stateless(move |_| sender.input(PkgMsg::NixShell))
         };
 
         rungroup.add_action(launchaction);
@@ -1120,15 +1119,16 @@ impl Component for PkgModel {
         match msg {
             PkgMsg::UpdateConfig(config) => {
                 self.config = config.clone();
-                self.installworker.emit(InstallAsyncHandlerMsg::SetConfig(config));
+                self.installworker
+                    .emit(InstallAsyncHandlerMsg::SetConfig(config));
             }
             PkgMsg::UpdatePkgTypes(syspkgs, userpkgs) => {
                 self.syspkgtype = syspkgs.clone();
                 self.userpkgtype = userpkgs.clone();
-                self.installworker.emit(InstallAsyncHandlerMsg::SetPkgTypes(syspkgs, userpkgs));
+                self.installworker
+                    .emit(InstallAsyncHandlerMsg::SetPkgTypes(syspkgs, userpkgs));
             }
             PkgMsg::Open(pkgmodel) => {
-
                 // First clean up from previous package
                 self.summary = None;
                 self.description = None;
@@ -1149,7 +1149,12 @@ impl Component for PkgModel {
                 self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
 
-                if self.installedsystempkgs.contains(&self.pkg) && !self.installeduserpkgs.contains(match self.userpkgtype { UserPkgs::Env => &self.pname, UserPkgs::Profile => &self.pkg }) {
+                if self.installedsystempkgs.contains(&self.pkg)
+                    && !self.installeduserpkgs.contains(match self.userpkgtype {
+                        UserPkgs::Env => &self.pname,
+                        UserPkgs::Profile => &self.pkg,
+                    })
+                {
                     self.set_installtype(InstallType::System)
                 } else {
                     self.set_installtype(InstallType::User)
@@ -1157,7 +1162,10 @@ impl Component for PkgModel {
 
                 self.launchable = if let Some(l) = pkgmodel.launchable {
                     Some(Launch::GtkApp(l))
-                } else if self.installeduserpkgs.contains(match self.userpkgtype { UserPkgs::Env => &self.pname, UserPkgs::Profile => &self.pkg }) {
+                } else if self.installeduserpkgs.contains(match self.userpkgtype {
+                    UserPkgs::Env => &self.pname,
+                    UserPkgs::Profile => &self.pkg,
+                }) {
                     if let Ok(o) = Command::new("command").arg("-v").arg(&self.pname).output() {
                         if o.status.success() {
                             Some(Launch::TerminalApp(self.pname.to_string()))
@@ -1289,7 +1297,7 @@ impl Component for PkgModel {
                                                                     }
                                                                     Ok(())
                                                                 }
-    
+
                                                                 match openimg(&scrnpath) {
                                                                     Ok(_) => {
                                                                         out.send(PkgAsyncMsg::LoadScreenshot(
@@ -1307,7 +1315,7 @@ impl Component for PkgModel {
                                                         }
                                                     } else {
                                                         out.send(PkgAsyncMsg::SetError(pkg, i));
-                                                        warn!("Error: {}", response.status());    
+                                                        warn!("Error: {}", response.status());
                                                     }
                                                 } else {
                                                     out.send(PkgAsyncMsg::SetError(pkg, i));
@@ -1437,46 +1445,54 @@ impl Component for PkgModel {
                 self.workqueue.remove(&work);
                 trace!("WORK QUEUE: {}", self.workqueue.len());
                 match work.pkgtype {
-                    InstallType::User => {
-                        match work.action {
-                            PkgAction::Install => {
-                                match self.userpkgtype {
-                                    UserPkgs::Env => self.installeduserpkgs.insert(work.pname.to_string()),
-                                    UserPkgs::Profile => self.installeduserpkgs.insert(work.pkg.to_string()),
-                                };
-                                if self.launchable.is_none() {
-                                    if let Ok(o) = Command::new("command").arg("-v").arg(&self.pname).output() {
-                                        if o.status.success() {
-                                            self.set_launchable(Some(Launch::TerminalApp(self.pname.to_string())))
-                                        }
+                    InstallType::User => match work.action {
+                        PkgAction::Install => {
+                            match self.userpkgtype {
+                                UserPkgs::Env => {
+                                    self.installeduserpkgs.insert(work.pname.to_string())
+                                }
+                                UserPkgs::Profile => {
+                                    self.installeduserpkgs.insert(work.pkg.to_string())
+                                }
+                            };
+                            if self.launchable.is_none() {
+                                if let Ok(o) =
+                                    Command::new("command").arg("-v").arg(&self.pname).output()
+                                {
+                                    if o.status.success() {
+                                        self.set_launchable(Some(Launch::TerminalApp(
+                                            self.pname.to_string(),
+                                        )))
                                     }
                                 }
                             }
-                            PkgAction::Remove => {
-                                match self.userpkgtype {
-                                    UserPkgs::Env => self.installeduserpkgs.remove(&work.pname),
-                                    UserPkgs::Profile => self.installeduserpkgs.remove(&work.pkg),
-                                };
-                            }
                         }
-                    }
-                    InstallType::System => {
-                        match work.action {
-                            PkgAction::Install => {
-                                self.installedsystempkgs.insert(work.pkg.clone());
-                                if self.launchable.is_none() {
-                                    if let Ok(o) = Command::new("command").arg("-v").arg(&self.pname).output() {
-                                        if o.status.success() {
-                                            self.set_launchable(Some(Launch::TerminalApp(self.pname.to_string())))
-                                        }
+                        PkgAction::Remove => {
+                            match self.userpkgtype {
+                                UserPkgs::Env => self.installeduserpkgs.remove(&work.pname),
+                                UserPkgs::Profile => self.installeduserpkgs.remove(&work.pkg),
+                            };
+                        }
+                    },
+                    InstallType::System => match work.action {
+                        PkgAction::Install => {
+                            self.installedsystempkgs.insert(work.pkg.clone());
+                            if self.launchable.is_none() {
+                                if let Ok(o) =
+                                    Command::new("command").arg("-v").arg(&self.pname).output()
+                                {
+                                    if o.status.success() {
+                                        self.set_launchable(Some(Launch::TerminalApp(
+                                            self.pname.to_string(),
+                                        )))
                                     }
                                 }
                             }
-                            PkgAction::Remove => {
-                                self.installedsystempkgs.remove(&work.pkg);
-                            }
                         }
-                    }
+                        PkgAction::Remove => {
+                            self.installedsystempkgs.remove(&work.pkg);
+                        }
+                    },
                 }
                 sender.output(AppMsg::UpdateInstalledPkgs);
                 if let Some(n) = &work.notify {
@@ -1486,10 +1502,11 @@ impl Component for PkgModel {
                         }
                     }
                 }
-                
+
                 if !self.workqueue.is_empty() {
                     if let Some(w) = self.workqueue.clone().iter().next() {
-                        self.installworker.emit(InstallAsyncHandlerMsg::Process(w.clone()));
+                        self.installworker
+                            .emit(InstallAsyncHandlerMsg::Process(w.clone()));
                     }
                 }
             }
@@ -1504,7 +1521,8 @@ impl Component for PkgModel {
                 }
                 if !self.workqueue.is_empty() {
                     if let Some(w) = self.workqueue.clone().iter().next() {
-                        self.installworker.emit(InstallAsyncHandlerMsg::Process(w.clone()));
+                        self.installworker
+                            .emit(InstallAsyncHandlerMsg::Process(w.clone()));
                     }
                 }
             }
@@ -1512,9 +1530,9 @@ impl Component for PkgModel {
                 // If running, cancel the current process
                 if let Some(h) = self.workqueue.iter().next() {
                     if h.pkg == self.pkg {
-                        self.installworker.
-                        emit(InstallAsyncHandlerMsg::CancelProcess);
-                        return
+                        self.installworker
+                            .emit(InstallAsyncHandlerMsg::CancelProcess);
+                        return;
                     }
                 }
 
@@ -1530,7 +1548,7 @@ impl Component for PkgModel {
                 if let Some(h) = self.workqueue.clone().iter().next() {
                     if h.pkg == self.pkg {
                         self.workqueue.remove(h);
-                        return
+                        return;
                     }
                 }
 
@@ -1556,20 +1574,19 @@ impl Component for PkgModel {
             PkgMsg::NixRun => {
                 if let Some(l) = &self.launchable {
                     match l {
-                        Launch::GtkApp(x) => {
-                            match self.userpkgtype {
-                                UserPkgs::Env => {
-                                    debug!("Launching {} with nix-shell", x);
-                                    let _ = Command::new("nix-shell")
+                        Launch::GtkApp(x) => match self.userpkgtype {
+                            UserPkgs::Env => {
+                                debug!("Launching {} with nix-shell", x);
+                                let _ = Command::new("nix-shell")
                                         .arg("-p")
                                         .arg(&self.pkg)
                                         .arg("--command")
                                         .arg(&format!("XDG_DATA_DIRS=$XDG_DATA_DIRS:$buildInputs/share gtk-launch {}", x))
                                         .spawn();
-                                }
-                                UserPkgs::Profile => {
-                                    debug!("Launching {} with nix shell", x);
-                                    let _ = Command::new("nix")
+                            }
+                            UserPkgs::Profile => {
+                                debug!("Launching {} with nix shell", x);
+                                let _ = Command::new("nix")
                                         .arg("shell")
                                         .arg(&format!("nixpkgs#{}", self.pkg))
                                         .arg("--command")
@@ -1577,16 +1594,18 @@ impl Component for PkgModel {
                                         .arg("-c")
                                         .arg(&format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.pkg, x))
                                         .spawn();
-                                }
                             }
-                        }
+                        },
                         Launch::TerminalApp(x) => {
                             let cmd = match self.userpkgtype {
                                 UserPkgs::Env => {
                                     format!("nix-shell -p {} --command \"{}; $SHELL\"", self.pkg, x)
                                 }
                                 UserPkgs::Profile => {
-                                    format!("nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"", self.pkg, x)
+                                    format!(
+                                        "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
+                                        self.pkg, x
+                                    )
                                 }
                             };
                             launchterm(&cmd);
@@ -1595,10 +1614,16 @@ impl Component for PkgModel {
                 } else {
                     let cmd = match self.userpkgtype {
                         UserPkgs::Env => {
-                            format!("nix-shell -p {} --command \"{}; $SHELL\"", self.pkg, self.pname)
+                            format!(
+                                "nix-shell -p {} --command \"{}; $SHELL\"",
+                                self.pkg, self.pname
+                            )
                         }
                         UserPkgs::Profile => {
-                            format!("nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"", self.pkg, self.pname)
+                            format!(
+                                "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
+                                self.pkg, self.pname
+                            )
                         }
                     };
                     launchterm(&cmd);
@@ -1621,7 +1646,8 @@ impl Component for PkgModel {
             PkgMsg::AddToQueue(work) => {
                 self.workqueue.insert(work.clone());
                 if self.workqueue.len() == 1 {
-                    self.installworker.emit(InstallAsyncHandlerMsg::Process(work));
+                    self.installworker
+                        .emit(InstallAsyncHandlerMsg::Process(work));
                 }
             }
             PkgMsg::UpdateOnline(online) => {
@@ -1630,7 +1656,12 @@ impl Component for PkgModel {
         }
     }
 
-    fn update_cmd(&mut self, msg: Self::CommandOutput, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update_cmd(
+        &mut self,
+        msg: Self::CommandOutput,
+        sender: ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
         match msg {
             PkgAsyncMsg::LoadScreenshot(pkg, i, u) => {
                 sender.input(PkgMsg::LoadScreenshot(pkg, i, u));
