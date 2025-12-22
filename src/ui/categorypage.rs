@@ -1,8 +1,8 @@
 use super::{categories::PkgCategory, categorytile::CategoryTile, window::*};
 use adw::prelude::*;
+use gettextrs::gettext;
 use log::*;
 use relm4::{factory::*, *};
-use gettextrs::gettext;
 
 #[tracker::track]
 #[derive(Debug)]
@@ -53,13 +53,13 @@ impl Component for CategoryPageModel {
                 #[wrap(Some)]
                 set_title_widget = &gtk::Label {
                     #[watch]
-                    set_label: match model.category {
-                        PkgCategory::Audio => "Audio",
-                        PkgCategory::Development => "Development",
-                        PkgCategory::Games => "Games",
-                        PkgCategory::Graphics => "Graphics",
-                        PkgCategory::Web => "Web",
-                        PkgCategory::Video => "Video",
+                    set_label: &match model.category {
+                        PkgCategory::Audio => gettext("Audio"),
+                        PkgCategory::Development => gettext("Development"),
+                        PkgCategory::Games => gettext("Games"),
+                        PkgCategory::Graphics => gettext("Graphics"),
+                        PkgCategory::Web => gettext("Web"),
+                        PkgCategory::Video => gettext("Video"),
                     },
                 },
             },
@@ -158,10 +158,10 @@ impl Component for CategoryPageModel {
         match msg {
             CategoryPageMsg::Close => {
                 sender.output(AppMsg::FrontFrontPage);
-            },
+            }
             CategoryPageMsg::OpenPkg(pkg) => {
                 sender.output(AppMsg::OpenPkg(pkg));
-            },
+            }
             CategoryPageMsg::Open(category, catrec, catall) => {
                 info!("CategoryPageMsg::Open");
                 self.set_category(category);

@@ -33,7 +33,7 @@ use std::{
 };
 
 use super::{
-    about::{AboutPageModel},
+    about::AboutPageModel,
     categories::{PkgCategory, PkgGroup},
     categorypage::{CategoryPageModel, CategoryPageMsg},
     categorytile::CategoryTile,
@@ -383,8 +383,8 @@ impl Component for AppModel {
 
     menu! {
         mainmenu: {
-            "Preferences" => PreferencesAction,
-            "About" => AboutAction,
+            &gettext("Preferences") => PreferencesAction,
+            &gettext("About") => AboutAction,
         }
     }
 
@@ -447,7 +447,7 @@ impl Component for AppModel {
             if Path::new(&format!("{}/.nix-profile/manifest.json", h)).exists()
                 || !Path::new("/nix/var/nix/profiles/per-user/root/channels/nixos").exists()
                 || !Path::new(&format!("{}/.nix-profile/manifest.nix", h)).exists()
-                || if let Ok(m) = fs::read_to_string(&format!("{}/.nix-profile/manifest.nix", h)) {
+                || if let Ok(m) = fs::read_to_string(format!("{}/.nix-profile/manifest.nix", h)) {
                     m == "[ ]"
                 } else {
                     false
@@ -470,7 +470,7 @@ impl Component for AppModel {
                         || config.flake.is_some()
                     {
                         SystemPkgs::Flake
-                    } else if let Some(last) = s.split('.').last() {
+                    } else if let Some(last) = s.split('.').next_back() {
                         if last.len() == 7 || last == "dirty" || last == "git" {
                             SystemPkgs::Flake
                         } else {
@@ -684,7 +684,7 @@ impl Component for AppModel {
                                 || self.config.flake.is_some()
                             {
                                 SystemPkgs::Flake
-                            } else if let Some(last) = s.split('.').last() {
+                            } else if let Some(last) = s.split('.').next_back() {
                                 if last.len() == 7 || last == "dirty" || last == "git" {
                                     SystemPkgs::Flake
                                 } else {
@@ -819,7 +819,7 @@ impl Component for AppModel {
                 sender.input(AppMsg::UpdateRecPkgs(recommendedapps));
                 let mut cat_guard = self.categories.guard();
                 cat_guard.clear();
-                for c in vec![
+                for c in [
                     PkgCategory::Audio,
                     PkgCategory::Development,
                     PkgCategory::Games,
@@ -996,7 +996,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 }
                             }
                             if let Some(l) = &data.launchable {
-                                if let Some(d) = l.desktopid.get(0) {
+                                if let Some(d) = l.desktopid.first() {
                                     launchable = Some(d.to_string());
                                 }
                             }
@@ -1242,14 +1242,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 HashMap::new()
                             }
                         }
-                        UserPkgs::Env => {
-                            let pkgs = nix_data::cache::channel::getenvpkgs();
-                            if let Ok(pkgs) = pkgs {
-                                pkgs
-                            } else {
-                                HashMap::new()
-                            }
-                        }
+                        UserPkgs::Env => nix_data::cache::channel::getenvpkgs().unwrap_or_default(),
                     };
                     AppAsyncMsg::UpdateInstalledPkgs(installedsystempkgs, installeduserpkgs)
                 });
@@ -1273,7 +1266,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         .unwrap();
 
                                 match possibleitems.len() {
-                                    // 
+                                    //
                                     0 => {
                                         let pkg_attr: String = installedpname.to_string();
                                         let pkg_data: sqlx::Result<(String, String)> = sqlx::query_as(
@@ -1448,7 +1441,10 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             }
                         }
                         UserPkgs::Profile => {
-                            warn!("UserPkgs::Profile is installeduserpkgs len: {:?}", self.installeduserpkgs.len());
+                            warn!(
+                                "UserPkgs::Profile is installeduserpkgs len: {:?}",
+                                self.installeduserpkgs.len()
+                            );
 
                             for installedpkg in self.installeduserpkgs.keys() {
                                 debug!("Checking package {}", installedpkg);
@@ -1621,10 +1617,10 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 updatesystemitems.insert(
                                     0,
                                     UpdateItem {
-                                        name: String::from("NixOS System"),
+                                        name: gettext("NixOS System"),
                                         pname: String::new(),
                                         pkg: None,
-                                        summary: Some(String::from(
+                                        summary: Some(gettext(
                                             "NixOS internal packages and modules",
                                         )),
                                         icon: None,
@@ -1637,15 +1633,15 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         }
                         SystemPkgs::Flake => {
                             if let Ok(Some((old, new))) = nix_data::cache::flakes::uptodate() {
-                              println!("old flake ver: {old:?}");
-                              println!("new flake ver: {new:?}");
+                                println!("old flake ver: {old:?}");
+                                println!("new flake ver: {new:?}");
                                 updatesystemitems.insert(
                                     0,
                                     UpdateItem {
-                                        name: String::from("NixOS System"),
+                                        name: gettext("NixOS System"),
                                         pname: String::new(),
                                         pkg: None,
-                                        summary: Some(String::from(
+                                        summary: Some(gettext(
                                             "NixOS internal packages and modules",
                                         )),
                                         icon: None,
@@ -1806,10 +1802,10 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 //         bpoints -= 1;
                                 //     }
                                 // }
-                                if appdata.get(&a.pkg).is_some() {
+                                if appdata.contains_key(&a.pkg) {
                                     apoints -= 5;
                                 }
-                                if appdata.get(&b.pkg).is_some() {
+                                if appdata.contains_key(&b.pkg) {
                                     bpoints -= 5;
                                 }
                                 apoints.cmp(&bpoints)

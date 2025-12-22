@@ -8,15 +8,23 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-19 15:22+0500\n"
-"PO-Revision-Date: 2025-09-19 15:22+0500\n"
+"POT-Creation-Date: 2025-12-22 18:32+0500\n"
+"PO-Revision-Date: 2025-12-22 19:28+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.6\n"
+
+#: src/ui/unavailabledialog.rs:39
+msgid "Some packages are unavailable!"
+msgstr ""
+
+#: src/ui/unavailabledialog.rs:40
+msgid "If you continue this update, some packages will be removed"
+msgstr ""
 
 #: src/ui/unavailabledialog.rs:48
 msgid "User Packages"
@@ -26,23 +34,40 @@ msgstr "Пользовательские пакеты"
 msgid "System Packages"
 msgstr "Системные пакеты"
 
+#: src/ui/unavailabledialog.rs:66 src/ui/pkgpage.rs:338 src/ui/pkgpage.rs:442
+msgid "Cancel"
+msgstr "Отменить"
+
+#: src/ui/unavailabledialog.rs:67 src/ui/welcome.rs:165
+msgid "Continue"
+msgstr "Продолжить"
+
 #: src/ui/preferencespage.rs:51 src/ui/welcome.rs:75
 msgid "Configuration file"
 msgstr "Файл конфигурации"
 
-#: src/ui/preferencespage.rs:89
+#: src/ui/preferencespage.rs:76 src/ui/preferencespage.rs:132
+#: src/ui/welcome.rs:91 src/ui/welcome.rs:96 src/ui/welcome.rs:137
+#: src/ui/welcome.rs:142
+msgid "(None)"
+msgstr ""
+
+#: src/ui/preferencespage.rs:92
 msgid "Use nix flakes"
 msgstr "Используйте флейк nix"
 
-#: src/ui/preferencespage.rs:107 src/ui/welcome.rs:120
+#: src/ui/preferencespage.rs:110 src/ui/welcome.rs:120
 msgid "Flake file"
 msgstr "Файл флейк"
 
-#: src/ui/preferencespage.rs:154
-msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
+#: src/ui/preferencespage.rs:151
+#, fuzzy
+#| msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
+msgid "Flake arguments (--flake path/to/flake.nix#ENTRY)"
 msgstr "Флейк аргументы (--flake path/to/flake.nix#<THIS ENTRY>)"
 
-#: src/ui/installedpage.rs:76 src/ui/updatepage.rs:167
+#: src/ui/installedpage.rs:78 src/ui/updatepage.rs:168 src/ui/pkgpage.rs:217
+#: src/ui/pkgpage.rs:223 src/ui/pkgpage.rs:996 src/ui/pkgpage.rs:1000
 msgid "System (configuration.nix)"
 msgstr "Система (configuration.nix)"
 
@@ -50,33 +75,85 @@ msgstr "Система (configuration.nix)"
 msgid "No internet connection"
 msgstr "Нет подключения к Интернету"
 
+#: src/ui/updatepage.rs:84
+msgid "Please connect to the internet to update your system"
+msgstr ""
+
 #: src/ui/updatepage.rs:90
 msgid "Refresh"
 msgstr "Обновить"
 
-#: src/ui/updatepage.rs:109 src/ui/window.rs:635
+#: src/ui/updatepage.rs:110 src/ui/window.rs:635
 msgid "Updates"
 msgstr "Обновления"
 
-#: src/ui/updatepage.rs:116
+#: src/ui/updatepage.rs:117
 msgid "Update Everything"
 msgstr "Обновить всё"
 
-#: src/ui/updatepage.rs:140
+#: src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216 src/ui/pkgpage.rs:995
+msgid "User (nix-env)"
+msgstr ""
+
+#: src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
+#, fuzzy
+#| msgid "Use nix flakes"
+msgid "User (nix profile)"
+msgstr "Используйте флейк nix"
+
+#: src/ui/updatepage.rs:141
 msgid "Update All"
 msgstr "Обновить все"
 
-#: src/ui/updatepage.rs:174
+#: src/ui/updatepage.rs:175
 msgid "Update"
 msgstr "Обновление"
 
-#: src/ui/updatepage.rs:209
+#: src/ui/updatepage.rs:210
 msgid "Everything is up to date!"
 msgstr "Всё актуально!"
 
-#: src/ui/welcome.rs:165
-msgid "Continue"
-msgstr "Продолжить"
+#: src/ui/categories.rs:67
+msgid "Audio"
+msgstr ""
+
+#: src/ui/categories.rs:68
+msgid "Development"
+msgstr ""
+
+#: src/ui/categories.rs:69
+msgid "Games"
+msgstr ""
+
+#: src/ui/categories.rs:70
+msgid "Graphics"
+msgstr ""
+
+#: src/ui/categories.rs:71
+msgid "Web"
+msgstr ""
+
+#: src/ui/categories.rs:72
+msgid "Video"
+msgstr ""
+
+#: src/ui/welcome.rs:62
+#, fuzzy
+#| msgid "Nix Software Center"
+msgid "Welcome the Nix Software Center!"
+msgstr "Центр программного обеспечения Nix"
+
+#: src/ui/welcome.rs:67
+msgid ""
+"If your configuration file is not in the default location, you can change it "
+"here."
+msgstr ""
+
+#: src/ui/welcome.rs:121
+msgid ""
+"If you are using flakes, you can specify the path to your flake.nix file "
+"here."
+msgstr ""
 
 #: src/ui/rebuild.rs:74
 msgid "Building..."
@@ -102,25 +179,62 @@ msgstr "Сборка не удалась! Сообщение об ошибке �
 msgid "Close"
 msgstr "Закрыть"
 
-#: src/ui/pkgpage.rs:340 src/ui/pkgpage.rs:444
-msgid "Cancel"
-msgstr "Отменить"
+#: src/ui/pkgpage.rs:309 src/ui/pkgpage.rs:826 src/ui/pkgpage.rs:893
+#: src/ui/pkgpage.rs:972
+msgid "Unknown"
+msgstr ""
 
-#: src/ui/pkgpage.rs:396 src/ui/pkgpage.rs:504
+#: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465
+msgid "Open"
+msgstr ""
+
+#: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465 src/ui/window.rs:634
+msgid "Installed"
+msgstr "Установлено"
+
+#: src/ui/pkgpage.rs:394 src/ui/pkgpage.rs:502
 msgid "Offline"
 msgstr "Офлайн"
 
-#: src/ui/pkgpage.rs:414 src/ui/pkgpage.rs:522
+#: src/ui/pkgpage.rs:412 src/ui/pkgpage.rs:520
 msgid "Install"
 msgstr "Установить"
 
-#: src/ui/pkgpage.rs:734
+#: src/ui/pkgpage.rs:732
 msgid "Homepage"
 msgstr "Главная страница"
 
-#: src/ui/pkgpage.rs:868
+#: src/ui/pkgpage.rs:785
+msgid "Licenses"
+msgstr ""
+
+#: src/ui/pkgpage.rs:785
+msgid "License"
+msgstr ""
+
+#: src/ui/pkgpage.rs:866
 msgid "Platforms"
 msgstr "Платформы"
+
+#: src/ui/pkgpage.rs:930
+msgid "Maintainers"
+msgstr ""
+
+#: src/ui/pkgpage.rs:930
+msgid "Maintainer"
+msgstr ""
+
+#: src/ui/pkgpage.rs:999
+msgid "User (nix-profile)"
+msgstr ""
+
+#: src/ui/pkgpage.rs:1003
+msgid "Run without installing"
+msgstr ""
+
+#: src/ui/pkgpage.rs:1004
+msgid "Open interactive shell"
+msgstr ""
 
 #: src/ui/window.rs:221 src/ui/window.rs:273
 msgid "Nix Software Center"
@@ -138,26 +252,34 @@ msgstr "Категории"
 msgid "Recommended"
 msgstr "Рекомендуется"
 
+#: src/ui/window.rs:386
+msgid "Preferences"
+msgstr ""
+
+#: src/ui/window.rs:387
+msgid "About"
+msgstr ""
+
 #: src/ui/window.rs:633
 msgid "Explore"
 msgstr "Исследовать"
 
-#: src/ui/window.rs:634
-msgid "Installed"
-msgstr "Установлено"
+#: src/ui/window.rs:1620 src/ui/window.rs:1641
+msgid "NixOS System"
+msgstr ""
 
-#: src/ui/window.rs:636
-msgid "explore"
-msgstr "исследовать"
+#: src/ui/window.rs:1624 src/ui/window.rs:1645
+msgid "NixOS internal packages and modules"
+msgstr ""
 
-#: src/ui/window.rs:637
-msgid "installed"
-msgstr "yстановлено"
+#~ msgid "explore"
+#~ msgstr "исследовать"
 
-#: src/ui/window.rs:638
-msgid "search"
-msgstr "поиск"
+#~ msgid "installed"
+#~ msgstr "yстановлено"
 
-#: src/ui/window.rs:639
-msgid "updates"
-msgstr "обновления"
+#~ msgid "search"
+#~ msgstr "поиск"
+
+#~ msgid "updates"
+#~ msgstr "обновления"

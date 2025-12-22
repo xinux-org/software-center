@@ -395,7 +395,7 @@ async fn runcmd(
                         .arg("flake")
                         .arg("--rebuild")
                         .arg("--flakepath")
-                        .arg(&flakepath)
+                        .arg(flakepath)
                         .arg("--generations")
                         .arg(config.generations.unwrap_or(0).to_string())
                         .arg("--output")
@@ -455,7 +455,7 @@ async fn updateprofile(rmpkgs: Option<Vec<String>>) -> Result<bool> {
                 .arg("profile")
                 .arg("remove")
                 .args(
-                    &rmpkgs
+                    rmpkgs
                         .iter()
                         .map(|x| format!("legacyPackages.x86_64-linux.{}", x))
                         .collect::<Vec<String>>(),
