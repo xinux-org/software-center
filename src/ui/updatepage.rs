@@ -81,7 +81,7 @@ impl SimpleComponent for UpdatePageModel {
                     adw::StatusPage {
                         set_icon_name: Some("nsc-network-offline-symbolic"),
                         set_title: &gettext("No internet connection"),
-                        set_description: Some("Please connect to the internet to update your system"),
+                        set_description: Some(&gettext("Please connect to the internet to update your system")),
                         gtk::Button {
                             add_css_class: "pill",
                             set_halign: gtk::Align::Center,
@@ -128,9 +128,9 @@ impl SimpleComponent for UpdatePageModel {
                             gtk::Label {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "title-4",
-                                set_label: match model.usertype {
-                                    UserPkgs::Env => "User (nix-env)",
-                                    UserPkgs::Profile => "User (nix profile)",
+                                set_label: &match model.usertype {
+                                    UserPkgs::Env => gettext("User (nix-env)"),
+                                    UserPkgs::Profile => gettext("User (nix profile)"),
                                 }
                             },
                             gtk::Button {

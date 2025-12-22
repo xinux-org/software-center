@@ -238,7 +238,7 @@ impl SimpleComponent for RebuildModel {
                 self.set_scheme(sourceview5::StyleSchemeManager::default().scheme(&scheme));
             }
             RebuildMsg::Quit => {
-                sender.output(AppMsg::Close);
+                let _ = sender.output(AppMsg::Close);
             }
         }
     }

@@ -4,6 +4,7 @@ use crate::parse::packages::appsteamdata;
 use crate::parse::packages::AppData;
 use crate::ui::categories::PkgCategory;
 use crate::ui::window::UserPkgs;
+use gettextrs::gettext;
 use log::*;
 use nix_data::config::configfile::NixDataConfig;
 use rand::prelude::SliceRandom;
@@ -81,32 +82,14 @@ impl Worker for WindowAsyncHandler {
                     };
 
                     let nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => {
-                            if let Ok(x) = nix_data::cache::profile::nixpkgslatest().await {
-                                Some(x)
-                            } else {
-                                None
-                            }
-                        }
+                        UserPkgs::Profile => nix_data::cache::profile::nixpkgslatest().await.ok(),
                         UserPkgs::Env => None,
                     };
 
                     let systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => {
-                            if let Ok(x) = nix_data::cache::channel::legacypkgs().await {
-                                Some(x)
-                            } else {
-                                None
-                            }
-                        }
-                        SystemPkgs::Flake => {
-                            if let Ok(x) = nix_data::cache::flakes::flakespkgs().await {
-                                Some(x)
-                            } else {
-                                None
-                            }
-                        }
+                        SystemPkgs::Legacy => nix_data::cache::channel::legacypkgs().await.ok(),
+                        SystemPkgs::Flake => nix_data::cache::flakes::flakespkgs().await.ok(),
                     };
 
                     let pkglist: Vec<(String,)> = match sqlx::query_as("SELECT attribute FROM pkgs")
@@ -117,7 +100,7 @@ impl Worker for WindowAsyncHandler {
                         Err(e) => {
                             error!("Error getting pkglist: {}", e);
                             let _ = sender.output(AppMsg::LoadError(
-                                String::from("Malformed package database"),
+                                gettext("Malformed package database"),
                                 e.to_string(),
                             ));
                             return;
@@ -135,7 +118,7 @@ impl Worker for WindowAsyncHandler {
                             Err(e) => {
                                 error!("Error getting package metadata: {}", e);
                                 let _ = sender.output(AppMsg::LoadError(
-                                    String::from("Malformed package database"),
+                                    gettext("Malformed package database"),
                                     e.to_string(),
                                 ));
                                 return;
@@ -146,7 +129,7 @@ impl Worker for WindowAsyncHandler {
                         Err(e) => {
                             error!("Error getting appdata: {}", e);
                             let _ = sender.output(AppMsg::LoadError(
-                                String::from("Error retrieving appstream data"),
+                                gettext("Error retrieving appstream data"),
                                 e.to_string(),
                             ));
                             return;
@@ -211,7 +194,7 @@ impl Worker for WindowAsyncHandler {
                         .map(|(x, y)| (x, if y.is_empty() { None } else { Some(y) }))
                         .collect::<HashMap<String, Option<String>>>();
 
-                    for category in vec![
+                    for category in [
                         PkgCategory::Audio,
                         PkgCategory::Development,
                         PkgCategory::Games,
@@ -382,7 +365,7 @@ impl Worker for WindowAsyncHandler {
                         let catagortypkgs = pkglist
                             .iter()
                             .filter(|x| {
-                                if appdata.get(*x).is_some() {
+                                if appdata.contains_key(*x) {
                                     if let Some(Some(position)) = &pospkgs.get(*x) {
                                         (position.starts_with("pkgs/applications/audio")
                                             && category == PkgCategory::Audio)
@@ -437,7 +420,7 @@ impl Worker for WindowAsyncHandler {
                     }
                     recpicks.shuffle(&mut rng);
 
-                    sender.output(AppMsg::Initialize(
+                    let _ = sender.output(AppMsg::Initialize(
                         pkgdb, nixpkgsdb, systemdb, appdata, recpicks, catpicks, catpkgs,
                     ));
                 });
@@ -451,8 +434,8 @@ impl Worker for WindowAsyncHandler {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting NixOS pkgs: {}", e);
-                                sender.output(AppMsg::LoadError(
-                                    String::from("Error retrieving NixOS package database"),
+                                let _ = sender.output(AppMsg::LoadError(
+                                    gettext("Error retrieving NixOS package database"),
                                     e.to_string(),
                                 ));
                                 return;
@@ -463,8 +446,8 @@ impl Worker for WindowAsyncHandler {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting nixpkgs: {}", e);
-                                sender.output(AppMsg::LoadError(
-                                    String::from("Error retrieving nixpkgs package database"),
+                                let _ = sender.output(AppMsg::LoadError(
+                                    gettext("Error retrieving nixpkgs package database"),
                                     e.to_string(),
                                 ));
                                 return;
@@ -473,32 +456,14 @@ impl Worker for WindowAsyncHandler {
                     };
 
                     let _nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => {
-                            if let Ok(x) = nix_data::cache::profile::nixpkgslatest().await {
-                                Some(x)
-                            } else {
-                                None
-                            }
-                        }
+                        UserPkgs::Profile => nix_data::cache::profile::nixpkgslatest().await.ok(),
                         UserPkgs::Env => None,
                     };
 
                     let _systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => {
-                            if let Ok(x) = nix_data::cache::channel::legacypkgs().await {
-                                Some(x)
-                            } else {
-                                None
-                            }
-                        }
-                        SystemPkgs::Flake => {
-                            if let Ok(x) = nix_data::cache::flakes::flakespkgs().await {
-                                Some(x)
-                            } else {
-                                None
-                            }
-                        }
+                        SystemPkgs::Legacy => nix_data::cache::channel::legacypkgs().await.ok(),
+                        SystemPkgs::Flake => nix_data::cache::flakes::flakespkgs().await.ok(),
                     };
                 });
             }
@@ -537,9 +502,9 @@ impl SimpleComponent for LoadErrorModel {
             set_secondary_text: Some(&model.msg2),
             set_use_markup: true,
             set_secondary_use_markup: true,
-            add_button: ("Retry", gtk::ResponseType::Accept),
+            add_button: (&gettext("Retry"), gtk::ResponseType::Accept),
             // add_button: ("Preferences", gtk::ResponseType::Help),
-            add_button: ("Quit", gtk::ResponseType::Close),
+            add_button: (&gettext("Quit"), gtk::ResponseType::Close),
             connect_response[sender] => move |_, resp| {
                 sender.input(match resp {
                     gtk::ResponseType::Accept => LoadErrorMsg::Retry,
@@ -584,10 +549,10 @@ impl SimpleComponent for LoadErrorModel {
             }
             LoadErrorMsg::Retry => {
                 self.hidden = true;
-                sender.output(AppMsg::TryLoad);
+                let _ = sender.output(AppMsg::TryLoad);
             }
             LoadErrorMsg::Close => {
-                sender.output(AppMsg::Close);
+                let _ = sender.output(AppMsg::Close);
             } // LoadErrorMsg::Preferences => sender.output(AppMsg::ShowPrefMenu),
         }
     }

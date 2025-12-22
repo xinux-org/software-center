@@ -36,7 +36,7 @@ impl SimpleComponent for UnavailableDialogModel {
             set_visible: !model.hidden,
             set_transient_for: Some(&parent_window),
             set_modal: true,
-            set_heading: Some("Some packages are unavailable!"),
+            set_heading: Some(&gettext("Some packages are unavailable!")),
             set_body: &gettext("If you continue this update, some packages will be removed"),
             #[wrap(Some)]
             set_extra_child = &gtk::Box {
@@ -63,8 +63,8 @@ impl SimpleComponent for UnavailableDialogModel {
                     },
                 }
             },
-            add_response: ("cancel", "Cancel"),
-            add_response: ("continue", "Continue"),
+            add_response: ("cancel", &gettext("Cancel")),
+            add_response: ("continue", &gettext("Continue")),
             set_response_appearance: ("continue", adw::ResponseAppearance::Destructive),
             connect_close_request => |_| {
                 gtk::Inhibit(true)
@@ -133,13 +133,13 @@ impl SimpleComponent for UnavailableDialogModel {
             UnavailableDialogMsg::Continue => {
                 match self.updatetype {
                     UpdateType::User => {
-                        sender.output(UpdatePageMsg::UpdateAllUserRm(self.unavailableuseritems.iter().map(|x| x.pkg.to_string()).collect()));
+                        let _ = sender.output(UpdatePageMsg::UpdateAllUserRm(self.unavailableuseritems.iter().map(|x| x.pkg.to_string()).collect()));
                     }
                     UpdateType::System => {
-                        sender.output(UpdatePageMsg::UpdateSystemRm(self.unavailablesysitems.iter().map(|x| x.pkg.to_string()).collect()));
+                        let _ = sender.output(UpdatePageMsg::UpdateSystemRm(self.unavailablesysitems.iter().map(|x| x.pkg.to_string()).collect()));
                     }
                     UpdateType::All => {
-                        sender.output(UpdatePageMsg::UpdateAllRm(self.unavailableuseritems.iter().map(|x| x.pkg.to_string()).collect(), self.unavailablesysitems.iter().map(|x| x.pkg.to_string()).collect()));
+                        let _ = sender.output(UpdatePageMsg::UpdateAllRm(self.unavailableuseritems.iter().map(|x| x.pkg.to_string()).collect(), self.unavailablesysitems.iter().map(|x| x.pkg.to_string()).collect()));
                     }
                 }
                 sender.input(UnavailableDialogMsg::Close)

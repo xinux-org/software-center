@@ -2,11 +2,7 @@ use anyhow::Result;
 use nix_data::config::configfile::NixDataConfig;
 
 pub fn getconfig() -> Option<NixDataConfig> {
-    if let Ok(c) = nix_data::config::configfile::getconfig() {
-        Some(c)
-    } else {
-        None
-    }
+    nix_data::config::configfile::getconfig().ok()
 }
 
 pub fn editconfig(config: NixDataConfig) -> Result<()> {

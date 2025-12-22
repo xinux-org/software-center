@@ -85,15 +85,15 @@ impl SimpleComponent for WelcomeModel {
                                     gtk::Label {
                                         #[watch]
                                         set_label: {
-                                            if let Some(path) = &model.confpath {
+                                            &if let Some(path) = &model.confpath {
                                                 let x = path.file_name().unwrap_or_default().to_str().unwrap_or_default();
                                                 if x.is_empty() {
-                                                    "(None)"
+                                                    gettext("(None)")
                                                 } else {
-                                                    x
+                                                    x.to_string()
                                                 }
                                             } else {
-                                                "(None)"
+                                                gettext("(None)")
                                             }
                                         }
                                     }
@@ -131,15 +131,15 @@ impl SimpleComponent for WelcomeModel {
                                     gtk::Label {
                                         #[watch]
                                         set_label: {
-                                            if let Some(path) = &model.flakepath {
+                                            &if let Some(path) = &model.flakepath {
                                                 let x = path.file_name().unwrap_or_default().to_str().unwrap_or_default();
                                                 if x.is_empty() {
-                                                    "(None)"
+                                                    gettext("(None)")
                                                 } else {
-                                                    x
+                                                    x.to_string()
                                                 }
                                             } else {
-                                                "(None)"
+                                                gettext("(None)")
                                             }
                                         }
                                     }
