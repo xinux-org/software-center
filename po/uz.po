@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-12-22 18:32+0500\n"
-"PO-Revision-Date: 2025-12-22 19:28+0500\n"
+"PO-Revision-Date: 2025-12-23 13:31+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uz@latin\n"
@@ -20,11 +20,11 @@ msgstr ""
 
 #: src/ui/unavailabledialog.rs:39
 msgid "Some packages are unavailable!"
-msgstr ""
+msgstr "Ayrim paketlar mavjud emas!"
 
 #: src/ui/unavailabledialog.rs:40
 msgid "If you continue this update, some packages will be removed"
-msgstr ""
+msgstr "Bu yangilanishda davom etsangiz, ayrim paketlar olib tashlanadi"
 
 #: src/ui/unavailabledialog.rs:48
 msgid "User Packages"
@@ -61,10 +61,8 @@ msgid "Flake file"
 msgstr "Flake fayli"
 
 #: src/ui/preferencespage.rs:151
-#, fuzzy
-#| msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
 msgid "Flake arguments (--flake path/to/flake.nix#ENTRY)"
-msgstr "Flake argumentlari (--flake path/to/flake.nix#<THIS ENTRY>)"
+msgstr "Flake arguments (--flake path/to/flake.nix#ENTRY)"
 
 #: src/ui/installedpage.rs:78 src/ui/updatepage.rs:168 src/ui/pkgpage.rs:217
 #: src/ui/pkgpage.rs:223 src/ui/pkgpage.rs:996 src/ui/pkgpage.rs:1000
@@ -77,7 +75,7 @@ msgstr "Internetga ulanmagansiz"
 
 #: src/ui/updatepage.rs:84
 msgid "Please connect to the internet to update your system"
-msgstr ""
+msgstr "Tizimni yangilash uchun internetga ulaning"
 
 #: src/ui/updatepage.rs:90
 msgid "Refresh"
@@ -93,13 +91,11 @@ msgstr "Barchasini yangilash"
 
 #: src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216 src/ui/pkgpage.rs:995
 msgid "User (nix-env)"
-msgstr ""
+msgstr "Foydalanuvchi (nix-env)"
 
 #: src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
-#, fuzzy
-#| msgid "Use nix flakes"
 msgid "User (nix profile)"
-msgstr "Nix flakes'dan foydalaning"
+msgstr "Foydalanuvchi (nix profile)"
 
 #: src/ui/updatepage.rs:141
 msgid "Update All"
@@ -115,45 +111,47 @@ msgstr "Hammasi yangi!"
 
 #: src/ui/categories.rs:67
 msgid "Audio"
-msgstr ""
+msgstr "Audio"
 
 #: src/ui/categories.rs:68
 msgid "Development"
-msgstr ""
+msgstr "Ishlab chiqish"
 
 #: src/ui/categories.rs:69
 msgid "Games"
-msgstr ""
+msgstr "O‘yinlar"
 
 #: src/ui/categories.rs:70
 msgid "Graphics"
-msgstr ""
+msgstr "Grafika"
 
 #: src/ui/categories.rs:71
 msgid "Web"
-msgstr ""
+msgstr "Veb"
 
 #: src/ui/categories.rs:72
 msgid "Video"
-msgstr ""
+msgstr "Video"
 
 #: src/ui/welcome.rs:62
-#, fuzzy
-#| msgid "Nix Software Center"
 msgid "Welcome the Nix Software Center!"
-msgstr "Nix dasturiy ta'minot markazi"
+msgstr "Nix dasturiy ta’minot markaziga xush kelibsiz!"
 
 #: src/ui/welcome.rs:67
 msgid ""
 "If your configuration file is not in the default location, you can change it "
 "here."
 msgstr ""
+"Agar konfiguratsiya faylingiz birlamchi joylashuvda boʻlmasa, uni bu yerda "
+"oʻzgartirishingiz mumkin."
 
 #: src/ui/welcome.rs:121
 msgid ""
 "If you are using flakes, you can specify the path to your flake.nix file "
 "here."
 msgstr ""
+"Agar flakes ishlatayotgan bo‘lsangiz, bu yerda flake.nix fayliga yo‘lni "
+"ko‘rsatishingiz mumkin."
 
 #: src/ui/rebuild.rs:74
 msgid "Building..."
@@ -184,11 +182,11 @@ msgstr "Yopish"
 #: src/ui/pkgpage.rs:309 src/ui/pkgpage.rs:826 src/ui/pkgpage.rs:893
 #: src/ui/pkgpage.rs:972
 msgid "Unknown"
-msgstr ""
+msgstr "Noaniq"
 
 #: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465
 msgid "Open"
-msgstr ""
+msgstr "Ochish"
 
 #: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465 src/ui/window.rs:634
 msgid "Installed"
@@ -208,11 +206,11 @@ msgstr "Bosh sahifa"
 
 #: src/ui/pkgpage.rs:785
 msgid "Licenses"
-msgstr ""
+msgstr "Litsenziyalar"
 
 #: src/ui/pkgpage.rs:785
 msgid "License"
-msgstr ""
+msgstr "Litsenziya"
 
 #: src/ui/pkgpage.rs:866
 msgid "Platforms"
@@ -220,23 +218,19 @@ msgstr "Platformalar"
 
 #: src/ui/pkgpage.rs:930
 msgid "Maintainers"
-msgstr ""
+msgstr "Ta’minotchilar"
 
 #: src/ui/pkgpage.rs:930
 msgid "Maintainer"
-msgstr ""
-
-#: src/ui/pkgpage.rs:999
-msgid "User (nix-profile)"
-msgstr ""
+msgstr "Ta’minotchi"
 
 #: src/ui/pkgpage.rs:1003
 msgid "Run without installing"
-msgstr ""
+msgstr "O‘rnatmasdan ishga tushirish"
 
 #: src/ui/pkgpage.rs:1004
 msgid "Open interactive shell"
-msgstr ""
+msgstr "Terminalda ochish"
 
 #: src/ui/window.rs:221 src/ui/window.rs:273
 msgid "Nix Software Center"
@@ -256,11 +250,11 @@ msgstr "Tavsiya etiladi"
 
 #: src/ui/window.rs:386
 msgid "Preferences"
-msgstr ""
+msgstr "Afzalliklar"
 
 #: src/ui/window.rs:387
 msgid "About"
-msgstr ""
+msgstr "Haqida"
 
 #: src/ui/window.rs:633
 msgid "Explore"
@@ -268,11 +262,11 @@ msgstr "Kezish"
 
 #: src/ui/window.rs:1620 src/ui/window.rs:1641
 msgid "NixOS System"
-msgstr ""
+msgstr "NixOS tizimi"
 
 #: src/ui/window.rs:1624 src/ui/window.rs:1645
 msgid "NixOS internal packages and modules"
-msgstr ""
+msgstr "NixOS ichki paketlari va modullari"
 
 #~ msgid "explore"
 #~ msgstr "kezish"

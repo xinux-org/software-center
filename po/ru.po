@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-22 18:32+0500\n"
-"PO-Revision-Date: 2025-12-22 19:28+0500\n"
+"POT-Creation-Date: 2025-12-23 13:50+0500\n"
+"PO-Revision-Date: 2025-12-23 13:50+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -20,11 +20,11 @@ msgstr ""
 
 #: src/ui/unavailabledialog.rs:39
 msgid "Some packages are unavailable!"
-msgstr ""
+msgstr "Некоторые пакеты недоступны!"
 
 #: src/ui/unavailabledialog.rs:40
 msgid "If you continue this update, some packages will be removed"
-msgstr ""
+msgstr "Если вы продолжите это обновление, некоторые пакеты будут удалены"
 
 #: src/ui/unavailabledialog.rs:48
 msgid "User Packages"
@@ -54,17 +54,24 @@ msgstr ""
 
 #: src/ui/preferencespage.rs:92
 msgid "Use nix flakes"
-msgstr "Используйте флейк nix"
+msgstr "Использовать nix flakes"
 
 #: src/ui/preferencespage.rs:110 src/ui/welcome.rs:120
 msgid "Flake file"
-msgstr "Файл флейк"
+msgstr "Файл flake"
 
 #: src/ui/preferencespage.rs:151
-#, fuzzy
-#| msgid "Flake arguments (--flake path/to/flake.nix#<THIS ENTRY>)"
 msgid "Flake arguments (--flake path/to/flake.nix#ENTRY)"
-msgstr "Флейк аргументы (--flake path/to/flake.nix#<THIS ENTRY>)"
+msgstr "Flake аргументы (--flake path/to/flake.nix#ENTRY)"
+
+#: src/ui/installedpage.rs:55 src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216
+#: src/ui/pkgpage.rs:995
+msgid "User (nix-env)"
+msgstr "Пользователь (nix-env)"
+
+#: src/ui/installedpage.rs:56 src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
+msgid "User (nix profile)"
+msgstr "Пользователь (nix profile)"
 
 #: src/ui/installedpage.rs:78 src/ui/updatepage.rs:168 src/ui/pkgpage.rs:217
 #: src/ui/pkgpage.rs:223 src/ui/pkgpage.rs:996 src/ui/pkgpage.rs:1000
@@ -77,7 +84,7 @@ msgstr "Нет подключения к Интернету"
 
 #: src/ui/updatepage.rs:84
 msgid "Please connect to the internet to update your system"
-msgstr ""
+msgstr "Подключитесь к интернету для обновления системы"
 
 #: src/ui/updatepage.rs:90
 msgid "Refresh"
@@ -90,16 +97,6 @@ msgstr "Обновления"
 #: src/ui/updatepage.rs:117
 msgid "Update Everything"
 msgstr "Обновить всё"
-
-#: src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216 src/ui/pkgpage.rs:995
-msgid "User (nix-env)"
-msgstr ""
-
-#: src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
-#, fuzzy
-#| msgid "Use nix flakes"
-msgid "User (nix profile)"
-msgstr "Используйте флейк nix"
 
 #: src/ui/updatepage.rs:141
 msgid "Update All"
@@ -115,49 +112,51 @@ msgstr "Всё актуально!"
 
 #: src/ui/categories.rs:67
 msgid "Audio"
-msgstr ""
+msgstr "Аудио"
 
 #: src/ui/categories.rs:68
 msgid "Development"
-msgstr ""
+msgstr "Развитие"
 
 #: src/ui/categories.rs:69
 msgid "Games"
-msgstr ""
+msgstr "Игры"
 
 #: src/ui/categories.rs:70
 msgid "Graphics"
-msgstr ""
+msgstr "Графика"
 
 #: src/ui/categories.rs:71
 msgid "Web"
-msgstr ""
+msgstr "Веб"
 
 #: src/ui/categories.rs:72
 msgid "Video"
-msgstr ""
+msgstr "Видео"
 
 #: src/ui/welcome.rs:62
-#, fuzzy
-#| msgid "Nix Software Center"
 msgid "Welcome the Nix Software Center!"
-msgstr "Центр программного обеспечения Nix"
+msgstr "Добро пожаловать в Центр программного обеспечения Nix!"
 
 #: src/ui/welcome.rs:67
 msgid ""
 "If your configuration file is not in the default location, you can change it "
 "here."
 msgstr ""
+"Если ваш файл конфигурации не находится в местоположении по умолчанию, вы "
+"можете изменить его здесь."
 
 #: src/ui/welcome.rs:121
 msgid ""
 "If you are using flakes, you can specify the path to your flake.nix file "
 "here."
 msgstr ""
+"Если вы используете flake, вы можете указать путь к вашему файлу flake.nix "
+"здесь."
 
 #: src/ui/rebuild.rs:74
 msgid "Building..."
-msgstr "Строится..."
+msgstr "Сборка..."
 
 #: src/ui/rebuild.rs:88
 msgid "Done!"
@@ -182,11 +181,11 @@ msgstr "Закрыть"
 #: src/ui/pkgpage.rs:309 src/ui/pkgpage.rs:826 src/ui/pkgpage.rs:893
 #: src/ui/pkgpage.rs:972
 msgid "Unknown"
-msgstr ""
+msgstr "Неизвестно"
 
 #: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465
 msgid "Open"
-msgstr ""
+msgstr "Открыть"
 
 #: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465 src/ui/window.rs:634
 msgid "Installed"
@@ -206,11 +205,11 @@ msgstr "Главная страница"
 
 #: src/ui/pkgpage.rs:785
 msgid "Licenses"
-msgstr ""
+msgstr "Лицензии"
 
 #: src/ui/pkgpage.rs:785
 msgid "License"
-msgstr ""
+msgstr "Лицензия"
 
 #: src/ui/pkgpage.rs:866
 msgid "Platforms"
@@ -218,23 +217,19 @@ msgstr "Платформы"
 
 #: src/ui/pkgpage.rs:930
 msgid "Maintainers"
-msgstr ""
+msgstr "Поддерживающие"
 
 #: src/ui/pkgpage.rs:930
 msgid "Maintainer"
-msgstr ""
-
-#: src/ui/pkgpage.rs:999
-msgid "User (nix-profile)"
-msgstr ""
+msgstr "Поддерживающий"
 
 #: src/ui/pkgpage.rs:1003
 msgid "Run without installing"
-msgstr ""
+msgstr "Запустить без установки"
 
 #: src/ui/pkgpage.rs:1004
 msgid "Open interactive shell"
-msgstr ""
+msgstr "Открытая интерактивная оболочка"
 
 #: src/ui/window.rs:221 src/ui/window.rs:273
 msgid "Nix Software Center"
@@ -254,11 +249,11 @@ msgstr "Рекомендуется"
 
 #: src/ui/window.rs:386
 msgid "Preferences"
-msgstr ""
+msgstr "Параметры"
 
 #: src/ui/window.rs:387
 msgid "About"
-msgstr ""
+msgstr "О нас"
 
 #: src/ui/window.rs:633
 msgid "Explore"
@@ -266,11 +261,11 @@ msgstr "Исследовать"
 
 #: src/ui/window.rs:1620 src/ui/window.rs:1641
 msgid "NixOS System"
-msgstr ""
+msgstr "Система NixOS"
 
 #: src/ui/window.rs:1624 src/ui/window.rs:1645
 msgid "NixOS internal packages and modules"
-msgstr ""
+msgstr "внутренние пакеты и модули NixOS"
 
 #~ msgid "explore"
 #~ msgstr "исследовать"
