@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-23 13:53+0500\n"
-"PO-Revision-Date: 2025-12-23 13:55+0500\n"
+"POT-Creation-Date: 2025-12-23 14:01+0500\n"
+"PO-Revision-Date: 2025-12-23 14:02+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -79,6 +79,38 @@ msgstr "Пользователь (nix profile)"
 msgid "System (configuration.nix)"
 msgstr "Система (configuration.nix)"
 
+#: src/ui/categorypage.rs:57 src/ui/categories.rs:67
+msgid "Audio"
+msgstr "Аудио"
+
+#: src/ui/categorypage.rs:58 src/ui/categories.rs:68
+msgid "Development"
+msgstr "Развитие"
+
+#: src/ui/categorypage.rs:59 src/ui/categories.rs:69
+msgid "Games"
+msgstr "Игры"
+
+#: src/ui/categorypage.rs:60 src/ui/categories.rs:70
+msgid "Graphics"
+msgstr "Графика"
+
+#: src/ui/categorypage.rs:61 src/ui/categories.rs:71
+msgid "Web"
+msgstr "Веб"
+
+#: src/ui/categorypage.rs:62 src/ui/categories.rs:72
+msgid "Video"
+msgstr "Видео"
+
+#: src/ui/categorypage.rs:95 src/ui/window.rs:348
+msgid "Recommended"
+msgstr "Рекомендуется"
+
+#: src/ui/categorypage.rs:113
+msgid "Other"
+msgstr "Другое"
+
 #: src/ui/updatepage.rs:83
 msgid "No internet connection"
 msgstr "Нет подключения к Интернету"
@@ -110,30 +142,6 @@ msgstr "Обновление"
 #: src/ui/updatepage.rs:210
 msgid "Everything is up to date!"
 msgstr "Всё актуально!"
-
-#: src/ui/categories.rs:67
-msgid "Audio"
-msgstr "Аудио"
-
-#: src/ui/categories.rs:68
-msgid "Development"
-msgstr "Развитие"
-
-#: src/ui/categories.rs:69
-msgid "Games"
-msgstr "Игры"
-
-#: src/ui/categories.rs:70
-msgid "Graphics"
-msgstr "Графика"
-
-#: src/ui/categories.rs:71
-msgid "Web"
-msgstr "Веб"
-
-#: src/ui/categories.rs:72
-msgid "Video"
-msgstr "Видео"
 
 #: src/ui/welcome.rs:62
 msgid "Welcome the Nix Software Center!"
@@ -243,10 +251,6 @@ msgstr "Загрузка..."
 #: src/ui/window.rs:330
 msgid "Categories"
 msgstr "Категории"
-
-#: src/ui/window.rs:348
-msgid "Recommended"
-msgstr "Рекомендуется"
 
 #: src/ui/window.rs:386
 msgid "Preferences"

@@ -1,6 +1,7 @@
 src/ui/unavailabledialog.rs
 src/ui/preferencespage.rs
 src/ui/installedpage.rs
+src/ui/categorypage.rs
 src/ui/updatepage.rs
 src/ui/categories.rs
 src/ui/welcome.rs
