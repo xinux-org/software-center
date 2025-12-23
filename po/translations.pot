@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-23 13:53+0500\n"
+"POT-Creation-Date: 2025-12-23 14:01+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -78,6 +78,38 @@ msgstr ""
 msgid "System (configuration.nix)"
 msgstr ""
 
+#: src/ui/categorypage.rs:57 src/ui/categories.rs:67
+msgid "Audio"
+msgstr ""
+
+#: src/ui/categorypage.rs:58 src/ui/categories.rs:68
+msgid "Development"
+msgstr ""
+
+#: src/ui/categorypage.rs:59 src/ui/categories.rs:69
+msgid "Games"
+msgstr ""
+
+#: src/ui/categorypage.rs:60 src/ui/categories.rs:70
+msgid "Graphics"
+msgstr ""
+
+#: src/ui/categorypage.rs:61 src/ui/categories.rs:71
+msgid "Web"
+msgstr ""
+
+#: src/ui/categorypage.rs:62 src/ui/categories.rs:72
+msgid "Video"
+msgstr ""
+
+#: src/ui/categorypage.rs:95 src/ui/window.rs:348
+msgid "Recommended"
+msgstr ""
+
+#: src/ui/categorypage.rs:113
+msgid "Other"
+msgstr ""
+
 #: src/ui/updatepage.rs:83
 msgid "No internet connection"
 msgstr ""
@@ -108,30 +140,6 @@ msgstr ""
 
 #: src/ui/updatepage.rs:210
 msgid "Everything is up to date!"
-msgstr ""
-
-#: src/ui/categories.rs:67
-msgid "Audio"
-msgstr ""
-
-#: src/ui/categories.rs:68
-msgid "Development"
-msgstr ""
-
-#: src/ui/categories.rs:69
-msgid "Games"
-msgstr ""
-
-#: src/ui/categories.rs:70
-msgid "Graphics"
-msgstr ""
-
-#: src/ui/categories.rs:71
-msgid "Web"
-msgstr ""
-
-#: src/ui/categories.rs:72
-msgid "Video"
 msgstr ""
 
 #: src/ui/welcome.rs:62
@@ -237,10 +245,6 @@ msgstr ""
 
 #: src/ui/window.rs:330
 msgid "Categories"
-msgstr ""
-
-#: src/ui/window.rs:348
-msgid "Recommended"
 msgstr ""
 
 #: src/ui/window.rs:386

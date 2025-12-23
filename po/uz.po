@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-23 13:53+0500\n"
-"PO-Revision-Date: 2025-12-23 13:56+0500\n"
+"POT-Creation-Date: 2025-12-23 14:01+0500\n"
+"PO-Revision-Date: 2025-12-23 14:02+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uz@latin\n"
@@ -79,6 +79,38 @@ msgstr "Foydalanuvchi (nix profile)"
 msgid "System (configuration.nix)"
 msgstr "Tizim (configuration.nix)"
 
+#: src/ui/categorypage.rs:57 src/ui/categories.rs:67
+msgid "Audio"
+msgstr "Audio"
+
+#: src/ui/categorypage.rs:58 src/ui/categories.rs:68
+msgid "Development"
+msgstr "Ishlab chiqish"
+
+#: src/ui/categorypage.rs:59 src/ui/categories.rs:69
+msgid "Games"
+msgstr "O‘yinlar"
+
+#: src/ui/categorypage.rs:60 src/ui/categories.rs:70
+msgid "Graphics"
+msgstr "Grafika"
+
+#: src/ui/categorypage.rs:61 src/ui/categories.rs:71
+msgid "Web"
+msgstr "Veb"
+
+#: src/ui/categorypage.rs:62 src/ui/categories.rs:72
+msgid "Video"
+msgstr "Video"
+
+#: src/ui/categorypage.rs:95 src/ui/window.rs:348
+msgid "Recommended"
+msgstr "Tavsiya etiladi"
+
+#: src/ui/categorypage.rs:113
+msgid "Other"
+msgstr "Boshqa"
+
 #: src/ui/updatepage.rs:83
 msgid "No internet connection"
 msgstr "Internetga ulanmagansiz"
@@ -110,30 +142,6 @@ msgstr "Yangilash"
 #: src/ui/updatepage.rs:210
 msgid "Everything is up to date!"
 msgstr "Hammasi yangi!"
-
-#: src/ui/categories.rs:67
-msgid "Audio"
-msgstr "Audio"
-
-#: src/ui/categories.rs:68
-msgid "Development"
-msgstr "Ishlab chiqish"
-
-#: src/ui/categories.rs:69
-msgid "Games"
-msgstr "O‘yinlar"
-
-#: src/ui/categories.rs:70
-msgid "Graphics"
-msgstr "Grafika"
-
-#: src/ui/categories.rs:71
-msgid "Web"
-msgstr "Veb"
-
-#: src/ui/categories.rs:72
-msgid "Video"
-msgstr "Video"
 
 #: src/ui/welcome.rs:62
 msgid "Welcome the Nix Software Center!"
@@ -245,10 +253,6 @@ msgstr "Yuklanmoqda..."
 #: src/ui/window.rs:330
 msgid "Categories"
 msgstr "Toifalar"
-
-#: src/ui/window.rs:348
-msgid "Recommended"
-msgstr "Tavsiya etiladi"
 
 #: src/ui/window.rs:386
 msgid "Preferences"
