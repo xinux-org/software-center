@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-23 13:50+0500\n"
-"PO-Revision-Date: 2025-12-23 13:50+0500\n"
+"POT-Creation-Date: 2025-12-23 13:53+0500\n"
+"PO-Revision-Date: 2025-12-23 13:55+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -70,6 +70,7 @@ msgid "User (nix-env)"
 msgstr "Пользователь (nix-env)"
 
 #: src/ui/installedpage.rs:56 src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
+#: src/ui/pkgpage.rs:999
 msgid "User (nix profile)"
 msgstr "Пользователь (nix profile)"
 

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-22 18:32+0500\n"
-"PO-Revision-Date: 2025-12-23 13:31+0500\n"
+"POT-Creation-Date: 2025-12-23 13:53+0500\n"
+"PO-Revision-Date: 2025-12-23 13:56+0500\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: uz@latin\n"
@@ -64,6 +64,16 @@ msgstr "Flake fayli"
 msgid "Flake arguments (--flake path/to/flake.nix#ENTRY)"
 msgstr "Flake arguments (--flake path/to/flake.nix#ENTRY)"
 
+#: src/ui/installedpage.rs:55 src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216
+#: src/ui/pkgpage.rs:995
+msgid "User (nix-env)"
+msgstr "Foydalanuvchi (nix-env)"
+
+#: src/ui/installedpage.rs:56 src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
+#: src/ui/pkgpage.rs:999
+msgid "User (nix profile)"
+msgstr "Foydalanuvchi (nix profile)"
+
 #: src/ui/installedpage.rs:78 src/ui/updatepage.rs:168 src/ui/pkgpage.rs:217
 #: src/ui/pkgpage.rs:223 src/ui/pkgpage.rs:996 src/ui/pkgpage.rs:1000
 msgid "System (configuration.nix)"
@@ -88,14 +98,6 @@ msgstr "Yangilanishlar"
 #: src/ui/updatepage.rs:117
 msgid "Update Everything"
 msgstr "Barchasini yangilash"
-
-#: src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216 src/ui/pkgpage.rs:995
-msgid "User (nix-env)"
-msgstr "Foydalanuvchi (nix-env)"
-
-#: src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
-msgid "User (nix profile)"
-msgstr "Foydalanuvchi (nix profile)"
 
 #: src/ui/updatepage.rs:141
 msgid "Update All"
