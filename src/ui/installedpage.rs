@@ -51,9 +51,9 @@ impl SimpleComponent for InstalledPageModel {
                         set_halign: gtk::Align::Start,
                         add_css_class: "title-4",
                         set_lines: 1,
-                        set_label: match model.userpkgtype {
-                            UserPkgs::Env => "User (nix-env)",
-                            UserPkgs::Profile => "User (nix profile)",
+                        set_label: &match model.userpkgtype {
+                          UserPkgs::Env => gettext("User (nix-env)"),
+                            UserPkgs::Profile => gettext("User (nix profile)"),
                         },
                     },
                     #[local_ref]
