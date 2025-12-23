@@ -996,7 +996,7 @@ impl Component for PkgModel {
             &gettext("System (configuration.nix)") => NixSystemAction,
         },
         installprofiletype: {
-            &gettext("User (nix-profile)") => NixProfileAction,
+            &gettext("User (nix profile)") => NixProfileAction,
             &gettext("System (configuration.nix)") => NixSystemAction,
         },
         runaction: {
