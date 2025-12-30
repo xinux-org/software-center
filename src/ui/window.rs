@@ -633,6 +633,12 @@ impl Component for AppModel {
         frontvs.set_title(Some(&gettext("Explore")));
         installedvs.set_title(Some(&gettext("Installed")));
         updatesvs.set_title(Some(&gettext("Updates")));
+        // let badge_active = model.clone().updatepage.model();
+        // if badge_active.updateuserlist.guard().is_empty() {
+          
+        // }
+        updatesvs.set_badge_number(1);
+        // badge-number
         frontvs.set_name(Some("explore"));
         installedvs.set_name(Some("installed"));
         searchvs.set_name(Some("search"));

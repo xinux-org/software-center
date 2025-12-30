@@ -14,7 +14,7 @@ pub static UNAVAILABLE_BROKER: MessageBroker<UnavailableDialogMsg> = MessageBrok
 #[derive(Debug)]
 pub struct UpdatePageModel {
     #[tracker::no_eq]
-    updateuserlist: FactoryVecDeque<UpdateItemModel>,
+    pub updateuserlist: FactoryVecDeque<UpdateItemModel>,
     #[tracker::no_eq]
     updatesystemlist: FactoryVecDeque<UpdateItemModel>,
     channelupdate: Option<(String, String)>,
@@ -439,7 +439,7 @@ pub struct UpdateItem {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct UpdateItemModel {
-    item: UpdateItem,
+    pub item: UpdateItem,
 }
 
 #[derive(Debug)]
