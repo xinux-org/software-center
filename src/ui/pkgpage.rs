@@ -274,6 +274,7 @@ impl Component for PkgModel {
                                 set_selection_mode: gtk::SelectionMode::None,
                                 // Details
                                 append = &gtk::FlowBoxChild {
+                                    set_can_target: false,
                                     gtk::Box {
                                         set_halign: gtk::Align::Fill,
                                         set_valign: gtk::Align::Center,
@@ -694,6 +695,7 @@ impl Component for PkgModel {
                             set_selection_mode: gtk::SelectionMode::None,
                             set_max_children_per_line: 2,
                             append = &gtk::FlowBoxChild {
+                                // set_can_target: false,
                                 set_hexpand: true,
                                 gtk::Box {
                                     set_spacing: 10,
@@ -795,7 +797,7 @@ impl Component for PkgModel {
                                                     set_max_width_chars: 0,
                                                     set_justify: gtk::Justification::Center,
                                                     #[watch]
-                                                    set_label: {
+                                                    set_label: &{
                                                         let mut s = String::new();
                                                         for license in model.licenses.iter() {
                                                             if model.licenses.iter().len() == 1 {
@@ -825,7 +827,7 @@ impl Component for PkgModel {
                                                         if model.licenses.is_empty() {
                                                             s.push_str(&gettext("Unknown"));
                                                         }
-                                                        &s.to_string()
+                                                        s.to_string()
                                                     },
                                                     #[watch]
                                                     set_visible: !model.licenses.is_empty()
@@ -836,6 +838,7 @@ impl Component for PkgModel {
                                 }
                             },
                             append = &gtk::FlowBoxChild {
+                                set_can_target: false,
                                 set_hexpand: true,
                                 gtk::Box {
                                     set_spacing: 10,
@@ -876,7 +879,7 @@ impl Component for PkgModel {
                                                     set_max_width_chars: 0,
                                                     set_justify: gtk::Justification::Center,
                                                     #[watch]
-                                                    set_label: {
+                                                    set_label: &{
                                                         let mut s = String::new();
                                                         for p in model.platforms.iter() {
                                                             if model.platforms.iter().len() == 1 {
@@ -892,7 +895,7 @@ impl Component for PkgModel {
                                                         if model.platforms.is_empty() {
                                                             s.push_str(&gettext("Unknown"));
                                                         }
-                                                        &s.to_string()
+                                                        s.to_string()
                                                     },
                                                     #[watch]
                                                     set_visible: !model.platforms.is_empty()
@@ -940,7 +943,7 @@ impl Component for PkgModel {
                                                     set_max_width_chars: 0,
                                                     set_justify: gtk::Justification::Center,
                                                     #[watch]
-                                                    set_label: {
+                                                    set_label: &{
                                                         let mut s = String::new();
                                                         let maintainerlist = model.maintainers.iter().filter(|m| m.name.is_some() || m.github.is_some()).collect::<Vec<_>>();
                                                         for p in &maintainerlist {
@@ -971,7 +974,7 @@ impl Component for PkgModel {
                                                         if model.maintainers.is_empty() {
                                                             s.push_str(&gettext("Unknown"));
                                                         }
-                                                        &s.to_string()
+                                                        s.to_string()
                                                     }
                                                 }
                                             }
