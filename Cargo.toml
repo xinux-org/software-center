@@ -31,7 +31,7 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 nix-editor = "0.3.0"
-nix-data = { git = "https://github.com/xinux-org/nix-data", rev = "5ae0facbcc594ab6df26c814567ea33ad1c4ea09"}
+nix-data-xinux = "0.0.5"
 sqlx = { version = "0.8.3", features = ["runtime-tokio-native-tls", "sqlite"] }
 html2pango = "0.5"
 log = "0.4"
