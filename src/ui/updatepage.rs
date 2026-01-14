@@ -1,4 +1,4 @@
-use crate::{parse::util, ui::unavailabledialog::UnavailableDialogModel, APPINFO};
+use crate::{APPINFO, parse::util, ui::unavailabledialog::UnavailableDialogModel};
 
 use super::{
     pkgpage::InstallType,
@@ -566,8 +566,8 @@ impl FactoryComponent for UpdateItemModel {
                         set_halign: gtk::Align::Start,
                         add_css_class: "dim-label",
                         add_css_class: "caption",
-                        set_label: {
-                            &(if let Some(old) = &self.item.verfrom {
+                        set_label:
+                            &if let Some(old) = &self.item.verfrom {
                                 if let Some(new) = &self.item.verto {
                                     format!("{} → {}", old, new)
                                 } else {
@@ -575,8 +575,8 @@ impl FactoryComponent for UpdateItemModel {
                                 }
                             } else {
                                 String::default()
-                            })
-                        },
+                            },
+
                         set_visible: self.item.verfrom.is_some() && self.item.verto.is_some(),
                         set_ellipsize: pango::EllipsizeMode::End,
                         set_lines: 1,
