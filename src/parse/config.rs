@@ -1,11 +1,11 @@
 use anyhow::Result;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux::config::configfile::NixDataConfig;
 
 pub fn getconfig() -> Option<NixDataConfig> {
-    nix_data::config::configfile::getconfig().ok()
+    nix_data_xinux::config::configfile::getconfig().ok()
 }
 
 pub fn editconfig(config: NixDataConfig) -> Result<()> {
-    nix_data::config::configfile::setuserconfig(config)?;
+    nix_data_xinux::config::configfile::setuserconfig(config)?;
     Ok(())
 }

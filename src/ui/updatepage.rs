@@ -1,12 +1,18 @@
-use crate::{APPINFO, ui::unavailabledialog::UnavailableDialogModel, parse::util};
+use crate::{parse::util, ui::unavailabledialog::UnavailableDialogModel, APPINFO};
 
-use super::{pkgpage::InstallType, window::*, updateworker::{UpdateAsyncHandler, UpdateAsyncHandlerMsg, UpdateAsyncHandlerInit}, rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg};
+use super::{
+    pkgpage::InstallType,
+    rebuild::RebuildMsg,
+    unavailabledialog::UnavailableDialogMsg,
+    updateworker::{UpdateAsyncHandler, UpdateAsyncHandlerInit, UpdateAsyncHandlerMsg},
+    window::*,
+};
 use adw::prelude::*;
 use gettextrs::gettext;
-use nix_data::config::configfile::NixDataConfig;
-use relm4::{factory::*, gtk::pango, *};
-use std::{path::Path, convert::identity, collections::HashMap};
 use log::*;
+use nix_data_xinux::config::configfile::NixDataConfig;
+use relm4::{factory::*, gtk::pango, *};
+use std::{collections::HashMap, convert::identity, path::Path};
 
 pub static UNAVAILABLE_BROKER: MessageBroker<UnavailableDialogMsg> = MessageBroker::new();
 
@@ -221,7 +227,10 @@ impl SimpleComponent for UpdatePageModel {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let updateworker = UpdateAsyncHandler::builder()
-            .detach_worker(UpdateAsyncHandlerInit { syspkgs: initparams.systype.clone(), userpkgs: initparams.usertype.clone() })
+            .detach_worker(UpdateAsyncHandlerInit {
+                syspkgs: initparams.systype.clone(),
+                userpkgs: initparams.usertype.clone(),
+            })
             .forward(sender.input_sender(), identity);
 
         let unavailabledialog = UnavailableDialogModel::builder()
@@ -260,12 +269,17 @@ impl SimpleComponent for UpdatePageModel {
         match msg {
             UpdatePageMsg::UpdateConfig(config) => {
                 self.config = config;
-                self.updateworker.emit(UpdateAsyncHandlerMsg::UpdateConfig(self.config.clone()));
+                self.updateworker
+                    .emit(UpdateAsyncHandlerMsg::UpdateConfig(self.config.clone()));
             }
             UpdatePageMsg::UpdatePkgTypes(systype, usertype) => {
                 self.systype = systype;
                 self.usertype = usertype;
-                self.updateworker.emit(UpdateAsyncHandlerMsg::UpdatePkgTypes(self.systype.clone(), self.usertype.clone()));
+                self.updateworker
+                    .emit(UpdateAsyncHandlerMsg::UpdatePkgTypes(
+                        self.systype.clone(),
+                        self.usertype.clone(),
+                    ));
             }
             UpdatePageMsg::Update(updateuserlist, updatesystemlist) => {
                 info!("UpdatePageMsg::Update");
@@ -315,11 +329,17 @@ impl SimpleComponent for UpdatePageModel {
                 REBUILD_BROKER.send(RebuildMsg::Show);
                 relm4::spawn(async move {
                     let uninstallsys = match systype {
-                        SystemPkgs::Legacy => {
-                            nix_data::cache::channel::unavailablepkgs(&[&systemconfig.unwrap()]).await.unwrap_or_default()
-                        }
+                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::unavailablepkgs(&[
+                            &systemconfig.unwrap(),
+                        ])
+                        .await
+                        .unwrap_or_default(),
                         SystemPkgs::Flake => {
-                            nix_data::cache::flakes::unavailablepkgs(&[&systemconfig.unwrap()]).await.unwrap_or_default()
+                            nix_data_xinux::cache::flakes::unavailablepkgs(
+                                &[&systemconfig.unwrap()],
+                            )
+                            .await
+                            .unwrap_or_default()
                         }
                         _ => HashMap::new(),
                     };
@@ -327,13 +347,18 @@ impl SimpleComponent for UpdatePageModel {
                         let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateSystem);
                     } else {
                         warn!("Uninstalling unavailable packages: {:?}", uninstallsys);
-                        let _ = output.send(AppMsg::GetUnavailableItems(HashMap::new(), uninstallsys, UpdateType::System));
+                        let _ = output.send(AppMsg::GetUnavailableItems(
+                            HashMap::new(),
+                            uninstallsys,
+                            UpdateType::System,
+                        ));
                     }
                 });
             }
             UpdatePageMsg::UpdateSystemRm(pkgs) => {
                 info!("UpdatePageMsg::UpdateSystemRm({:?})", pkgs);
-                self.updateworker.emit(UpdateAsyncHandlerMsg::UpdateSystemRemove(pkgs));
+                self.updateworker
+                    .emit(UpdateAsyncHandlerMsg::UpdateSystemRemove(pkgs));
             }
             UpdatePageMsg::UpdateUser(pkg) => {
                 info!("UPDATE USER PKG: {}", pkg);
@@ -351,22 +376,29 @@ impl SimpleComponent for UpdatePageModel {
                     let workersender = self.updateworker.sender().clone();
                     let output = sender.output_sender().clone();
                     relm4::spawn(async move {
-                        let uninstalluser = nix_data::cache::profile::unavailablepkgs().await.unwrap_or_default();
+                        let uninstalluser = nix_data_xinux::cache::profile::unavailablepkgs()
+                            .await
+                            .unwrap_or_default();
                         if uninstalluser.is_empty() {
                             let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
                         } else {
                             warn!("Uninstalling unavailable packages: {:?}", uninstalluser);
-                            let _ = output.send(AppMsg::GetUnavailableItems(uninstalluser, HashMap::new(), UpdateType::User));
+                            let _ = output.send(AppMsg::GetUnavailableItems(
+                                uninstalluser,
+                                HashMap::new(),
+                                UpdateType::User,
+                            ));
                         }
                     });
-    
                 } else {
-                    self.updateworker.emit(UpdateAsyncHandlerMsg::UpdateUserPkgs);
+                    self.updateworker
+                        .emit(UpdateAsyncHandlerMsg::UpdateUserPkgs);
                 }
             }
             UpdatePageMsg::UpdateAllUserRm(pkgs) => {
                 info!("UpdatePageMsg::UpdateAllUserRm({:?})", pkgs);
-                self.updateworker.emit(UpdateAsyncHandlerMsg::UpdateUserPkgsRemove(pkgs));
+                self.updateworker
+                    .emit(UpdateAsyncHandlerMsg::UpdateUserPkgsRemove(pkgs));
             }
             UpdatePageMsg::UpdateAll => {
                 let online = util::checkonline();
@@ -384,34 +416,53 @@ impl SimpleComponent for UpdatePageModel {
                 REBUILD_BROKER.send(RebuildMsg::Show);
                 relm4::spawn(async move {
                     let uninstallsys = match systype {
-                        SystemPkgs::Legacy => {
-                            nix_data::cache::channel::unavailablepkgs(&[&systemconfig.unwrap()]).await.unwrap_or_default()
-                        }
+                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::unavailablepkgs(&[
+                            &systemconfig.unwrap(),
+                        ])
+                        .await
+                        .unwrap_or_default(),
                         SystemPkgs::Flake => {
-                            nix_data::cache::flakes::unavailablepkgs(&[&systemconfig.unwrap()]).await.unwrap_or_default()
+                            nix_data_xinux::cache::flakes::unavailablepkgs(
+                                &[&systemconfig.unwrap()],
+                            )
+                            .await
+                            .unwrap_or_default()
                         }
                         _ => HashMap::new(),
                     };
                     let uninstalluser = if usertype == UserPkgs::Profile {
-                        nix_data::cache::profile::unavailablepkgs().await.unwrap_or_default()
+                        nix_data_xinux::cache::profile::unavailablepkgs()
+                            .await
+                            .unwrap_or_default()
                     } else {
                         HashMap::new()
                     };
                     if uninstallsys.is_empty() && uninstalluser.is_empty() {
                         let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateAll);
                     } else {
-                        warn!("Uninstalling unavailable user packages: {:?}", uninstalluser);
-                        warn!("Uninstalling unavailable system packages: {:?}", uninstallsys);
-                        let _ = output.send(AppMsg::GetUnavailableItems(uninstalluser, uninstallsys, UpdateType::All));
+                        warn!(
+                            "Uninstalling unavailable user packages: {:?}",
+                            uninstalluser
+                        );
+                        warn!(
+                            "Uninstalling unavailable system packages: {:?}",
+                            uninstallsys
+                        );
+                        let _ = output.send(AppMsg::GetUnavailableItems(
+                            uninstalluser,
+                            uninstallsys,
+                            UpdateType::All,
+                        ));
                     }
                 });
             }
             UpdatePageMsg::UpdateAllRm(userpkgs, syspkgs) => {
                 info!("UpdatePageMsg::UpdateAllRm({:?}, {:?})", userpkgs, syspkgs);
-                self.updateworker.emit(UpdateAsyncHandlerMsg::UpdateAllRemove(userpkgs, syspkgs));
+                self.updateworker
+                    .emit(UpdateAsyncHandlerMsg::UpdateAllRemove(userpkgs, syspkgs));
             }
             UpdatePageMsg::DoneWorking => {
-                let _ = nix_data::utils::refreshicons();
+                let _ = nix_data_xinux::utils::refreshicons();
                 REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
                 let _ = sender.output(AppMsg::UpdateInstalledPkgs);
             }
@@ -553,11 +604,7 @@ impl FactoryComponent for UpdateItemModel {
         }
     }
 
-    fn init_model(
-        parent: Self::Init,
-        _index: &DynamicIndex,
-        _sender: FactorySender<Self>,
-    ) -> Self {
+    fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         let sum = if let Some(s) = parent.summary {
             let mut sum = s.trim().to_string();
             while sum.contains('\n') {

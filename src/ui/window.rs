@@ -15,7 +15,7 @@ use crate::{
 use adw::prelude::*;
 use gettextrs::gettext;
 use log::*;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
     self,
     actions::{RelmAction, RelmActionGroup},
@@ -1211,7 +1211,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     let installedsystempkgs = if let Some(config) = &systemconfig {
                         match syspkgtype {
                             SystemPkgs::Flake => {
-                                let pkgs = nix_data::cache::flakes::getflakepkgs(&[config]).await;
+                                let pkgs =
+                                    nix_data_xinux::cache::flakes::getflakepkgs(&[config]).await;
                                 if let Ok(pkgs) = pkgs {
                                     pkgs.keys().cloned().collect::<HashSet<String>>()
                                 } else {
@@ -1219,7 +1220,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 }
                             }
                             SystemPkgs::Legacy => {
-                                let pkgs = nix_data::cache::channel::getlegacypkgs(&[config]).await;
+                                let pkgs =
+                                    nix_data_xinux::cache::channel::getlegacypkgs(&[config]).await;
                                 if let Ok(pkgs) = pkgs {
                                     pkgs.keys().cloned().collect::<HashSet<String>>()
                                 } else {
@@ -1234,7 +1236,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
 
                     let installeduserpkgs = match userpkgtype {
                         UserPkgs::Profile => {
-                            let pkgs = nix_data::cache::profile::getprofilepkgs_versioned().await;
+                            let pkgs =
+                                nix_data_xinux::cache::profile::getprofilepkgs_versioned().await;
                             if let Ok(pkgs) = pkgs {
                                 pkgs
                             } else {
@@ -1242,7 +1245,9 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 HashMap::new()
                             }
                         }
-                        UserPkgs::Env => nix_data::cache::channel::getenvpkgs().unwrap_or_default(),
+                        UserPkgs::Env => {
+                            nix_data_xinux::cache::channel::getenvpkgs().unwrap_or_default()
+                        }
                     };
                     AppAsyncMsg::UpdateInstalledPkgs(installedsystempkgs, installeduserpkgs)
                 });
@@ -1613,7 +1618,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     // Add NixOS system to update list
                     match self.syspkgtype {
                         SystemPkgs::Legacy => {
-                            if let Ok(Some((old, new))) = nix_data::cache::channel::uptodate() {
+                            if let Ok(Some((old, new))) = nix_data_xinux::cache::channel::uptodate()
+                            {
                                 updatesystemitems.insert(
                                     0,
                                     UpdateItem {
@@ -1632,7 +1638,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             }
                         }
                         SystemPkgs::Flake => {
-                            if let Ok(Some((old, new))) = nix_data::cache::flakes::uptodate() {
+                            if let Ok(Some((old, new))) = nix_data_xinux::cache::flakes::uptodate()
+                            {
                                 println!("old flake ver: {old:?}");
                                 println!("new flake ver: {new:?}");
                                 updatesystemitems.insert(

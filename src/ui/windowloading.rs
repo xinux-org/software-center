@@ -6,7 +6,7 @@ use crate::ui::categories::PkgCategory;
 use crate::ui::window::UserPkgs;
 use gettextrs::gettext;
 use log::*;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux::config::configfile::NixDataConfig;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
 use relm4::adw::prelude::*;
@@ -44,7 +44,7 @@ impl Worker for WindowAsyncHandler {
                     let nixos = Path::new("/etc/NIXOS").exists();
 
                     let pkgdb = if nixos {
-                        match nix_data::cache::nixos::nixospkgs().await {
+                        match nix_data_xinux::cache::nixos::nixospkgs().await {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting NixOS pkgs: {}", e);
@@ -56,7 +56,7 @@ impl Worker for WindowAsyncHandler {
                             }
                         }
                     } else {
-                        match nix_data::cache::nonnixos::nixpkgs().await {
+                        match nix_data_xinux::cache::nonnixos::nixpkgs().await {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting nixpkgs: {}", e);
@@ -82,14 +82,14 @@ impl Worker for WindowAsyncHandler {
                     };
 
                     let nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => nix_data::cache::profile::nixpkgslatest().await.ok(),
+                        UserPkgs::Profile => nix_data_xinux::cache::profile::nixpkgslatest().await.ok(),
                         UserPkgs::Env => None,
                     };
 
                     let systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => nix_data::cache::channel::legacypkgs().await.ok(),
-                        SystemPkgs::Flake => nix_data::cache::flakes::flakespkgs().await.ok(),
+                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::legacypkgs().await.ok(),
+                        SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
                     };
 
                     let pkglist: Vec<(String,)> = match sqlx::query_as("SELECT attribute FROM pkgs")
@@ -430,7 +430,7 @@ impl Worker for WindowAsyncHandler {
                     let nixos = Path::new("/etc/nixos").exists();
 
                     let _pkgdb = if nixos {
-                        match nix_data::cache::nixos::nixospkgs().await {
+                        match nix_data_xinux::cache::nixos::nixospkgs().await {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting NixOS pkgs: {}", e);
@@ -442,7 +442,7 @@ impl Worker for WindowAsyncHandler {
                             }
                         }
                     } else {
-                        match nix_data::cache::nonnixos::nixpkgs().await {
+                        match nix_data_xinux::cache::nonnixos::nixpkgs().await {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting nixpkgs: {}", e);
@@ -456,14 +456,14 @@ impl Worker for WindowAsyncHandler {
                     };
 
                     let _nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => nix_data::cache::profile::nixpkgslatest().await.ok(),
+                        UserPkgs::Profile => nix_data_xinux::cache::profile::nixpkgslatest().await.ok(),
                         UserPkgs::Env => None,
                     };
 
                     let _systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => nix_data::cache::channel::legacypkgs().await.ok(),
-                        SystemPkgs::Flake => nix_data::cache::flakes::flakespkgs().await.ok(),
+                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::legacypkgs().await.ok(),
+                        SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
                     };
                 });
             }

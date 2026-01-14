@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use log::*;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::*;
 use std::{fs, path::Path, process::Stdio};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
@@ -63,7 +63,7 @@ impl Worker for UpdateAsyncHandler {
                 systemconfig: None,
                 flake: None,
                 flakearg: None,
-                generations: None
+                generations: None,
             },
             syspkgs: params.syspkgs,
             userpkgs: params.userpkgs,
@@ -100,8 +100,7 @@ impl Worker for UpdateAsyncHandler {
                 let config = self.config.clone();
                 let syspkgs = self.syspkgs.clone();
                 relm4::spawn(async move {
-                    let result =
-                        runcmd(NscCmd::All, config, syspkgs, Some(pkgs)).await;
+                    let result = runcmd(NscCmd::All, config, syspkgs, Some(pkgs)).await;
                     match result {
                         Ok(true) => {
                             sender.output(UpdatePageMsg::DoneWorking);
@@ -118,12 +117,8 @@ impl Worker for UpdateAsyncHandler {
                 let syspkgs = self.syspkgs.clone();
                 relm4::spawn(async move {
                     let result = match syspkgs {
-                        SystemPkgs::Legacy => {
-                            runcmd(NscCmd::Rebuild, config, syspkgs, None).await
-                        }
-                        SystemPkgs::Flake => {
-                            runcmd(NscCmd::All, config, syspkgs, None).await
-                        }
+                        SystemPkgs::Legacy => runcmd(NscCmd::Rebuild, config, syspkgs, None).await,
+                        SystemPkgs::Flake => runcmd(NscCmd::All, config, syspkgs, None).await,
                         SystemPkgs::None => Ok(true),
                     };
                     match result {
@@ -206,13 +201,7 @@ impl Worker for UpdateAsyncHandler {
                 let syspkgs = self.syspkgs.clone();
                 let userpkgs = self.userpkgs.clone();
                 relm4::spawn(async move {
-                    let result = runcmd(
-                        NscCmd::All,
-                        config,
-                        syspkgs,
-                        Some(sysrmpkgs),
-                    )
-                    .await;
+                    let result = runcmd(NscCmd::All, config, syspkgs, Some(sysrmpkgs)).await;
                     match result {
                         Ok(true) => {
                             match match userpkgs {

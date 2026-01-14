@@ -3,7 +3,7 @@ use super::rebuild::RebuildMsg;
 use super::window::{SystemPkgs, UserPkgs, REBUILD_BROKER};
 use anyhow::{anyhow, Result};
 use log::*;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::*;
 use std::fs;
 use std::path::Path;

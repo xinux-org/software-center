@@ -1,7 +1,7 @@
 use super::window::AppMsg;
 use adw::prelude::*;
 use gettextrs::gettext;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux_xinux::config::configfile::NixDataConfig;
 use relm4::*;
 use relm4_components::open_dialog::*;
 use std::path::{Path, PathBuf};

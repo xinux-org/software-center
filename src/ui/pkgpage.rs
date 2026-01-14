@@ -4,7 +4,7 @@ use gettextrs::gettext;
 use html2pango;
 use image::{imageops::FilterType, ImageFormat};
 use log::*;
-use nix_data::config::configfile::NixDataConfig;
+use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::actions::RelmAction;
 use relm4::actions::RelmActionGroup;
 use relm4::gtk::pango;
@@ -1441,7 +1441,7 @@ impl Component for PkgModel {
                 }
             }
             PkgMsg::FinishedProcess(work) => {
-                let _ = nix_data::utils::refreshicons();
+                let _ = nix_data_xinux::utils::refreshicons();
                 self.workqueue.remove(&work);
                 trace!("WORK QUEUE: {}", self.workqueue.len());
                 match work.pkgtype {
