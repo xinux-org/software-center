@@ -1,5 +1,5 @@
 {
-  description = "A beginning of an awesome project bootstrapped with github:bleur-org/templates";
+  description = "Software-center app for NixOS based distros";
 
   inputs = {
     # Stable for keeping thins clean
