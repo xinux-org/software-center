@@ -693,7 +693,7 @@ impl Component for PkgModel {
                             set_row_spacing: 5,
                             set_column_spacing: 4,
                             set_selection_mode: gtk::SelectionMode::None,
-                            set_max_children_per_line: 2,
+                            set_max_children_per_line: 4,
                             append = &gtk::FlowBoxChild {
                                 // set_can_target: false,
                                 set_hexpand: true,
@@ -701,61 +701,6 @@ impl Component for PkgModel {
                                     set_spacing: 10,
                                     set_hexpand: true,
                                     set_homogeneous: true,
-                                    gtk::Button {
-                                        set_hexpand: true,
-                                        add_css_class: "card",
-                                        set_height_request: 100,
-                                        set_width_request: 100,
-                                        connect_clicked[sender] => move |_| {
-                                            sender.input(PkgMsg::OpenHomepage)
-                                        },
-                                        gtk::Box {
-                                            set_orientation: gtk::Orientation::Vertical,
-                                            set_halign: gtk::Align::Fill,
-                                            set_valign: gtk::Align::Center,
-                                            set_spacing: 10,
-                                            set_margin_all: 15,
-                                            gtk::Image {
-                                                add_css_class: "accent",
-                                                set_halign: gtk::Align::Center,
-                                                set_icon_name: Some("user-home-symbolic"),
-                                                set_pixel_size: 24,
-                                            },
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_hexpand: true,
-                                                set_spacing: 5,
-                                                gtk::Label {
-                                                    set_halign: gtk::Align::Center,
-                                                    set_valign: gtk::Align::Center,
-                                                    add_css_class: "heading",
-                                                    set_label: &gettext("Homepage")
-                                                },
-                                                gtk::Label {
-                                                    set_halign: gtk::Align::Fill,
-                                                    set_valign: gtk::Align::Center,
-                                                    add_css_class: "caption",
-                                                    add_css_class: "dim-label",
-                                                    set_ellipsize: pango::EllipsizeMode::End,
-                                                    set_lines: 2,
-                                                    set_wrap: true,
-                                                    set_max_width_chars: 0,
-                                                    set_justify: gtk::Justification::Center,
-                                                    #[watch]
-                                                    set_label: if let Some(u) = &model.homepage {
-                                                        u
-                                                    } else {
-                                                        ""
-                                                    },
-                                                    #[watch]
-                                                    set_visible: model.homepage.is_some(),
-                                                }
-                                            }
-
-                                        }
-                                    },
                                     gtk::Button {
                                         set_hexpand: true,
                                         add_css_class: "card",
@@ -838,7 +783,69 @@ impl Component for PkgModel {
                                 }
                             },
                             append = &gtk::FlowBoxChild {
-                                set_can_target: false,
+                                set_hexpand: true,
+                                gtk::Box {
+                                    set_spacing: 10,
+                                    set_hexpand: true,
+                                    set_homogeneous: true,
+                                    gtk::Button {
+                                        set_hexpand: true,
+                                        add_css_class: "card",
+                                        set_height_request: 100,
+                                        set_width_request: 100,
+                                        connect_clicked[sender] => move |_| {
+                                            sender.input(PkgMsg::OpenHomepage)
+                                        },
+                                        gtk::Box {
+                                            set_orientation: gtk::Orientation::Vertical,
+                                            set_halign: gtk::Align::Fill,
+                                            set_valign: gtk::Align::Center,
+                                            set_spacing: 10,
+                                            set_margin_all: 15,
+                                            gtk::Image {
+                                                add_css_class: "accent",
+                                                set_halign: gtk::Align::Center,
+                                                set_icon_name: Some("user-home-symbolic"),
+                                                set_pixel_size: 24,
+                                            },
+                                            gtk::Box {
+                                                set_orientation: gtk::Orientation::Vertical,
+                                                set_halign: gtk::Align::Fill,
+                                                set_valign: gtk::Align::Center,
+                                                set_hexpand: true,
+                                                set_spacing: 5,
+                                                gtk::Label {
+                                                    set_halign: gtk::Align::Center,
+                                                    set_valign: gtk::Align::Center,
+                                                    add_css_class: "heading",
+                                                    set_label: &gettext("Homepage")
+                                                },
+                                                gtk::Label {
+                                                    set_halign: gtk::Align::Fill,
+                                                    set_valign: gtk::Align::Center,
+                                                    add_css_class: "caption",
+                                                    add_css_class: "dim-label",
+                                                    set_ellipsize: pango::EllipsizeMode::End,
+                                                    set_lines: 2,
+                                                    set_wrap: true,
+                                                    set_max_width_chars: 0,
+                                                    set_justify: gtk::Justification::Center,
+                                                    #[watch]
+                                                    set_label: if let Some(u) = &model.homepage {
+                                                        u
+                                                    } else {
+                                                        ""
+                                                    },
+                                                    #[watch]
+                                                    set_visible: model.homepage.is_some(),
+                                                }
+                                            }
+
+                                        }
+                                    },
+                                }
+                            },
+                            append = &gtk::FlowBoxChild {
                                 set_hexpand: true,
                                 gtk::Box {
                                     set_spacing: 10,
@@ -903,6 +910,15 @@ impl Component for PkgModel {
                                             }
                                         }
                                     },
+                                }
+                            },
+                            append = &gtk::FlowBoxChild {
+                                set_hexpand: true,
+                                gtk::Box {
+                                    set_spacing: 10,
+                                    set_hexpand: true,
+                                    set_homogeneous: true,
+                              
                                     gtk::Button {
                                         set_hexpand: true,
                                         add_css_class: "card",
