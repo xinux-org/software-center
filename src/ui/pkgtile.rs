@@ -31,7 +31,7 @@ impl FactoryComponent for PkgTile {
     type Input = ();
     type Output = PkgTileMsg;
     type ParentWidget = gtk::FlowBox;
-    type ParentInput = AppMsg;
+    // type ParentInput = AppMsg;
 
     view! {
         gtk::FlowBoxChild {
@@ -67,7 +67,7 @@ impl FactoryComponent for PkgTile {
                 gtk::Button {
                     add_css_class: "card",
                     connect_clicked[sender, pkg = self.pkg.clone()] => move |_| {
-                        sender.output(PkgTileMsg::Open(pkg.to_string()))
+                        sender.output(PkgTileMsg::Open(pkg.to_string()));
                     },
                     gtk::Box {
                         set_margin_start: 15,
@@ -168,11 +168,5 @@ impl FactoryComponent for PkgTile {
             installeduser: parent.installeduser,
             installedsystem: parent.installedsystem,
         }
-    }
-
-    fn forward_to_parent(output: Self::Output) -> Option<AppMsg> {
-        Some(match output {
-            PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-        })
     }
 }

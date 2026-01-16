@@ -1,6 +1,6 @@
 use adw::prelude::*;
-use relm4::*;
 use gettextrs::gettext;
+use relm4::*;
 
 use crate::config;
 
@@ -28,7 +28,7 @@ impl SimpleComponent for AboutPageModel {
 
     fn init(
         parent_window: Self::Init,
-        _root: &Self::Root,
+        _root: Self::Root,
         _sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let model = Self {};
@@ -38,8 +38,8 @@ impl SimpleComponent for AboutPageModel {
         ComponentParts { model, widgets }
     }
 
-    fn update_view(&self, dialog: &mut Self::Widgets, _sender: ComponentSender<Self>) {
-        let dialog = adw::AboutWindow::builder()
+    fn update_view(&self, _dialog: &mut Self::Widgets, _sender: ComponentSender<Self>) {
+        let dialog = adw::AboutDialog::builder()
             .application_icon(config::APP_ID)
             .application_name(gettext("Nix Software Center"))
             .developer_name(gettext("Xinux Developers"))
@@ -49,11 +49,9 @@ impl SimpleComponent for AboutPageModel {
             ])
             .issue_url("https://github.com/xinux-org/software-center/issues")
             .license_type(gtk::License::Gpl30)
-            .modal(true)
-            .transient_for(&dialog.parent_window)
             .version(config::VERSION)
             .website("https://github.com/xinux-org/software-center")
             .build();
-        dialog.present();
+        dialog.present(relm4::main_application().active_window().as_ref());
     }
 }

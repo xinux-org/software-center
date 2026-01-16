@@ -2,7 +2,7 @@ use adw::gio;
 use adw::prelude::*;
 use gettextrs::gettext;
 use html2pango;
-use image::{imageops::FilterType, ImageFormat};
+use image::{ImageFormat, imageops::FilterType};
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::actions::RelmAction;
@@ -161,6 +161,7 @@ pub enum PkgMsg {
     SetInstallType(InstallType),
     AddToQueue(WorkPkg),
     UpdateOnline(bool),
+    Noop,
 }
 
 #[derive(Debug)]
@@ -918,7 +919,7 @@ impl Component for PkgModel {
                                     set_spacing: 10,
                                     set_hexpand: true,
                                     set_homogeneous: true,
-                              
+
                                     gtk::Button {
                                         set_hexpand: true,
                                         add_css_class: "card",
@@ -1026,7 +1027,7 @@ impl Component for PkgModel {
 
     fn init(
         initparams: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let installworker = InstallAsyncHandler::builder()
@@ -1048,7 +1049,9 @@ impl Component for PkgModel {
             icon: None,
             homepage: None,
             licenses: vec![],
-            screenshots: FactoryVecDeque::new(adw::Carousel::new(), sender.input_sender()),
+            screenshots: FactoryVecDeque::builder()
+                .launch(adw::Carousel::new())
+                .forward(sender.input_sender(), |_| PkgMsg::Noop),
             installworker,
             platforms: vec![],
             carpage: CarouselPage::Single,
@@ -1672,6 +1675,7 @@ impl Component for PkgModel {
             PkgMsg::UpdateOnline(online) => {
                 self.set_online(online);
             }
+            PkgMsg::Noop => (),
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::{
-    config,
+    APPINFO, config,
     parse::{
         config::{editconfig, getconfig},
         packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
@@ -10,18 +10,17 @@ use crate::{
         unavailabledialog::UnavailableDialogMsg, updatepage::UNAVAILABLE_BROKER,
         welcome::WelcomeMsg,
     },
-    APPINFO,
 };
-use adw::prelude::*;
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self,
+    self, Component, ComponentController, ComponentParts, ComponentSender, Controller,
+    MessageBroker, RelmWidgetExt, WorkerController,
     actions::{RelmAction, RelmActionGroup},
+    adw::{self, prelude::*},
     factory::FactoryVecDeque,
-    Component, ComponentController, ComponentParts, ComponentSender, Controller, MessageBroker,
-    RelmWidgetExt, WorkerController,
+    gtk::{self}, menu,
 };
 use spdx::Expression;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
@@ -174,6 +173,7 @@ pub enum AppMsg {
     SetDarkMode(bool),
     GetUnavailableItems(HashMap<String, String>, HashMap<String, String>, UpdateType),
     CheckNetwork,
+    Noop,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -553,8 +553,10 @@ impl Component for AppModel {
             userpkgtype,
             categoryrec: HashMap::new(),
             categoryall: HashMap::new(),
-            recommendedapps: FactoryVecDeque::new(gtk::FlowBox::new(), sender.input_sender()),
-            categories: FactoryVecDeque::new(gtk::FlowBox::new(), sender.input_sender()),
+            recommendedapps: FactoryVecDeque::builder().launch(gtk::FlowBox::new()).forward(sender.input_sender(), |pkg_tile_msg| match  {
+                PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
+            }),
+            categories: FactoryVecDeque::builder().launch(gtk::FlowBox::new()).forward(sender.input_sender(), |pkg_category_msg| AppMsg::Noop),
             pkgpage,
             searchpage,
             categorypage,
@@ -613,7 +615,7 @@ impl Component for AppModel {
                 sender
                     .send(PreferencesPageMsg::Show(config.clone()))
                     .unwrap();
-                preferencespage.present();
+                preferencespage.present(relm4::main_application().active_window().as_ref());
             })
         };
 
@@ -1440,7 +1442,9 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         }
                                     }
                                     _ => {
-                                        warn!("match possibleitems.len() is staaaaaaaaaaaaaaaaaaarted");
+                                        warn!(
+                                            "match possibleitems.len() is staaaaaaaaaaaaaaaaaaarted"
+                                        );
                                     }
                                 }
                             }
@@ -2106,7 +2110,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     }
                     AppAsyncMsg::SetNetwork(online)
                 });
-            }
+            },
+            AppMsg::Noop => {},
         }
     }
 

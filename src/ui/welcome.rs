@@ -176,11 +176,11 @@ impl SimpleComponent for WelcomeModel {
 
     fn init(
         parent_window: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let conf_dialog = OpenDialog::builder()
-            .transient_for_native(root)
+            .transient_for_native(&root)
             .launch(OpenDialogSettings::default())
             .forward(sender.input_sender(), |response| match response {
                 OpenDialogResponse::Accept(path) => WelcomeMsg::UpdateConfPath(path),
@@ -188,7 +188,7 @@ impl SimpleComponent for WelcomeModel {
             });
 
         let flake_dialog = OpenDialog::builder()
-            .transient_for_native(root)
+            .transient_for_native(&root)
             .launch(OpenDialogSettings::default())
             .forward(sender.input_sender(), |response| match response {
                 OpenDialogResponse::Accept(path) => WelcomeMsg::UpdateFlakePath(path),

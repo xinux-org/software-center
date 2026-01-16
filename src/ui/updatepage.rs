@@ -223,7 +223,7 @@ impl SimpleComponent for UpdatePageModel {
 
     fn init(
         initparams: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let updateworker = UpdateAsyncHandler::builder()
@@ -503,7 +503,7 @@ impl FactoryComponent for UpdateItemModel {
     type Input = ();
     type Output = UpdateItemMsg;
     type ParentWidget = adw::gtk::ListBox;
-    type ParentInput = UpdatePageMsg;
+    // type ParentInput = UpdatePageMsg;
 
     view! {
         adw::PreferencesRow {

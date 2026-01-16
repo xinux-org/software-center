@@ -2,7 +2,7 @@ use std::path::Path;
 
 use gtk::pango;
 use log::*;
-use relm4::{*, prelude::*, factory::*};
+use relm4::{factory::*, gtk::glib, prelude::*, *};
 use adw::prelude::*;
 use crate::{APPINFO, ui::{window::REBUILD_BROKER, rebuild::RebuildMsg}};
 
@@ -67,19 +67,21 @@ impl SimpleComponent for UnavailableDialogModel {
             add_response: ("continue", &gettext("Continue")),
             set_response_appearance: ("continue", adw::ResponseAppearance::Destructive),
             connect_close_request => |_| {
-                gtk::Inhibit(true)
+                glib::Propagation::Proceed
             }
         }
     }
 
     fn init(
         parent_window: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
 
         let model = UnavailableDialogModel {
-            unavailableuseritems: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
+            unavailableuseritems: FactoryVecDeque::builder().launch(gtk::ListBox::new()).forward(sender.input_sender(), |unavailable_item_msg| match  {
+                // UnavailableItemMsg::
+            }),
             unavailablesysitems: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
             updatetype: UpdateType::All,
             hidden: true,
@@ -166,11 +168,11 @@ impl FactoryComponent for UnavailableItemModel {
     type Init = UnavailableItemModel;
     type Input = ();
     type Output = UnavailableItemMsg;
-    type ParentWidget = adw::gtk::ListBox;
-    type ParentInput = UnavailableDialogMsg;
+    type ParentWidget = adw::ActionRow;
+    // type ParentInput = UnavailableDialogMsg;
 
     view! {
-        adw::PreferencesRow {
+        adw::ActionRow {
             set_activatable: false,
             #[wrap(Some)]
             set_child = &gtk::Box {
