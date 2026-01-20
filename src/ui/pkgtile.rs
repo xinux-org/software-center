@@ -5,9 +5,6 @@ use relm4::gtk::pango;
 use relm4::{factory::*, *};
 
 use crate::APPINFO;
-
-use super::window::AppMsg;
-
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct PkgTile {
     pub name: String,
@@ -145,12 +142,7 @@ impl FactoryComponent for PkgTile {
         }
     }
 
-    fn init_model(
-        parent: Self::Init,
-        _index: &DynamicIndex,
-        _sender: FactorySender<Self>,
-    ) -> Self {
-
+    fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         let mut sum = parent.summary.trim().to_string();
         while sum.contains('\n') {
             sum = sum.replace('\n', " ");

@@ -6,21 +6,23 @@ use crate::{
         util,
     },
     ui::{
-        installedpage::InstalledItem, pkgpage::PkgPageInit, rebuild::RebuildMsg,
-        unavailabledialog::UnavailableDialogMsg, updatepage::UNAVAILABLE_BROKER,
-        welcome::WelcomeMsg,
+        installedpage::InstalledItem, pkgpage::PkgPageInit, pkgtile::PkgTileMsg,
+        rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg,
+        updatepage::UNAVAILABLE_BROKER, welcome::WelcomeMsg,
     },
 };
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self, Component, ComponentController, ComponentParts, ComponentSender, Controller,
-    MessageBroker, RelmWidgetExt, WorkerController,
+    self, AsyncComponentSender, Component, ComponentController, ComponentParts, ComponentSender,
+    Controller, MessageBroker, RelmWidgetExt, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     factory::FactoryVecDeque,
-    gtk::{self}, menu,
+    gtk::{self},
+    menu,
+    prelude::{AsyncComponent, AsyncComponentParts},
 };
 use spdx::Expression;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
@@ -195,8 +197,8 @@ pub enum AppAsyncMsg {
     SetNetwork(bool),
 }
 
-#[relm4::component(pub)]
-impl Component for AppModel {
+#[relm4::component(pub, async)]
+impl AsyncComponent for AppModel {
     type Init = ();
     type Input = AppMsg;
     type Output = ();
@@ -388,31 +390,31 @@ impl Component for AppModel {
         }
     }
 
-    fn pre_view() {
-        match model.page {
-            Page::FrontPage => {
-                main_leaf.set_visible_child(front_leaf);
-            }
-            Page::PkgPage => {
-                main_leaf.set_visible_child(model.pkgpage.widget());
-            }
-        }
-        match model.mainpage {
-            MainPage::FrontPage => {
-                front_leaf.set_visible_child(main_box);
-            }
-            MainPage::CategoryPage => {
-                front_leaf.set_visible_child(model.categorypage.widget());
-            }
-        }
-    }
+    // fn pre_view() {
+    //     match model.page {
+    //         Page::FrontPage => {
+    //             main_leaf.set_visible_child(front_leaf);
+    //         }
+    //         Page::PkgPage => {
+    //             main_leaf.set_visible_child(model.pkgpage.widget());
+    //         }
+    //     }
+    //     match model.mainpage {
+    //         MainPage::FrontPage => {
+    //             front_leaf.set_visible_child(main_box);
+    //         }
+    //         MainPage::CategoryPage => {
+    //             front_leaf.set_visible_child(model.categorypage.widget());
+    //         }
+    //     }
+    // }
 
-    #[tokio::main]
+    // #[tokio::main]
     async fn init(
         _application: Self::Init,
-        root: &Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        root: Self::Root,
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         let (config, welcome) = if let Some(config) = getconfig() {
             debug!("Got config: {:?}", config);
             let mut out = false;
@@ -553,10 +555,17 @@ impl Component for AppModel {
             userpkgtype,
             categoryrec: HashMap::new(),
             categoryall: HashMap::new(),
-            recommendedapps: FactoryVecDeque::builder().launch(gtk::FlowBox::new()).forward(sender.input_sender(), |pkg_tile_msg| match  {
-                PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-            }),
-            categories: FactoryVecDeque::builder().launch(gtk::FlowBox::new()).forward(sender.input_sender(), |pkg_category_msg| AppMsg::Noop),
+            recommendedapps: FactoryVecDeque::builder()
+                .launch(gtk::FlowBox::new())
+                .forward(
+                    sender.input_sender(),
+                    |pkg_tile_msg| match pkg_tile_msg {
+                        PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
+                    },
+                ),
+            categories: FactoryVecDeque::builder()
+                .launch(gtk::FlowBox::new())
+                .forward(sender.input_sender(), |pkg_category_msg| AppMsg::Noop),
             pkgpage,
             searchpage,
             categorypage,
@@ -643,14 +652,14 @@ impl Component for AppModel {
         installedvs.set_icon_name(Some("nsc-installed-symbolic"));
         updatesvs.set_icon_name(Some("nsc-update-symbolic"));
 
-        ComponentParts { model, widgets }
+        AsyncComponentParts { model, widgets }
     }
 
-    #[tokio::main]
+    // #[tokio::main]
     async fn update(
         &mut self,
         msg: Self::Input,
-        sender: ComponentSender<Self>,
+        sender: AsyncComponentSender<Self>,
         _root: &Self::Root,
     ) {
         self.reset();
@@ -2110,15 +2119,15 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     }
                     AppAsyncMsg::SetNetwork(online)
                 });
-            },
-            AppMsg::Noop => {},
+            }
+            AppMsg::Noop => {}
         }
     }
 
-    fn update_cmd(
+    async fn update_cmd(
         &mut self,
         msg: Self::CommandOutput,
-        sender: ComponentSender<Self>,
+        sender: AsyncComponentSender<Self>,
         _root: &Self::Root,
     ) {
         match msg {

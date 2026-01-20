@@ -24,7 +24,7 @@ fn main() {
     );
     app.set_resource_base_path(Some("/org/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
-    app.run::<AppModel>(());
+    app.run_async::<AppModel>(());
 }
 
 fn setup_gettext() {
