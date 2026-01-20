@@ -2,7 +2,10 @@ use adw::gio;
 use gettextrs::{LocaleCategory, gettext};
 use gtk::{glib, prelude::ApplicationExt};
 use log::{error, info};
-use nix_software_center::{config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE}, ui::window::AppModel};
+use nix_software_center::{
+    config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE},
+    ui::window::AppModel,
+};
 use relm4::*;
 fn main() {
     gtk::init().unwrap();
@@ -10,7 +13,7 @@ fn main() {
     glib::set_application_name(&gettext("Software Center"));
 
     setup_gettext();
-    
+
     if let Ok(res) = gio::Resource::load(RESOURCES_FILE) {
         info!("Resource loaded: {}", RESOURCES_FILE);
         gio::resources_register(&res);
@@ -18,10 +21,7 @@ fn main() {
         error!("Failed to load resources");
     }
     gtk::Window::set_default_icon_name(APP_ID);
-    let app = adw::Application::new(
-        Some(APP_ID),
-        gio::ApplicationFlags::empty(),
-    );
+    let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
     app.set_resource_base_path(Some("/org/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
     app.run_async::<AppModel>(());

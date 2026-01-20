@@ -6,23 +6,21 @@ use crate::{
         util,
     },
     ui::{
-        categories::PkgCategoryMsg, categorypage, installedpage::InstalledItem,
-        pkgpage::PkgPageInit, pkgtile::PkgTileMsg, rebuild::RebuildMsg,
-        unavailabledialog::UnavailableDialogMsg, updatepage::UNAVAILABLE_BROKER,
-        welcome::WelcomeMsg,
+        categories::PkgCategoryMsg, installedpage::InstalledItem, pkgpage::PkgPageInit,
+        pkgtile::PkgTileMsg, rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg,
+        updatepage::UNAVAILABLE_BROKER, welcome::WelcomeMsg,
     },
 };
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self, AsyncComponentSender, Component, ComponentController, ComponentParts, ComponentSender,
-    Controller, MessageBroker, RelmWidgetExt, WorkerController,
+    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker,
+    RelmWidgetExt, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     factory::FactoryVecDeque,
     gtk::{self},
-    menu,
     prelude::{AsyncComponent, AsyncComponentParts},
 };
 use spdx::Expression;
@@ -206,6 +204,7 @@ impl AsyncComponent for AppModel {
     type CommandOutput = AppAsyncMsg;
 
     view! {
+        #[root]
         #[name(main_window)]
         adw::ApplicationWindow {
             set_default_width: 1150,
@@ -391,7 +390,7 @@ impl AsyncComponent for AppModel {
         }
     }
 
-    fn pre_view() {
+    async fn pre_view() {
         match model.page {
             Page::FrontPage => {
                 main_leaf.set_visible_child(front_leaf);
@@ -410,7 +409,6 @@ impl AsyncComponent for AppModel {
         }
     }
 
-    // #[tokio::main]
     async fn init(
         _application: Self::Init,
         root: Self::Root,
@@ -496,7 +494,7 @@ impl AsyncComponent for AppModel {
             .detach_worker(())
             .forward(sender.input_sender(), identity);
         let loaderrordialog = LoadErrorModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
         let pkgpage = PkgModel::builder()
             .launch(PkgPageInit {
@@ -529,13 +527,13 @@ impl AsyncComponent for AppModel {
             .forward(sender.input_sender(), identity);
         let viewstack = adw::ViewStack::new();
         let welcomepage = WelcomeModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
         let aboutpage = AboutPageModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .detach();
         let preferencespage = PreferencesPageModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
 
         let model = AppModel {
@@ -658,7 +656,6 @@ impl AsyncComponent for AppModel {
         AsyncComponentParts { model, widgets }
     }
 
-    // #[tokio::main]
     async fn update(
         &mut self,
         msg: Self::Input,
