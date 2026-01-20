@@ -1,10 +1,13 @@
 use std::path::Path;
 
+use crate::{
+    APPINFO,
+    ui::{rebuild::RebuildMsg, window::REBUILD_BROKER},
+};
+use adw::prelude::*;
 use gtk::pango;
 use log::*;
-use relm4::{*, prelude::*, factory::*};
-use adw::prelude::*;
-use crate::{APPINFO, ui::{window::REBUILD_BROKER, rebuild::RebuildMsg}};
+use relm4::{factory::*, prelude::*};
 
 use super::updatepage::{UpdatePageMsg, UpdateType};
 use gettextrs::gettext;
@@ -19,9 +22,14 @@ pub struct UnavailableDialogModel {
 
 #[derive(Debug)]
 pub enum UnavailableDialogMsg {
-    Show(Vec<UnavailableItemModel>, Vec<UnavailableItemModel>, UpdateType),
+    Show(
+        Vec<UnavailableItemModel>,
+        Vec<UnavailableItemModel>,
+        UpdateType,
+    ),
     Close,
     Continue,
+    Noop,
 }
 
 #[relm4::component(pub)]
@@ -31,11 +39,11 @@ impl SimpleComponent for UnavailableDialogModel {
     type Output = UpdatePageMsg;
 
     view! {
-        dialog = adw::MessageDialog {
+        dialog = adw::AlertDialog {
             #[watch]
             set_visible: !model.hidden,
-            set_transient_for: Some(&parent_window),
-            set_modal: true,
+            // set_transient_for: Some(&parent_window),
+            // set_modal: true,
             set_heading: Some(&gettext("Some packages are unavailable!")),
             set_body: &gettext("If you continue this update, some packages will be removed"),
             #[wrap(Some)]
@@ -66,21 +74,24 @@ impl SimpleComponent for UnavailableDialogModel {
             add_response: ("cancel", &gettext("Cancel")),
             add_response: ("continue", &gettext("Continue")),
             set_response_appearance: ("continue", adw::ResponseAppearance::Destructive),
-            connect_close_request => |_| {
-                gtk::Inhibit(true)
-            }
+            // connect_close_request => |_| {
+            //     glib::Propagation::Proceed
+            // }
         }
     }
 
     fn init(
         parent_window: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-
         let model = UnavailableDialogModel {
-            unavailableuseritems: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
-            unavailablesysitems: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
+            unavailableuseritems: FactoryVecDeque::builder()
+                .launch(gtk::ListBox::new())
+                .forward(sender.input_sender(), |_| UnavailableDialogMsg::Noop),
+            unavailablesysitems: FactoryVecDeque::builder()
+                .launch(gtk::ListBox::new())
+                .forward(sender.input_sender(), |_| UnavailableDialogMsg::Noop),
             updatetype: UpdateType::All,
             hidden: true,
         };
@@ -90,21 +101,20 @@ impl SimpleComponent for UnavailableDialogModel {
 
         let widgets = view_output!();
 
-        widgets.dialog.connect_response(None, move |_, resp| {
-            match resp {
+        widgets
+            .dialog
+            .connect_response(None, move |_, resp| match resp {
                 "cancel" => {
                     REBUILD_BROKER.send(RebuildMsg::Close);
                     debug!("Response: cancel")
-                },
+                }
                 "continue" => {
                     sender.input(UnavailableDialogMsg::Continue);
                     debug!("Response: continue")
-                },
+                }
                 _ => unreachable!(),
-            }
-        });
+            });
         ComponentParts { model, widgets }
-
     }
 
     fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
@@ -133,17 +143,37 @@ impl SimpleComponent for UnavailableDialogModel {
             UnavailableDialogMsg::Continue => {
                 match self.updatetype {
                     UpdateType::User => {
-                        let _ = sender.output(UpdatePageMsg::UpdateAllUserRm(self.unavailableuseritems.iter().map(|x| x.pkg.to_string()).collect()));
+                        let _ = sender.output(UpdatePageMsg::UpdateAllUserRm(
+                            self.unavailableuseritems
+                                .iter()
+                                .map(|x| x.pkg.to_string())
+                                .collect(),
+                        ));
                     }
                     UpdateType::System => {
-                        let _ = sender.output(UpdatePageMsg::UpdateSystemRm(self.unavailablesysitems.iter().map(|x| x.pkg.to_string()).collect()));
+                        let _ = sender.output(UpdatePageMsg::UpdateSystemRm(
+                            self.unavailablesysitems
+                                .iter()
+                                .map(|x| x.pkg.to_string())
+                                .collect(),
+                        ));
                     }
                     UpdateType::All => {
-                        let _ = sender.output(UpdatePageMsg::UpdateAllRm(self.unavailableuseritems.iter().map(|x| x.pkg.to_string()).collect(), self.unavailablesysitems.iter().map(|x| x.pkg.to_string()).collect()));
+                        let _ = sender.output(UpdatePageMsg::UpdateAllRm(
+                            self.unavailableuseritems
+                                .iter()
+                                .map(|x| x.pkg.to_string())
+                                .collect(),
+                            self.unavailablesysitems
+                                .iter()
+                                .map(|x| x.pkg.to_string())
+                                .collect(),
+                        ));
                     }
                 }
                 sender.input(UnavailableDialogMsg::Close)
             }
+            UnavailableDialogMsg::Noop => {}
         }
     }
 }
@@ -157,20 +187,20 @@ pub struct UnavailableItemModel {
     pub message: String,
 }
 
-#[derive(Debug)]
-pub enum UnavailableItemMsg {}
+// #[derive(Debug)]
+// pub enum UnavailableItemMsg {}
 
 #[relm4::factory(pub)]
 impl FactoryComponent for UnavailableItemModel {
     type CommandOutput = ();
     type Init = UnavailableItemModel;
     type Input = ();
-    type Output = UnavailableItemMsg;
-    type ParentWidget = adw::gtk::ListBox;
-    type ParentInput = UnavailableDialogMsg;
+    type Output = ();
+    type ParentWidget = gtk::ListBox;
+    // type ParentInput = UnavailableDialogMsg;
 
     view! {
-        adw::PreferencesRow {
+        adw::ActionRow {
             set_activatable: false,
             #[wrap(Some)]
             set_child = &gtk::Box {
@@ -248,16 +278,12 @@ impl FactoryComponent for UnavailableItemModel {
                         set_wrap: true,
                     }
                 }
-                
+
             }
         }
     }
 
-    fn init_model(
-        init: Self::Init,
-        _index: &DynamicIndex,
-        _sender: FactorySender<Self>,
-    ) -> Self {
+    fn init_model(init: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         init
     }
 }

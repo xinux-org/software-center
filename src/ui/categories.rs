@@ -3,7 +3,7 @@ use relm4::adw::prelude::*;
 use relm4::gtk::pango;
 use relm4::{factory::*, *};
 
-use super::window::AppMsg;
+// use super::window::AppMsg;
 
 #[derive(Debug)]
 pub struct PkgGroup {
@@ -32,7 +32,7 @@ impl FactoryComponent for PkgGroup {
     type Input = ();
     type Output = PkgCategoryMsg;
     type ParentWidget = gtk::FlowBox;
-    type ParentInput = AppMsg;
+    // type ParentInput = AppMsg;
 
     view! {
         gtk::FlowBoxChild {
@@ -78,7 +78,7 @@ impl FactoryComponent for PkgGroup {
                     }
                 },
                 connect_clicked[sender, category = self.category.clone()] => move |_| {
-                    sender.output(PkgCategoryMsg::Open(category.clone()));
+                    sender.output(PkgCategoryMsg::Open(category.clone())).unwrap()
                 }
             }
         }
@@ -86,11 +86,5 @@ impl FactoryComponent for PkgGroup {
 
     fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         Self { category: parent }
-    }
-
-    fn forward_to_parent(output: Self::Output) -> Option<AppMsg> {
-        Some(match output {
-            PkgCategoryMsg::Open(x) => AppMsg::OpenCategoryPage(x),
-        })
     }
 }

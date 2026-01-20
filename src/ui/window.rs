@@ -1,27 +1,27 @@
 use crate::{
-    config,
+    APPINFO, config,
     parse::{
         config::{editconfig, getconfig},
         packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         util,
     },
     ui::{
-        installedpage::InstalledItem, pkgpage::PkgPageInit, rebuild::RebuildMsg,
-        unavailabledialog::UnavailableDialogMsg, updatepage::UNAVAILABLE_BROKER,
-        welcome::WelcomeMsg,
+        categories::PkgCategoryMsg, installedpage::InstalledItem, pkgpage::PkgPageInit,
+        pkgtile::PkgTileMsg, rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg,
+        updatepage::UNAVAILABLE_BROKER, welcome::WelcomeMsg,
     },
-    APPINFO,
 };
-use adw::prelude::*;
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self,
-    actions::{RelmAction, RelmActionGroup},
-    factory::FactoryVecDeque,
-    Component, ComponentController, ComponentParts, ComponentSender, Controller, MessageBroker,
+    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker,
     RelmWidgetExt, WorkerController,
+    actions::{RelmAction, RelmActionGroup},
+    adw::{self, prelude::*},
+    factory::FactoryVecDeque,
+    gtk::{self},
+    prelude::{AsyncComponent, AsyncComponentParts},
 };
 use spdx::Expression;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
@@ -174,6 +174,7 @@ pub enum AppMsg {
     SetDarkMode(bool),
     GetUnavailableItems(HashMap<String, String>, HashMap<String, String>, UpdateType),
     CheckNetwork,
+    Noop,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -195,14 +196,15 @@ pub enum AppAsyncMsg {
     SetNetwork(bool),
 }
 
-#[relm4::component(pub)]
-impl Component for AppModel {
+#[relm4::component(pub, async)]
+impl AsyncComponent for AppModel {
     type Init = ();
     type Input = AppMsg;
     type Output = ();
     type CommandOutput = AppAsyncMsg;
 
     view! {
+        #[root]
         #[name(main_window)]
         adw::ApplicationWindow {
             set_default_width: 1150,
@@ -388,7 +390,7 @@ impl Component for AppModel {
         }
     }
 
-    fn pre_view() {
+    async fn pre_view() {
         match model.page {
             Page::FrontPage => {
                 main_leaf.set_visible_child(front_leaf);
@@ -407,12 +409,11 @@ impl Component for AppModel {
         }
     }
 
-    #[tokio::main]
     async fn init(
         _application: Self::Init,
-        root: &Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        root: Self::Root,
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         let (config, welcome) = if let Some(config) = getconfig() {
             debug!("Got config: {:?}", config);
             let mut out = false;
@@ -493,7 +494,7 @@ impl Component for AppModel {
             .detach_worker(())
             .forward(sender.input_sender(), identity);
         let loaderrordialog = LoadErrorModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
         let pkgpage = PkgModel::builder()
             .launch(PkgPageInit {
@@ -526,13 +527,13 @@ impl Component for AppModel {
             .forward(sender.input_sender(), identity);
         let viewstack = adw::ViewStack::new();
         let welcomepage = WelcomeModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
         let aboutpage = AboutPageModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .detach();
         let preferencespage = PreferencesPageModel::builder()
-            .launch(root.clone().upcast())
+            .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
 
         let model = AppModel {
@@ -553,8 +554,19 @@ impl Component for AppModel {
             userpkgtype,
             categoryrec: HashMap::new(),
             categoryall: HashMap::new(),
-            recommendedapps: FactoryVecDeque::new(gtk::FlowBox::new(), sender.input_sender()),
-            categories: FactoryVecDeque::new(gtk::FlowBox::new(), sender.input_sender()),
+            recommendedapps: FactoryVecDeque::builder()
+                .launch(gtk::FlowBox::new())
+                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
+                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
+                }),
+            categories: FactoryVecDeque::builder()
+                .launch(gtk::FlowBox::new())
+                .forward(
+                    sender.input_sender(),
+                    |pkg_category_msg| match pkg_category_msg {
+                        PkgCategoryMsg::Open(category) => AppMsg::OpenCategoryPage(category),
+                    },
+                ),
             pkgpage,
             searchpage,
             categorypage,
@@ -613,7 +625,7 @@ impl Component for AppModel {
                 sender
                     .send(PreferencesPageMsg::Show(config.clone()))
                     .unwrap();
-                preferencespage.present();
+                preferencespage.present(relm4::main_application().active_window().as_ref());
             })
         };
 
@@ -641,14 +653,13 @@ impl Component for AppModel {
         installedvs.set_icon_name(Some("nsc-installed-symbolic"));
         updatesvs.set_icon_name(Some("nsc-update-symbolic"));
 
-        ComponentParts { model, widgets }
+        AsyncComponentParts { model, widgets }
     }
 
-    #[tokio::main]
     async fn update(
         &mut self,
         msg: Self::Input,
-        sender: ComponentSender<Self>,
+        sender: AsyncComponentSender<Self>,
         _root: &Self::Root,
     ) {
         self.reset();
@@ -1440,7 +1451,9 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         }
                                     }
                                     _ => {
-                                        warn!("match possibleitems.len() is staaaaaaaaaaaaaaaaaaarted");
+                                        warn!(
+                                            "match possibleitems.len() is staaaaaaaaaaaaaaaaaaarted"
+                                        );
                                     }
                                 }
                             }
@@ -2107,13 +2120,14 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     AppAsyncMsg::SetNetwork(online)
                 });
             }
+            AppMsg::Noop => {}
         }
     }
 
-    fn update_cmd(
+    async fn update_cmd(
         &mut self,
         msg: Self::CommandOutput,
-        sender: ComponentSender<Self>,
+        sender: AsyncComponentSender<Self>,
         _root: &Self::Root,
     ) {
         match msg {

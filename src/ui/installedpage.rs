@@ -1,10 +1,13 @@
-use std::path::Path;
 use crate::APPINFO;
+use std::path::Path;
 
-use super::{window::*, pkgpage::{InstallType, WorkPkg, PkgAction, NotifyPage}};
+use super::{
+    pkgpage::{InstallType, NotifyPage, PkgAction, WorkPkg},
+    window::*,
+};
 use adw::prelude::*;
-use relm4::{factory::*, *, gtk::pango};
 use gettextrs::gettext;
+use relm4::{factory::*, gtk::pango, *};
 
 #[tracker::track]
 #[derive(Debug)]
@@ -97,16 +100,30 @@ impl SimpleComponent for InstalledPageModel {
 
     fn init(
         (systempkgtype, userpkgtype): Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let model = InstalledPageModel {
-            installeduserlist: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
-            installedsystemlist: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
+            installeduserlist: FactoryVecDeque::builder()
+                .launch(gtk::ListBox::new())
+                .forward(
+                    sender.input_sender(),
+                    |installed_item_msg| match installed_item_msg {
+                        InstalledItemMsg::Delete(item) => InstalledPageMsg::Remove(item),
+                    },
+                ),
+            installedsystemlist: FactoryVecDeque::builder()
+                .launch(gtk::ListBox::new())
+                .forward(
+                    sender.input_sender(),
+                    |installed_item_msg| match installed_item_msg {
+                        InstalledItemMsg::Delete(item) => InstalledPageMsg::Remove(item),
+                    },
+                ),
             updatetracker: 0,
             userpkgtype,
             systempkgtype,
-            tracker: 0
+            tracker: 0,
         };
 
         let installeduserlist = model.installeduserlist.widget();
@@ -137,26 +154,24 @@ impl SimpleComponent for InstalledPageModel {
                 self.systempkgtype = systempkgtype;
                 self.userpkgtype = userpkgtype;
             }
-            InstalledPageMsg::OpenRow(row, pkgtype) => {
-                match pkgtype {
-                    InstallType::User => {
-                        let installeduserlist_guard = self.installeduserlist.guard();
-                        if let Some(item) = installeduserlist_guard.get(row) {
-                            if let Some(pkg) = &item.item.pkg {
-                                let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
-                            }
-                        }
-                    }
-                    InstallType::System => {
-                        let installedsystemlist_guard = self.installedsystemlist.guard();
-                        if let Some(item) = installedsystemlist_guard.get(row) {
-                            if let Some(pkg) = &item.item.pkg {
-                                let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
-                            }
+            InstalledPageMsg::OpenRow(row, pkgtype) => match pkgtype {
+                InstallType::User => {
+                    let installeduserlist_guard = self.installeduserlist.guard();
+                    if let Some(item) = installeduserlist_guard.get(row) {
+                        if let Some(pkg) = &item.item.pkg {
+                            let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                         }
                     }
                 }
-            }
+                InstallType::System => {
+                    let installedsystemlist_guard = self.installedsystemlist.guard();
+                    if let Some(item) = installedsystemlist_guard.get(row) {
+                        if let Some(pkg) = &item.item.pkg {
+                            let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                        }
+                    }
+                }
+            },
             InstalledPageMsg::Remove(item) => {
                 let work = WorkPkg {
                     pkg: item.pkg.unwrap_or_default(),
@@ -164,40 +179,37 @@ impl SimpleComponent for InstalledPageModel {
                     pkgtype: item.pkgtype,
                     action: PkgAction::Remove,
                     block: false,
-                    notify: Some(NotifyPage::Installed)
+                    notify: Some(NotifyPage::Installed),
                 };
-                sender.output(AppMsg::AddInstalledToWorkQueue(work));
+                let _ = sender.output(AppMsg::AddInstalledToWorkQueue(work));
             }
-            InstalledPageMsg::UnsetBusy(work) => {
-                match work.pkgtype {
-                    InstallType::User => {
-                        let mut installeduserlist_guard = self.installeduserlist.guard();
-                        for i in 0..installeduserlist_guard.len() {
-                            if let Some(item) = installeduserlist_guard.get_mut(i) {
-                                if item.item.pname == work.pname && item.item.pkgtype == work.pkgtype {
-                                    item.item.busy = false;
-                                }
-                            }
-                        }
-                    }
-                    InstallType::System => {
-                        let mut installedsystemlist_guard = self.installedsystemlist.guard();
-                        for i in 0..installedsystemlist_guard.len() {
-                            if let Some(item) = installedsystemlist_guard.get_mut(i) {
-                                if item.item.pkg == Some(work.pkg.clone()) && item.item.pkgtype == work.pkgtype {
-                                    item.item.busy = false;
-                                }
+            InstalledPageMsg::UnsetBusy(work) => match work.pkgtype {
+                InstallType::User => {
+                    let mut installeduserlist_guard = self.installeduserlist.guard();
+                    for i in 0..installeduserlist_guard.len() {
+                        if let Some(item) = installeduserlist_guard.get_mut(i) {
+                            if item.item.pname == work.pname && item.item.pkgtype == work.pkgtype {
+                                item.item.busy = false;
                             }
                         }
                     }
                 }
-            }
+                InstallType::System => {
+                    let mut installedsystemlist_guard = self.installedsystemlist.guard();
+                    for i in 0..installedsystemlist_guard.len() {
+                        if let Some(item) = installedsystemlist_guard.get_mut(i) {
+                            if item.item.pkg == Some(work.pkg.clone())
+                                && item.item.pkgtype == work.pkgtype
+                            {
+                                item.item.busy = false;
+                            }
+                        }
+                    }
+                }
+            },
         }
     }
 }
-
-
-
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InstalledItem {
@@ -232,7 +244,7 @@ impl FactoryComponent for InstalledItemModel {
     type Input = InstalledItemInputMsg;
     type Output = InstalledItemMsg;
     type ParentWidget = adw::gtk::ListBox;
-    type ParentInput = InstalledPageMsg;
+    // type ParentInput = InstalledPageMsg;
 
     view! {
         adw::PreferencesRow {
@@ -324,7 +336,7 @@ impl FactoryComponent for InstalledItemModel {
                         set_can_focus: false,
                         connect_clicked[sender, item = self.item.clone()] => move |_| {
                             sender.input(InstalledItemInputMsg::Busy(true));
-                            sender.output(InstalledItemMsg::Delete(item.clone()))
+                            let _ = sender.output(InstalledItemMsg::Delete(item.clone()));
                         }
                     }
                 }
@@ -332,11 +344,7 @@ impl FactoryComponent for InstalledItemModel {
         }
     }
 
-    fn init_model(
-        parent: Self::Init,
-        _index: &DynamicIndex,
-        _sender: FactorySender<Self>,
-    ) -> Self {
+    fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         let sum = if let Some(s) = parent.summary {
             let mut sum = s.trim().to_string();
             while sum.contains('\n') {
@@ -360,15 +368,7 @@ impl FactoryComponent for InstalledItemModel {
             busy: parent.busy,
         };
 
-        Self {
-            item,
-        }
-    }
-
-    fn forward_to_parent(output: Self::Output) -> Option<InstalledPageMsg> {
-        Some(match output {
-            InstalledItemMsg::Delete(item) => InstalledPageMsg::Remove(item),
-        })
+        Self { item }
     }
 
     fn update(&mut self, msg: Self::Input, _sender: FactorySender<Self>) {
@@ -376,5 +376,4 @@ impl FactoryComponent for InstalledItemModel {
             InstalledItemInputMsg::Busy(b) => self.item.busy = b,
         }
     }
-
 }

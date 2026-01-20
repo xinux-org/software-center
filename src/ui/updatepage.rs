@@ -53,6 +53,7 @@ pub enum UpdatePageMsg {
     DoneWorking,
     FailedWorking,
     UpdateOnline(bool),
+    Noop,
 }
 
 #[derive(Debug)]
@@ -223,7 +224,7 @@ impl SimpleComponent for UpdatePageModel {
 
     fn init(
         initparams: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let updateworker = UpdateAsyncHandler::builder()
@@ -241,8 +242,12 @@ impl SimpleComponent for UpdatePageModel {
         updateworker.emit(UpdateAsyncHandlerMsg::UpdateConfig(config.clone()));
 
         let model = UpdatePageModel {
-            updateuserlist: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
-            updatesystemlist: FactoryVecDeque::new(gtk::ListBox::new(), sender.input_sender()),
+            updateuserlist: FactoryVecDeque::builder()
+                .launch(gtk::ListBox::new())
+                .forward(sender.input_sender(), |_| UpdatePageMsg::Noop),
+            updatesystemlist: FactoryVecDeque::builder()
+                .launch(gtk::ListBox::new())
+                .forward(sender.input_sender(), |_| UpdatePageMsg::Noop),
             channelupdate: None,
             updatetracker: 0,
             updateworker,
@@ -472,6 +477,7 @@ impl SimpleComponent for UpdatePageModel {
             UpdatePageMsg::UpdateOnline(online) => {
                 self.set_online(online);
             }
+            UpdatePageMsg::Noop => {}
         }
     }
 }
@@ -493,17 +499,17 @@ pub struct UpdateItemModel {
     item: UpdateItem,
 }
 
-#[derive(Debug)]
-pub enum UpdateItemMsg {}
+// #[derive(Debug)]
+// pub enum UpdateItemMsg {}
 
 #[relm4::factory(pub)]
 impl FactoryComponent for UpdateItemModel {
     type CommandOutput = ();
     type Init = UpdateItem;
     type Input = ();
-    type Output = UpdateItemMsg;
+    type Output = ();
     type ParentWidget = adw::gtk::ListBox;
-    type ParentInput = UpdatePageMsg;
+    // type ParentInput = UpdatePageMsg;
 
     view! {
         adw::PreferencesRow {

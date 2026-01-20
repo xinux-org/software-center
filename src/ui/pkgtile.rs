@@ -5,9 +5,6 @@ use relm4::gtk::pango;
 use relm4::{factory::*, *};
 
 use crate::APPINFO;
-
-use super::window::AppMsg;
-
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct PkgTile {
     pub name: String,
@@ -31,7 +28,7 @@ impl FactoryComponent for PkgTile {
     type Input = ();
     type Output = PkgTileMsg;
     type ParentWidget = gtk::FlowBox;
-    type ParentInput = AppMsg;
+    // type ParentInput = AppMsg;
 
     view! {
         gtk::FlowBoxChild {
@@ -67,7 +64,7 @@ impl FactoryComponent for PkgTile {
                 gtk::Button {
                     add_css_class: "card",
                     connect_clicked[sender, pkg = self.pkg.clone()] => move |_| {
-                        sender.output(PkgTileMsg::Open(pkg.to_string()))
+                        sender.output(PkgTileMsg::Open(pkg.to_string())).unwrap()
                     },
                     gtk::Box {
                         set_margin_start: 15,
@@ -145,12 +142,7 @@ impl FactoryComponent for PkgTile {
         }
     }
 
-    fn init_model(
-        parent: Self::Init,
-        _index: &DynamicIndex,
-        _sender: FactorySender<Self>,
-    ) -> Self {
-
+    fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         let mut sum = parent.summary.trim().to_string();
         while sum.contains('\n') {
             sum = sum.replace('\n', " ");
@@ -168,11 +160,5 @@ impl FactoryComponent for PkgTile {
             installeduser: parent.installeduser,
             installedsystem: parent.installedsystem,
         }
-    }
-
-    fn forward_to_parent(output: Self::Output) -> Option<AppMsg> {
-        Some(match output {
-            PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-        })
     }
 }

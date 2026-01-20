@@ -1,7 +1,7 @@
 use relm4::adw::prelude::*;
 use relm4::{factory::*, *};
 
-use super::pkgpage::PkgMsg;
+// use super::pkgpage::PkgMsg;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct ScreenshotItem {
@@ -19,7 +19,7 @@ impl FactoryComponent for ScreenshotItem {
     type Input = ();
     type Output = ScreenshotItemMsg;
     type ParentWidget = adw::Carousel;
-    type ParentInput = PkgMsg;
+    // type ParentInput = PkgMsg;
 
     view! {
         gtk::Box {

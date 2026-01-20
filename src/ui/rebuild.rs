@@ -1,5 +1,4 @@
 use super::window::AppMsg;
-use adw::prelude::*;
 use log::{info, trace};
 use relm4::*;
 use sourceview5::prelude::*;
@@ -182,7 +181,7 @@ impl SimpleComponent for RebuildModel {
 
     fn init(
         parent_window: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
 
