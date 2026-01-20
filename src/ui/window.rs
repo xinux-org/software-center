@@ -6,9 +6,10 @@ use crate::{
         util,
     },
     ui::{
-        installedpage::InstalledItem, pkgpage::PkgPageInit, pkgtile::PkgTileMsg,
-        rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg,
-        updatepage::UNAVAILABLE_BROKER, welcome::WelcomeMsg,
+        categories::PkgCategoryMsg, categorypage, installedpage::InstalledItem,
+        pkgpage::PkgPageInit, pkgtile::PkgTileMsg, rebuild::RebuildMsg,
+        unavailabledialog::UnavailableDialogMsg, updatepage::UNAVAILABLE_BROKER,
+        welcome::WelcomeMsg,
     },
 };
 use gettextrs::gettext;
@@ -390,24 +391,24 @@ impl AsyncComponent for AppModel {
         }
     }
 
-    // fn pre_view() {
-    //     match model.page {
-    //         Page::FrontPage => {
-    //             main_leaf.set_visible_child(front_leaf);
-    //         }
-    //         Page::PkgPage => {
-    //             main_leaf.set_visible_child(model.pkgpage.widget());
-    //         }
-    //     }
-    //     match model.mainpage {
-    //         MainPage::FrontPage => {
-    //             front_leaf.set_visible_child(main_box);
-    //         }
-    //         MainPage::CategoryPage => {
-    //             front_leaf.set_visible_child(model.categorypage.widget());
-    //         }
-    //     }
-    // }
+    fn pre_view() {
+        match model.page {
+            Page::FrontPage => {
+                main_leaf.set_visible_child(front_leaf);
+            }
+            Page::PkgPage => {
+                main_leaf.set_visible_child(model.pkgpage.widget());
+            }
+        }
+        match model.mainpage {
+            MainPage::FrontPage => {
+                front_leaf.set_visible_child(main_box);
+            }
+            MainPage::CategoryPage => {
+                front_leaf.set_visible_child(model.categorypage.widget());
+            }
+        }
+    }
 
     // #[tokio::main]
     async fn init(
@@ -557,15 +558,17 @@ impl AsyncComponent for AppModel {
             categoryall: HashMap::new(),
             recommendedapps: FactoryVecDeque::builder()
                 .launch(gtk::FlowBox::new())
-                .forward(
-                    sender.input_sender(),
-                    |pkg_tile_msg| match pkg_tile_msg {
-                        PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                    },
-                ),
+                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
+                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
+                }),
             categories: FactoryVecDeque::builder()
                 .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_category_msg| AppMsg::Noop),
+                .forward(
+                    sender.input_sender(),
+                    |pkg_category_msg| match pkg_category_msg {
+                        PkgCategoryMsg::Open(category) => AppMsg::OpenCategoryPage(category),
+                    },
+                ),
             pkgpage,
             searchpage,
             categorypage,

@@ -22,7 +22,7 @@ pub struct SearchPageModel {
 pub enum SearchPageMsg {
     Search(Vec<SearchItem>),
     UpdateInstalled(HashSet<String>, HashSet<String>),
-    OpenRow(DynamicIndex),
+    OpenRow(usize),
     Noop,
 }
 
@@ -41,13 +41,15 @@ impl SimpleComponent for SearchPageModel {
                 gtk::Stack {
                     set_margin_all: 20,
                     #[local_ref]
-                    searchlist -> adw::PreferencesGroup {
+                    searchlist -> gtk::ListBox {
                         set_valign: gtk::Align::Start,
                         add_css_class: "boxed-list",
-                        // set_selection_mode: gtk::SelectionMode::None,
-                        // connect_row_activated[sender] => move |_, row| {
-                        //     sender.input(SearchPageMsg::OpenRow(row.clone()));
-                        // }
+                        set_selection_mode: gtk::SelectionMode::None,
+                        connect_row_activated[sender] => move |listbox, row| {
+                            if let Some(i) = listbox.index_of_child(row) {
+                                sender.input(SearchPageMsg::OpenRow(i as usize))
+                            }
+                        }
                     }
                 }
             }
@@ -61,10 +63,8 @@ impl SimpleComponent for SearchPageModel {
     ) -> ComponentParts<Self> {
         let model = SearchPageModel {
             searchitems: FactoryVecDeque::builder()
-                .launch(adw::PreferencesGroup::new())
-                .forward(sender.input_sender(), |search_item_msg| match search_item_msg{
-                    SearchItemMsg::OpenRow(index) => SearchPageMsg::OpenRow(index),
-                }),
+                .launch(gtk::ListBox::new())
+                .forward(sender.input_sender(), |_| SearchPageMsg::Noop),
             searchitemtracker: 0,
             tracker: 0,
         };
@@ -88,12 +88,11 @@ impl SimpleComponent for SearchPageModel {
                 searchitem_guard.drop();
                 self.update_searchitemtracker(|_| ());
             }
-            SearchPageMsg::OpenRow(index) => {
-                let guard = self.searchitems.guard();
-
-                if let Some(item) = guard.get(index.current_index()) {
-                    let pkg = item.get_item().pkg.clone();
-                    sender.output(AppMsg::OpenPkg(pkg));
+            SearchPageMsg::OpenRow(row) => {
+                let searchitem_guard = self.searchitems.guard();
+                if let Some(item) = searchitem_guard.get(row) {
+                    let pkg = &item.item.pkg;
+                    let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                 }
             }
             SearchPageMsg::UpdateInstalled(installeduserpkgs, installedsystempkgs) => {
@@ -131,9 +130,7 @@ pub struct SearchItemModel {
 }
 
 #[derive(Debug)]
-pub enum SearchItemMsg {
-    OpenRow(DynamicIndex)
-}
+pub enum SearchItemMsg {}
 
 #[relm4::factory(pub)]
 impl FactoryComponent for SearchItemModel {
@@ -141,11 +138,13 @@ impl FactoryComponent for SearchItemModel {
     type Init = SearchItem;
     type Input = ();
     type Output = SearchItemMsg;
-    type ParentWidget = adw::PreferencesGroup;
+    type ParentWidget = adw::gtk::ListBox;
     // type ParentInput = SearchPageMsg;
 
     view! {
-        adw::ActionRow {
+        adw::PreferencesRow {
+            set_activatable: !self.item.pkg.is_empty(),
+            set_can_focus: false,
             #[wrap(Some)]
             set_child = &gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
@@ -242,9 +241,6 @@ impl FactoryComponent for SearchItemModel {
                         },
                     }
                 }
-            },
-            connect_activated[sender, index] => move |_|{
-                sender.output(SearchItemMsg::OpenRow(index.clone()));
             }
         }
     }

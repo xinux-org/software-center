@@ -181,7 +181,7 @@ impl SimpleComponent for InstalledPageModel {
                     block: false,
                     notify: Some(NotifyPage::Installed),
                 };
-                sender.output(AppMsg::AddInstalledToWorkQueue(work));
+                let _ = sender.output(AppMsg::AddInstalledToWorkQueue(work));
             }
             InstalledPageMsg::UnsetBusy(work) => match work.pkgtype {
                 InstallType::User => {
@@ -336,7 +336,7 @@ impl FactoryComponent for InstalledItemModel {
                         set_can_focus: false,
                         connect_clicked[sender, item = self.item.clone()] => move |_| {
                             sender.input(InstalledItemInputMsg::Busy(true));
-                            sender.output(InstalledItemMsg::Delete(item.clone()));
+                            let _ = sender.output(InstalledItemMsg::Delete(item.clone()));
                         }
                     }
                 }

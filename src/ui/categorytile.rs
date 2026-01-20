@@ -66,7 +66,7 @@ impl FactoryComponent for CategoryTile {
                 gtk::Button {
                     add_css_class: "card",
                     connect_clicked[sender, pkg = self.pkg.clone()] => move |_| {
-                        sender.output(CategoryTileMsg::Open(pkg.to_string()));
+                        sender.output(CategoryTileMsg::Open(pkg.to_string())).unwrap()
                     },
                     set_can_focus: false,
                     gtk::Box {

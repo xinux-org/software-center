@@ -78,7 +78,7 @@ impl FactoryComponent for PkgGroup {
                     }
                 },
                 connect_clicked[sender, category = self.category.clone()] => move |_| {
-                    sender.output(PkgCategoryMsg::Open(category.clone()));
+                    sender.output(PkgCategoryMsg::Open(category.clone())).unwrap()
                 }
             }
         }

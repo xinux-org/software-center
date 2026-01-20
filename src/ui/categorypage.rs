@@ -173,10 +173,10 @@ impl Component for CategoryPageModel {
         self.reset();
         match msg {
             CategoryPageMsg::Close => {
-                sender.output(AppMsg::FrontFrontPage);
+                sender.output(AppMsg::FrontFrontPage).unwrap()
             }
             CategoryPageMsg::OpenPkg(pkg) => {
-                sender.output(AppMsg::OpenPkg(pkg));
+                sender.output(AppMsg::OpenPkg(pkg)).unwrap()
             }
             CategoryPageMsg::Open(category, catrec, catall) => {
                 info!("CategoryPageMsg::Open");
