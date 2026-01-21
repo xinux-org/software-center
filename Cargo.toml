@@ -13,11 +13,6 @@ authors = [
 relm4 = { version = "0.9.1", features = ["libadwaita", "macros", "gnome_47"] }
 relm4-components = { package = "relm4-components", version = "0.9.1" }
 sourceview5 = { version = "0.9.1" }
-# adw = { package = "libadwaita", version = "0.4", features = [
-#   "v1_2",
-#   "gtk_v4_6",
-# ] }
-# gtk = { package = "gtk4", version = "0.6", features = ["v4_6"] }
 
 gettext-rs = { version = "0.7.7", features = ["gettext-system"] }
 nix-editor = "0.3.0"
