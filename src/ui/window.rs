@@ -119,8 +119,8 @@ pub struct AppModel {
     searchquery: String,
     vschild: String,
     showvsbar: bool,
-    #[tracker::no_eq]
-    aboutpage: Controller<AboutPageModel>,
+    // #[tracker::no_eq]
+    // aboutpage: Controller<AboutPageModel>,
     #[tracker::no_eq]
     preferencespage: Controller<PreferencesPageModel>,
     #[tracker::no_eq]
@@ -409,6 +409,7 @@ impl AsyncComponent for AppModel {
         }
     }
 
+    // #[tokio::main]
     async fn init(
         _application: Self::Init,
         root: Self::Root,
@@ -529,12 +530,8 @@ impl AsyncComponent for AppModel {
         let welcomepage = WelcomeModel::builder()
             .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
-        let aboutpage = AboutPageModel::builder()
-            .launch(root.clone().into())
-            .detach();
-        let preferencespage = PreferencesPageModel::builder()
-            .launch(root.clone().into())
-            .forward(sender.input_sender(), identity);
+        // let aboutpage = AboutPageModel::builder().launch(()).detach();
+        let preferencespage = PreferencesPageModel::builder().launch(()).detach();
 
         let model = AppModel {
             mainwindow: root.clone(),
@@ -580,7 +577,7 @@ impl AsyncComponent for AppModel {
             installedpagebusy: vec![],
             rebuild,
             welcomepage,
-            aboutpage,
+            // aboutpage,
             preferencespage,
             online,
             tracker: 0,
@@ -610,27 +607,23 @@ impl AsyncComponent for AppModel {
         let widgets = view_output!();
 
         let mut group = RelmActionGroup::<MenuActionGroup>::new();
+
         let aboutpage: RelmAction<AboutAction> = {
-            let sender = model.aboutpage.sender().clone();
             RelmAction::new_stateless(move |_| {
-                sender.send(()).unwrap();
+                AboutPageModel::builder().launch(()).detach();
             })
         };
 
-        let prefernecespage: RelmAction<PreferencesAction> = {
+        let prefernecespage_action: RelmAction<PreferencesAction> = {
             let sender = model.preferencespage.sender().clone();
-            let preferencespage = model.preferencespage.widget().clone();
             let config = model.config.clone();
             RelmAction::new_stateless(move |_| {
-                sender
-                    .send(PreferencesPageMsg::Show(config.clone()))
-                    .unwrap();
-                preferencespage.present(relm4::main_application().active_window().as_ref());
+                sender.emit(PreferencesPageMsg::Show(config.clone()));
             })
         };
 
         group.add_action(aboutpage);
-        group.add_action(prefernecespage);
+        group.add_action(prefernecespage_action);
         let actions = group.into_action_group();
         widgets
             .main_window

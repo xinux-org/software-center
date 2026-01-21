@@ -34,17 +34,16 @@ pub enum PreferencesPageMsg {
 }
 
 #[relm4::component(pub)]
-impl SimpleComponent for PreferencesPageModel {
-    type Init = gtk::Window;
+impl Component for PreferencesPageModel {
+    type Init = ();
     type Input = PreferencesPageMsg;
     type Output = AppMsg;
-    type Widgets = PreferencesPageWidgets;
+    // type Widgets = PreferencesPageWidgets;
+    type CommandOutput = ();
 
     view! {
         adw::PreferencesDialog {
-            // set_hide_on_close: true,
-            // set_transient_for: Some(&parent_window),
-            // set_modal: true,
+            set_vexpand: true,
             set_search_enabled: false,
             add = &adw::PreferencesPage {
                 add = &adw::PreferencesGroup {
@@ -201,17 +200,26 @@ impl SimpleComponent for PreferencesPageModel {
         };
 
         let widgets = view_output!();
+        // widgets.present(Some(&relm4::main_application().windows()[0]));
 
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
+    fn update(
+        &mut self,
+        msg: Self::Input, 
+        sender: ComponentSender<Self>, 
+        root: &Self::Root
+    ) {
         self.reset();
         match msg {
             PreferencesPageMsg::Show(config) => {
                 self.configpath = config.systemconfig.as_ref().map(PathBuf::from);
                 self.set_flake(config.flake.as_ref().map(PathBuf::from));
                 self.set_flakearg(config.flakearg);
+                
+                let window = relm4::main_application().active_window();
+                root.present(window.as_ref());
             }
             PreferencesPageMsg::Open => self.open_dialog.emit(OpenDialogMsg::Open),
             PreferencesPageMsg::OpenFlake => self.flake_file_dialog.emit(OpenDialogMsg::Open),
