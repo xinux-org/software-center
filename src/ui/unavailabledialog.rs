@@ -42,8 +42,6 @@ impl SimpleComponent for UnavailableDialogModel {
         dialog = adw::AlertDialog {
             #[watch]
             set_visible: !model.hidden,
-            // set_transient_for: Some(&parent_window),
-            // set_modal: true,
             set_heading: Some(&gettext("Some packages are unavailable!")),
             set_body: &gettext("If you continue this update, some packages will be removed"),
             #[wrap(Some)]
@@ -81,7 +79,7 @@ impl SimpleComponent for UnavailableDialogModel {
     }
 
     fn init(
-        parent_window: Self::Init,
+        _parent_window: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {

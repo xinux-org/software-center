@@ -1,19 +1,18 @@
-use super::window::AppMsg;
-use super::window::SystemPkgs;
-use crate::parse::packages::appsteamdata;
-use crate::parse::packages::AppData;
-use crate::ui::categories::PkgCategory;
-use crate::ui::window::UserPkgs;
+use super::window::{AppMsg, SystemPkgs};
+use crate::parse::packages::{AppData, appsteamdata};
+use crate::ui::{categories::PkgCategory, window::UserPkgs};
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
-use relm4::adw::prelude::*;
-use relm4::*;
+use rand::{prelude::SliceRandom, rng};
+use relm4::{
+    adw::{self, prelude::*},
+    *,
+};
 use sqlx::SqlitePool;
-use std::path::Path;
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, path::Path};
+
+const NIXOS_PATH: &str = "/etc/nixos";
 
 pub struct WindowAsyncHandler;
 
@@ -41,7 +40,7 @@ impl Worker for WindowAsyncHandler {
                     let mut catpicks: HashMap<PkgCategory, Vec<String>> = HashMap::new();
                     let mut catpkgs: HashMap<PkgCategory, Vec<String>> = HashMap::new();
 
-                    let nixos = Path::new("/etc/NIXOS").exists();
+                    let nixos = Path::new(NIXOS_PATH).exists();
 
                     let pkgdb = if nixos {
                         match nix_data_xinux::cache::nixos::nixospkgs().await {
@@ -82,13 +81,17 @@ impl Worker for WindowAsyncHandler {
                     };
 
                     let nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => nix_data_xinux::cache::profile::nixpkgslatest().await.ok(),
+                        UserPkgs::Profile => {
+                            nix_data_xinux::cache::profile::nixpkgslatest().await.ok()
+                        }
                         UserPkgs::Env => None,
                     };
 
                     let systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::legacypkgs().await.ok(),
+                        SystemPkgs::Legacy => {
+                            nix_data_xinux::cache::channel::legacypkgs().await.ok()
+                        }
                         SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
                     };
 
@@ -161,7 +164,7 @@ impl Worker for WindowAsyncHandler {
                         })
                         .collect::<Vec<_>>();
 
-                    let mut rng = thread_rng();
+                    let mut rng = rng();
                     recpkgs.shuffle(&mut rng);
 
                     let mut desktoppicks = recpkgs
@@ -427,7 +430,7 @@ impl Worker for WindowAsyncHandler {
             }
             WindowAsyncHandlerMsg::UpdateDB(syspkgs, userpkgs) => {
                 relm4::spawn(async move {
-                    let nixos = Path::new("/etc/nixos").exists();
+                    let nixos = Path::new(NIXOS_PATH).exists();
 
                     let _pkgdb = if nixos {
                         match nix_data_xinux::cache::nixos::nixospkgs().await {
@@ -456,13 +459,17 @@ impl Worker for WindowAsyncHandler {
                     };
 
                     let _nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => nix_data_xinux::cache::profile::nixpkgslatest().await.ok(),
+                        UserPkgs::Profile => {
+                            nix_data_xinux::cache::profile::nixpkgslatest().await.ok()
+                        }
                         UserPkgs::Env => None,
                     };
 
                     let _systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::legacypkgs().await.ok(),
+                        SystemPkgs::Legacy => {
+                            nix_data_xinux::cache::channel::legacypkgs().await.ok()
+                        }
                         SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
                     };
                 });
@@ -485,39 +492,31 @@ pub enum LoadErrorMsg {
 }
 
 #[relm4::component(pub)]
-impl SimpleComponent for LoadErrorModel {
-    type Init = gtk::Window;
+impl Component for LoadErrorModel {
+    type Init = ();
     type Input = LoadErrorMsg;
     type Output = AppMsg;
+    type CommandOutput = ();
 
     view! {
-        dialog = gtk::MessageDialog {
-            set_transient_for: Some(&parent_window),
-            set_modal: true,
+        dialog = adw::AlertDialog {
             #[watch]
             set_visible: !model.hidden,
             #[watch]
-            set_text: Some(&model.msg),
+            set_heading: Some(&model.msg),
             #[watch]
-            set_secondary_text: Some(&model.msg2),
-            set_use_markup: true,
-            set_secondary_use_markup: true,
-            add_button: (&gettext("Retry"), gtk::ResponseType::Accept),
+            set_body: &model.msg2,
+            // set_use_markup: true,
+            // set_secondary_use_markup: true,
+            add_response: ("Retry", &gettext("Retry")),
+            set_response_appearance: ("Retry", adw::ResponseAppearance::Destructive),
             // add_button: ("Preferences", gtk::ResponseType::Help),
-            add_button: (&gettext("Quit"), gtk::ResponseType::Close),
-            connect_response[sender] => move |_, resp| {
-                sender.input(match resp {
-                    gtk::ResponseType::Accept => LoadErrorMsg::Retry,
-                    gtk::ResponseType::Close => LoadErrorMsg::Close,
-                    // gtk::ResponseType::Help => LoadErrorMsg::Preferences,
-                    _ => unreachable!(),
-                });
-            },
+            add_response: ("Quit", &gettext("Quit")),
         }
     }
 
     fn init(
-        parent_window: Self::Init,
+        _parent_window: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -527,11 +526,19 @@ impl SimpleComponent for LoadErrorModel {
             msg2: String::default(),
         };
         let widgets = view_output!();
-        let accept_widget = widgets
-            .dialog
-            .widget_for_response(gtk::ResponseType::Accept)
-            .expect("No button for accept response set");
-        accept_widget.add_css_class("warning");
+        widgets.dialog.connect_response(None, move |_, resp| {
+            sender.input(match resp {
+                "Retry" => LoadErrorMsg::Retry,
+                "Quit" => LoadErrorMsg::Close,
+                // gtk::ResponseType::Help => LoadErrorMsg::Preferences,
+                _ => unreachable!(),
+            });
+        });
+        // let accept_widget = widgets
+        //     .dialog
+        //     .widget_for_response(gtk::ResponseType::Accept)
+        //     .expect("No button for accept response set");
+        // accept_widget.add_css_class("warning");
         // let pref_widget = widgets
         //     .dialog
         //     .widget_for_response(gtk::ResponseType::Help)
@@ -540,12 +547,15 @@ impl SimpleComponent for LoadErrorModel {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
+    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match msg {
             LoadErrorMsg::Show(s, s2) => {
                 self.hidden = false;
                 self.msg = s;
                 self.msg2 = s2;
+
+                let window = relm4::main_application().active_window();
+                root.present(window.as_ref());
             }
             LoadErrorMsg::Retry => {
                 self.hidden = true;

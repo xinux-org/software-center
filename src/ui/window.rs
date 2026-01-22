@@ -119,8 +119,6 @@ pub struct AppModel {
     searchquery: String,
     vschild: String,
     showvsbar: bool,
-    // #[tracker::no_eq]
-    // aboutpage: Controller<AboutPageModel>,
     #[tracker::no_eq]
     preferencespage: Controller<PreferencesPageModel>,
     #[tracker::no_eq]
@@ -494,9 +492,8 @@ impl AsyncComponent for AppModel {
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
             .forward(sender.input_sender(), identity);
-        let loaderrordialog = LoadErrorModel::builder()
-            .launch(root.clone().into())
-            .forward(sender.input_sender(), identity);
+        let loaderrordialog = LoadErrorModel::builder().launch(()).detach();
+        let preferencespage = PreferencesPageModel::builder().launch(()).detach();
         let pkgpage = PkgModel::builder()
             .launch(PkgPageInit {
                 userpkgs: userpkgtype.clone(),
@@ -530,8 +527,6 @@ impl AsyncComponent for AppModel {
         let welcomepage = WelcomeModel::builder()
             .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
-        // let aboutpage = AboutPageModel::builder().launch(()).detach();
-        let preferencespage = PreferencesPageModel::builder().launch(()).detach();
 
         let model = AppModel {
             mainwindow: root.clone(),
@@ -577,7 +572,6 @@ impl AsyncComponent for AppModel {
             installedpagebusy: vec![],
             rebuild,
             welcomepage,
-            // aboutpage,
             preferencespage,
             online,
             tracker: 0,
