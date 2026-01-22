@@ -106,18 +106,18 @@ impl Worker for InstallAsyncHandler {
                                                         "Removed user package: {} success",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FinishedProcess(work));
                                                 } else {
                                                     warn!(
                                                         "Removed user package: {} failed",
                                                         work.pkg
                                                     );
-                                                    sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(PkgMsg::FailedProcess(work));
                                                 }
                                             }
                                             Err(e) => {
                                                 warn!("Error removing user package: {}", e);
-                                                sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender.output(PkgMsg::FailedProcess(work));
                                             }
                                         }
                                     }));
@@ -264,7 +264,7 @@ impl Worker for InstallAsyncHandler {
                     },
                     InstallType::System => {
                         REBUILD_BROKER.send(RebuildMsg::Show);
-                        if let Some(systemconfig) = &config.systemconfig {
+                        if let Some(_systemconfig) = &config.systemconfig {
                             match work.action {
                                 PkgAction::Install => {
                                     info!("Installing system package: {}", work.pkg);
