@@ -192,7 +192,7 @@ impl Component for CategoryPageModel {
                     shutdown
                         .register(async move {
                             for app in catrec {
-                                out.send(CategoryPageAsyncMsg::PushRec(app));
+                                let _ = out.send(CategoryPageAsyncMsg::PushRec(app));
                                 tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
                             }
                         })
@@ -203,7 +203,7 @@ impl Component for CategoryPageModel {
                     shutdown
                         .register(async move {
                             for app in catall {
-                                out.send(CategoryPageAsyncMsg::Push(app));
+                                let _ = out.send(CategoryPageAsyncMsg::Push(app));
                                 tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
                             }
                         })
