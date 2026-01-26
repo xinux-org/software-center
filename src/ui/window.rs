@@ -51,18 +51,6 @@ use super::{
 
 pub static REBUILD_BROKER: MessageBroker<RebuildMsg> = MessageBroker::new();
 
-#[derive(PartialEq)]
-enum Page {
-    FrontPage,
-    PkgPage,
-}
-
-#[derive(PartialEq)]
-enum MainPage {
-    FrontPage,
-    CategoryPage,
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum SystemPkgs {
     Legacy,
@@ -78,6 +66,7 @@ pub enum UserPkgs {
 
 #[tracker::track]
 pub struct AppModel {
+    navigation: adw::NavigationView,
     mainwindow: adw::ApplicationWindow,
     config: NixDataConfig,
     #[tracker::no_eq]
@@ -85,8 +74,6 @@ pub struct AppModel {
     #[tracker::no_eq]
     loaderrordialog: Controller<LoadErrorModel>,
     busy: bool,
-    page: Page,
-    mainpage: MainPage,
     // #[tracker::no_eq]
     // pkgs: HashMap<String, Package>,
     // syspkgs: HashMap<String, String>,
@@ -153,8 +140,6 @@ pub enum AppMsg {
         HashMap<PkgCategory, Vec<String>>,
     ),
     OpenPkg(String),
-    FrontPage,
-    FrontFrontPage,
     // UpdatePkgs(Option<Vec<String>>),
     UpdateInstalledPkgs,
     UpdateInstalledPage,
@@ -207,6 +192,22 @@ impl AsyncComponent for AppModel {
         adw::ApplicationWindow {
             set_default_width: 1150,
             set_default_height: 800,
+
+            // add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+            //     adw::BreakpointConditionLengthType::MaxWidth,
+            //     500.0,
+            //     adw::LengthUnit::Sp,
+            // )) {
+            //     add_setter: (&header_bar, "show-title", Some(&false.into())),
+            //     add_setter: (&switcher_bar, "reveal", Some(&true.into())),
+            //     //add_setter: (&main_navigation, "collapsed", &true.into()),
+            //     //add_setter: (&main_navigation, "show-sidebar", &false.into()),
+            //     add_setter: (&spinner, "visible", Some(&true.into())),
+
+            //     connect_apply => AppMsg::Adapt(adaptive::Layout::Narrow),
+            //     connect_unapply => AppMsg::Adapt(adaptive::Layout::Wide),
+            // },
+
             #[name(main_stack)]
             if model.busy {
                 gtk::Box {
@@ -239,20 +240,10 @@ impl AsyncComponent for AppModel {
                     }
                 }
             } else {
-                #[name(main_leaf)]
-                adw::Leaflet {
-                    set_can_unfold: false,
-                    set_homogeneous: false,
-                    set_transition_type: adw::LeafletTransitionType::Over,
-                    set_can_navigate_back: true,
-                    #[name(front_leaf)]
-                    append = &adw::Leaflet {
-                        set_can_unfold: false,
-                        set_homogeneous: false,
-                        set_transition_type: adw::LeafletTransitionType::Over,
-                        set_can_navigate_back: true,
-                        #[name(main_box)]
-                        append = &gtk::Box {
+                #[name = "navigation"]
+                adw::NavigationView {
+                    add = &adw::NavigationPage {
+                        gtk::Box {
                             set_orientation: gtk::Orientation::Vertical,
                             adw::HeaderBar {
                                 set_centering_policy: adw::CenteringPolicy::Strict,
@@ -267,15 +258,17 @@ impl AsyncComponent for AppModel {
                                     } @searchtoggle
 
                                 },
-                                #[name(viewswitchertitle)]
-                                #[wrap(Some)]
-                                set_title_widget = &adw::ViewSwitcherTitle {
-                                    set_title: &gettext("Nix Software Center"),
-                                    set_stack: Some(viewstack),
-                                    connect_title_visible_notify[sender] => move |x| {
-                                        sender.input(AppMsg::SetVsBar(x.is_title_visible()))
-                                    },
-                                },
+
+                                // #[name(viewswitchertitle)]
+                                // #[wrap(Some)]
+                                // set_title_widget = &adw::ViewSwitcherTitle {
+                                //     set_title: &gettext("Nix Software Center"),
+                                //     set_stack: Some(viewstack),
+                                //     connect_title_visible_notify[sender] => move |x| {
+                                //         sender.input(AppMsg::SetVsBar(x.is_title_visible()))
+                                //     },
+                                // },
+
                                 pack_end: menu = &gtk::MenuButton {
                                     add_css_class: "flat",
                                     set_icon_name: "open-menu-symbolic",
@@ -369,13 +362,11 @@ impl AsyncComponent for AppModel {
                             },
                             adw::ViewSwitcherBar {
                                 set_stack: Some(viewstack),
-                                #[track(model.changed(AppModel::showvsbar()))]
-                                set_reveal: model.showvsbar,
+                                // #[track(model.changed(AppModel::showvsbar()))]
+                                // set_reveal: model.showvsbar,
                             }
                         },
-                        append: model.categorypage.widget(),
                     },
-                    append: model.pkgpage.widget()
                 }
             }
         }
@@ -385,25 +376,6 @@ impl AsyncComponent for AppModel {
         mainmenu: {
             &gettext("Preferences") => PreferencesAction,
             &gettext("About") => AboutAction,
-        }
-    }
-
-    async fn pre_view() {
-        match model.page {
-            Page::FrontPage => {
-                main_leaf.set_visible_child(front_leaf);
-            }
-            Page::PkgPage => {
-                main_leaf.set_visible_child(model.pkgpage.widget());
-            }
-        }
-        match model.mainpage {
-            MainPage::FrontPage => {
-                front_leaf.set_visible_child(main_box);
-            }
-            MainPage::CategoryPage => {
-                front_leaf.set_visible_child(model.categorypage.widget());
-            }
         }
     }
 
@@ -528,14 +500,13 @@ impl AsyncComponent for AppModel {
             .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
 
-        let model = AppModel {
+        let mut model = AppModel {
+            navigation: adw::NavigationView::new(),
             mainwindow: root.clone(),
             config,
             windowloading,
             loaderrordialog,
             busy: true,
-            page: Page::FrontPage,
-            mainpage: MainPage::FrontPage,
             pkgdb: String::new(),
             nixpkgsdb: None,
             systemdb: None,
@@ -599,6 +570,7 @@ impl AsyncComponent for AppModel {
         let viewstack = &model.viewstack;
 
         let widgets = view_output!();
+        model.navigation = widgets.navigation.clone();
 
         let mut group = RelmActionGroup::<MenuActionGroup>::new();
 
@@ -1180,7 +1152,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             installedsystempkgs: self.installedsystempkgs.clone(),
                             launchable,
                         };
-                        self.page = Page::PkgPage;
                         if self.viewstack.visible_child_name()
                             != Some(gtk::glib::GString::from("search"))
                         {
@@ -1188,17 +1159,13 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         }
                         self.busy = false;
                         self.pkgpage.emit(PkgMsg::Open(Box::new(out)));
+
+                        let page = self.pkgpage.widget();
+                        self.navigation.push(page);
                     }
                 } else {
                     error!("No pkgdb!");
                 }
-            }
-            AppMsg::FrontPage => {
-                self.page = Page::FrontPage;
-            }
-            AppMsg::FrontFrontPage => {
-                self.page = Page::FrontPage;
-                self.mainpage = MainPage::FrontPage;
             }
             AppMsg::UpdateInstalledPkgs => {
                 info!("AppMsg::UpdateInstalledPkgs");
@@ -1841,8 +1808,11 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
             }
             AppMsg::OpenCategoryPage(category) => {
                 info!("AppMsg::OpenCategoryPage({:?})", category);
-                self.page = Page::FrontPage;
-                self.mainpage = MainPage::CategoryPage;
+
+                // open category page
+                let page = self.categorypage.widget();
+                self.navigation.push(page);
+
                 self.categorypage
                     .emit(CategoryPageMsg::Loading(category.clone()));
                 sender.input(AppMsg::LoadCategory(category));
@@ -1855,7 +1825,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 let appdata = self.appdata.clone();
                 let installeduser = self.installeduserpkgs.clone();
                 let installedsystem = self.installedsystempkgs.clone();
-                // let category = category;
+
                 sender.oneshot_command(async move {
                     let mut catrec = vec![];
                     let mut catall = vec![];

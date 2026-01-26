@@ -19,7 +19,6 @@ pub struct CategoryPageModel {
 
 #[derive(Debug)]
 pub enum CategoryPageMsg {
-    Close,
     OpenPkg(String),
     Open(PkgCategory, Vec<CategoryTile>, Vec<CategoryTile>),
     Loading(PkgCategory),
@@ -40,92 +39,83 @@ impl Component for CategoryPageModel {
     type CommandOutput = CategoryPageAsyncMsg;
 
     view! {
-        gtk::Box {
-            set_orientation: gtk::Orientation::Vertical,
-            adw::HeaderBar {
-                pack_start = &gtk::Button {
-                    add_css_class: "flat",
-                    gtk::Image {
-                        set_icon_name: Some("go-previous-symbolic"),
-                    },
-                    connect_clicked[sender] => move |_| {
-                        sender.input(CategoryPageMsg::Close)
-                    },
-                },
-                #[wrap(Some)]
-                set_title_widget = &gtk::Label {
-                    #[watch]
-                    set_label: &match model.category {
-                        PkgCategory::Audio => gettext("Audio"),
-                        PkgCategory::Development => gettext("Development"),
-                        PkgCategory::Games => gettext("Games"),
-                        PkgCategory::Graphics => gettext("Graphics"),
-                        PkgCategory::Web => gettext("Web"),
-                        PkgCategory::Video => gettext("Video"),
-                    },
-                },
+        adw::NavigationPage {
+
+            #[watch]
+            set_title: &match model.category {
+                PkgCategory::Audio => gettext("Audio"),
+                PkgCategory::Development => gettext("Development"),
+                PkgCategory::Games => gettext("Games"),
+                PkgCategory::Graphics => gettext("Graphics"),
+                PkgCategory::Web => gettext("Web"),
+                PkgCategory::Video => gettext("Video"),
             },
-            gtk::ScrolledWindow {
-                set_vexpand: true,
-                set_hexpand: true,
-                set_hscrollbar_policy: gtk::PolicyType::Never,
-                set_vscrollbar_policy: gtk::PolicyType::Automatic,
-                #[track(model.changed(CategoryPageModel::category()))]
-                set_vadjustment: gtk::Adjustment::NONE,
-                adw::Clamp {
-                    set_maximum_size: 1000,
-                    set_tightening_threshold: 750,
-                    if model.busy {
-                        #[name(spinner)]
-                        gtk::Spinner {
-                            set_hexpand: true,
-                            set_vexpand: true,
-                            set_halign: gtk::Align::Center,
-                            set_valign: gtk::Align::Center,
-                            set_spinning: true,
-                            set_size_request: (64, 64),
-                        }
-                    } else {
-                        gtk::Box {
-                            set_orientation: gtk::Orientation::Vertical,
-                            set_valign: gtk::Align::Start,
-                            set_margin_all: 15,
-                            set_spacing: 15,
-                            gtk::Label {
-                                set_halign: gtk::Align::Start,
-                                add_css_class: "title-4",
-                                set_label: &gettext("Recommended"),
-                            },
-                            #[local_ref]
-                            recbox -> gtk::FlowBox {
-                                set_halign: gtk::Align::Fill,
+            
+            gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
+                adw::HeaderBar {},
+                gtk::ScrolledWindow {
+                    set_vexpand: true,
+                    set_hexpand: true,
+                    set_hscrollbar_policy: gtk::PolicyType::Never,
+                    set_vscrollbar_policy: gtk::PolicyType::Automatic,
+                    #[track(model.changed(CategoryPageModel::category()))]
+                    set_vadjustment: gtk::Adjustment::NONE,
+                    adw::Clamp {
+                        set_maximum_size: 1000,
+                        set_tightening_threshold: 750,
+                        if model.busy {
+                            #[name(spinner)]
+                            gtk::Spinner {
                                 set_hexpand: true,
+                                set_vexpand: true,
+                                set_halign: gtk::Align::Center,
                                 set_valign: gtk::Align::Center,
-                                set_orientation: gtk::Orientation::Horizontal,
-                                set_selection_mode: gtk::SelectionMode::None,
-                                set_homogeneous: true,
-                                set_max_children_per_line: 3,
-                                set_min_children_per_line: 1,
-                                set_column_spacing: 14,
-                                set_row_spacing: 14,
-                            },
-                            gtk::Label {
-                                set_halign: gtk::Align::Start,
-                                add_css_class: "title-4",
-                                set_label: &gettext("Other"),
-                            },
-                            #[local_ref]
-                            allbox -> gtk::FlowBox {
-                                set_halign: gtk::Align::Fill,
-                                set_hexpand: true,
-                                set_valign: gtk::Align::Center,
-                                set_orientation: gtk::Orientation::Horizontal,
-                                set_selection_mode: gtk::SelectionMode::None,
-                                set_homogeneous: true,
-                                set_max_children_per_line: 3,
-                                set_min_children_per_line: 1,
-                                set_column_spacing: 14,
-                                set_row_spacing: 14,
+                                set_spinning: true,
+                                set_size_request: (64, 64),
+                            }
+                        } else {
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_valign: gtk::Align::Start,
+                                set_margin_all: 15,
+                                set_spacing: 15,
+                                gtk::Label {
+                                    set_halign: gtk::Align::Start,
+                                    add_css_class: "title-4",
+                                    set_label: &gettext("Recommended"),
+                                },
+                                #[local_ref]
+                                recbox -> gtk::FlowBox {
+                                    set_halign: gtk::Align::Fill,
+                                    set_hexpand: true,
+                                    set_valign: gtk::Align::Center,
+                                    set_orientation: gtk::Orientation::Horizontal,
+                                    set_selection_mode: gtk::SelectionMode::None,
+                                    set_homogeneous: true,
+                                    set_max_children_per_line: 3,
+                                    set_min_children_per_line: 1,
+                                    set_column_spacing: 14,
+                                    set_row_spacing: 14,
+                                },
+                                gtk::Label {
+                                    set_halign: gtk::Align::Start,
+                                    add_css_class: "title-4",
+                                    set_label: &gettext("Other"),
+                                },
+                                #[local_ref]
+                                allbox -> gtk::FlowBox {
+                                    set_halign: gtk::Align::Fill,
+                                    set_hexpand: true,
+                                    set_valign: gtk::Align::Center,
+                                    set_orientation: gtk::Orientation::Horizontal,
+                                    set_selection_mode: gtk::SelectionMode::None,
+                                    set_homogeneous: true,
+                                    set_max_children_per_line: 3,
+                                    set_min_children_per_line: 1,
+                                    set_column_spacing: 14,
+                                    set_row_spacing: 14,
+                                }
                             }
                         }
                     }
@@ -172,12 +162,7 @@ impl Component for CategoryPageModel {
     fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
         self.reset();
         match msg {
-            CategoryPageMsg::Close => {
-                sender.output(AppMsg::FrontFrontPage).unwrap()
-            }
-            CategoryPageMsg::OpenPkg(pkg) => {
-                sender.output(AppMsg::OpenPkg(pkg)).unwrap()
-            }
+            CategoryPageMsg::OpenPkg(pkg) => sender.output(AppMsg::OpenPkg(pkg)).unwrap(),
             CategoryPageMsg::Open(category, catrec, catall) => {
                 info!("CategoryPageMsg::Open");
                 self.set_category(category);
