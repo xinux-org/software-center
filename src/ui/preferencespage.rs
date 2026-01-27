@@ -15,6 +15,7 @@ pub struct PreferencesPageModel {
     configpath: Option<PathBuf>,
     flake: Option<PathBuf>,
     flakearg: Option<String>,
+    flake_pending: bool,
     #[tracker::no_eq]
     open_dialog: Controller<OpenDialog>,
     #[tracker::no_eq]
@@ -30,6 +31,7 @@ pub enum PreferencesPageMsg {
     SetFlakePath(Option<PathBuf>),
     SetFlakeArg(Option<String>),
     ModifyFlake,
+    CancelFlakeSelection,
     Ignore,
 }
 
@@ -96,12 +98,12 @@ impl Component for PreferencesPageModel {
                             set_valign: gtk::Align::Center,
                             connect_state_set[sender] => move |_, b| {
                                 if b {
-                                    sender.input(PreferencesPageMsg::SetFlakePath(Some(PathBuf::new())));
+                                    sender.input(PreferencesPageMsg::OpenFlake);
+                                    glib::Propagation::Stop
                                 } else {
                                     sender.input(PreferencesPageMsg::SetFlakePath(None));
-                                    sender.input(PreferencesPageMsg::SetFlakeArg(None));
+                                    glib::Propagation::Proceed
                                 }
-                                glib::Propagation::Proceed
                             } @switched,
                             #[track(model.changed(PreferencesPageModel::flake()))]
                             #[block_signal(switched)]
@@ -177,23 +179,22 @@ impl Component for PreferencesPageModel {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let open_dialog = OpenDialog::builder()
-            .transient_for_native(&root)
             .launch(OpenDialogSettings::default())
             .forward(sender.input_sender(), |response| match response {
                 OpenDialogResponse::Accept(path) => PreferencesPageMsg::SetConfigPath(Some(path)),
                 OpenDialogResponse::Cancel => PreferencesPageMsg::Ignore,
             });
         let flake_file_dialog = OpenDialog::builder()
-            .transient_for_native(&root)
             .launch(OpenDialogSettings::default())
             .forward(sender.input_sender(), |response| match response {
                 OpenDialogResponse::Accept(path) => PreferencesPageMsg::SetFlakePath(Some(path)),
-                OpenDialogResponse::Cancel => PreferencesPageMsg::Ignore,
+                OpenDialogResponse::Cancel => PreferencesPageMsg::CancelFlakeSelection,
             });
         let model = PreferencesPageModel {
             configpath: None,
             flake: None,
             flakearg: None,
+            flake_pending: false,
             open_dialog,
             flake_file_dialog,
             tracker: 0,
@@ -222,15 +223,24 @@ impl Component for PreferencesPageModel {
                 root.present(window.as_ref());
             }
             PreferencesPageMsg::Open => self.open_dialog.emit(OpenDialogMsg::Open),
-            PreferencesPageMsg::OpenFlake => self.flake_file_dialog.emit(OpenDialogMsg::Open),
+            PreferencesPageMsg::OpenFlake => {
+                self.set_flake_pending(true);
+                self.flake_file_dialog.emit(OpenDialogMsg::Open);
+            }
             PreferencesPageMsg::SetConfigPath(path) => {
                 self.configpath = path.clone();
-                let _ = sender.output(AppMsg::UpdateSysconfig(
-                    path.map(|x| x.to_string_lossy().to_string()),
-                ));
+                let path_str = path.as_ref().map(|x| x.to_string_lossy().to_string());
+                log::info!("Setting system config path: {:?}", path_str);
+                
+                let _ = sender.output(AppMsg::UpdateSysconfig(path_str));
             }
             PreferencesPageMsg::SetFlakePath(path) => {
-                self.flake = path;
+                log::info!("Setting flake path: {:?}", path);
+                self.flake = path.clone();
+                self.set_flake_pending(false);
+                if path.is_none() {
+                    self.set_flakearg(None);
+                }
                 sender.input(PreferencesPageMsg::ModifyFlake)
             }
             PreferencesPageMsg::SetFlakeArg(arg) => {
@@ -238,10 +248,22 @@ impl Component for PreferencesPageModel {
                 sender.input(PreferencesPageMsg::ModifyFlake)
             }
             PreferencesPageMsg::ModifyFlake => {
+                let flake_path = self.flake.as_ref().and_then(|p| {
+                    if p.as_os_str().is_empty() {
+                        None
+                    } else {
+                        Some(p.to_string_lossy().to_string())
+                    }
+                });
+                log::info!("Updating flake config: flake={:?}, arg={:?}", flake_path, self.flakearg);
                 let _ = sender.output(AppMsg::UpdateFlake(
-                    self.flake.as_ref().map(|x| x.to_string_lossy().to_string()),
+                    flake_path,
                     self.flakearg.clone(),
                 ));
+            }
+            PreferencesPageMsg::CancelFlakeSelection => {
+                log::info!("Flake selection cancelled, reverting to previous state");
+                self.set_flake_pending(false);
             }
             _ => {}
         }

@@ -119,6 +119,7 @@ pub struct AppModel {
     #[tracker::no_eq]
     welcomepage: Controller<WelcomeModel>,
     online: bool,
+    updates_count: usize,
 }
 
 #[derive(Debug)]
@@ -156,6 +157,7 @@ pub enum AppMsg {
     SetDarkMode(bool),
     GetUnavailableItems(HashMap<String, String>, HashMap<String, String>, UpdateType),
     CheckNetwork,
+    ShowPreferences,
     Noop,
 }
 
@@ -241,9 +243,10 @@ impl AsyncComponent for AppModel {
                         set_hexpand: true,
                         set_vexpand: true,
                         set_spacing: 15,
-                        gtk::Image {
-                            set_icon_name: Some(config::APP_ID),
-                            set_pixel_size: 192,
+                        gtk::Spinner {
+                            set_spinning: true,
+                            set_width_request: 70,
+                            set_height_request: 70,
                         },
                         gtk::Label {
                             add_css_class: "title-1",
@@ -472,7 +475,9 @@ impl AsyncComponent for AppModel {
             .detach_worker(())
             .forward(sender.input_sender(), identity);
         let loaderrordialog = LoadErrorModel::builder().launch(()).detach();
-        let preferencespage = PreferencesPageModel::builder().launch(()).detach();
+        let preferencespage = PreferencesPageModel::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
         let pkgpage = PkgModel::builder()
             .launch(PkgPageInit {
                 userpkgs: userpkgtype.clone(),
@@ -551,6 +556,7 @@ impl AsyncComponent for AppModel {
             welcomepage,
             preferencespage,
             online,
+            updates_count: 0,
             tracker: 0,
         };
 
@@ -587,10 +593,9 @@ impl AsyncComponent for AppModel {
         };
 
         let prefernecespage_action: RelmAction<PreferencesAction> = {
-            let sender = model.preferencespage.sender().clone();
-            let config = model.config.clone();
+            let sender = sender.clone();
             RelmAction::new_stateless(move |_| {
-                sender.emit(PreferencesPageMsg::Show(config.clone()));
+                sender.input(AppMsg::ShowPreferences);
             })
         };
 
@@ -617,6 +622,16 @@ impl AsyncComponent for AppModel {
         frontvs.set_icon_name(Some("nsc-home-symbolic"));
         installedvs.set_icon_name(Some("nsc-installed-symbolic"));
         updatesvs.set_icon_name(Some("nsc-update-symbolic"));
+
+        // if model.updates_count > 0 {
+        //     updatesvs.set_badge_number(
+        //         total_updates
+        //             .try_into()
+        //             .expect("can not convert usize value of total_updates to i32"),
+        //     );
+        // } else {
+        //     page.set_title(Some(&gettext("Updates")));
+        // }
 
         AsyncComponentParts { model, widgets }
     }
@@ -697,15 +712,31 @@ impl AsyncComponent for AppModel {
                 self.busy = false;
                 self.loaderrordialog.emit(LoadErrorMsg::Show(msg, msg2));
             }
+            AppMsg::ShowPreferences => {
+                // Reload config from file before showing preferences
+                if let Some(updated_config) = getconfig() {
+                    info!("Reloaded config from file: {:?}", updated_config);
+                    self.config = updated_config;
+                }
+                self.preferencespage
+                    .emit(PreferencesPageMsg::Show(self.config.clone()));
+            }
             AppMsg::UpdateSysconfig(systemconfig) => {
+                info!(
+                    "AppMsg::UpdateSysconfig - received config: {:?}",
+                    systemconfig
+                );
                 self.config = NixDataConfig {
                     systemconfig: systemconfig.clone(),
                     flake: self.config.flake.clone(),
                     flakearg: self.config.flakearg.clone(),
                     generations: self.config.generations,
                 };
-                if editconfig(self.config.clone()).is_err() {
-                    warn!("Failed to update config");
+                info!("Full config to save: {:?}", self.config);
+                if let Err(e) = editconfig(self.config.clone()) {
+                    warn!("Failed to update system config: {}", e);
+                } else {
+                    info!("Successfully saved system config to file");
                 }
                 let nixos = Path::new("/etc/nixos").exists();
                 if systemconfig.is_some() && nixos {
@@ -735,16 +766,26 @@ impl AsyncComponent for AppModel {
                     self.syspkgtype.clone(),
                     self.userpkgtype.clone(),
                 ));
+
+                // fetch installed pkg and update
+                sender.input(AppMsg::UpdateInstalledPkgs);
             }
             AppMsg::UpdateFlake(flake, flakearg) => {
+                info!(
+                    "AppMsg::UpdateFlake - received flake: {:?}, arg: {:?}",
+                    flake, flakearg
+                );
                 self.config = NixDataConfig {
                     systemconfig: self.config.systemconfig.clone(),
                     flake: flake.clone(),
                     flakearg,
                     generations: self.config.generations,
                 };
-                if editconfig(self.config.clone()).is_err() {
-                    warn!("Failed to update config");
+                info!("Full config to save: {:?}", self.config);
+                if let Err(e) = editconfig(self.config.clone()) {
+                    warn!("Failed to update flake config: {}", e);
+                } else {
+                    info!("Successfully saved flake config to file");
                 }
 
                 let nixos = Path::new("/etc/nixos").exists();
@@ -771,6 +812,9 @@ impl AsyncComponent for AppModel {
                     self.syspkgtype.clone(),
                     self.userpkgtype.clone(),
                 ));
+
+                //  I think itʻs not related to installed page
+                // sender.input(AppMsg::UpdateInstalledPage);
             }
             AppMsg::Initialize(
                 pkgdb,
@@ -1637,6 +1681,24 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
 
                     installedsystemitems
                         .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                    let total_updates = updateuseritems.len() + updatesystemitems.len();
+                    // let total_updates = 5; // testing
+                    self.set_updates_count(total_updates);
+
+                    // Update the updates page tab title with badge
+                    if let Some(updates_child) = self.viewstack.child_by_name("updates") {
+                        let page = self.viewstack.page(&updates_child);
+                        if total_updates > 0 {
+                            page.set_badge_number(
+                                total_updates
+                                    .try_into()
+                                    .expect("can not convert usize value of total_updates to i32"),
+                            );
+                        } else {
+                            page.set_title(Some(&gettext("Updates")));
+                        }
+                    }
+
                     self.installedpage.emit(InstalledPageMsg::Update(
                         installeduseritems,
                         installedsystemitems,

@@ -235,7 +235,7 @@ impl SimpleComponent for WelcomeModel {
                     flakearg: None,
                     generations: None,
                 };
-                sender.output(AppMsg::LoadConfig(config));
+                let _ = sender.output(AppMsg::LoadConfig(config));
                 self.hidden = true;
             }
             WelcomeMsg::UpdateConfPath(s) => {
