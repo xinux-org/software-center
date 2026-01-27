@@ -147,7 +147,6 @@ pub enum AppMsg {
     UpdateCategoryPkgs,
     SetSearch(bool),
     SetVsBar(bool),
-    SetVsChild(String),
     Search(String),
     AddInstalledToWorkQueue(WorkPkg),
     RemoveInstalledBusy(WorkPkg),
@@ -193,20 +192,33 @@ impl AsyncComponent for AppModel {
             set_default_width: 1150,
             set_default_height: 800,
 
-            // add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
-            //     adw::BreakpointConditionLengthType::MaxWidth,
-            //     500.0,
-            //     adw::LengthUnit::Sp,
-            // )) {
-            //     add_setter: (&header_bar, "show-title", Some(&false.into())),
-            //     add_setter: (&switcher_bar, "reveal", Some(&true.into())),
-            //     //add_setter: (&main_navigation, "collapsed", &true.into()),
-            //     //add_setter: (&main_navigation, "show-sidebar", &false.into()),
-            //     add_setter: (&spinner, "visible", Some(&true.into())),
+            // desktop mode
+            add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+                adw::BreakpointConditionLengthType::MinWidth,
+                610.0,
+                adw::LengthUnit::Sp,
+            )) {
+                add_setter: (&switcher_title, "policy", Some(&adw::ViewSwitcherPolicy::Wide.into())),
+            },
 
-            //     connect_apply => AppMsg::Adapt(adaptive::Layout::Narrow),
-            //     connect_unapply => AppMsg::Adapt(adaptive::Layout::Wide),
-            // },
+            // tablet mode
+            add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+                adw::BreakpointConditionLengthType::MaxWidth,
+                600.0,
+                adw::LengthUnit::Sp,
+            )) {
+                add_setter: (&switcher_title, "policy", Some(&adw::ViewSwitcherPolicy::Narrow.into())),
+            },
+
+            // mobile mode
+            add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+                adw::BreakpointConditionLengthType::MaxWidth,
+                500.0,
+                adw::LengthUnit::Sp,
+            )) {
+                add_setter: (&header_bar, "show-title", Some(&false.into())),
+                add_setter: (&switcher_bar, "reveal", Some(&true.into())),
+            },
 
             #[name(main_stack)]
             if model.busy {
@@ -245,8 +257,9 @@ impl AsyncComponent for AppModel {
                     add = &adw::NavigationPage {
                         gtk::Box {
                             set_orientation: gtk::Orientation::Vertical,
+
+                            #[name(header_bar)]
                             adw::HeaderBar {
-                                set_centering_policy: adw::CenteringPolicy::Strict,
                                 pack_start: searchbtn = &gtk::ToggleButton {
                                     add_css_class: "flat",
                                     set_icon_name: "system-search-symbolic",
@@ -259,15 +272,13 @@ impl AsyncComponent for AppModel {
 
                                 },
 
-                                // #[name(viewswitchertitle)]
-                                // #[wrap(Some)]
-                                // set_title_widget = &adw::ViewSwitcherTitle {
-                                //     set_title: &gettext("Nix Software Center"),
-                                //     set_stack: Some(viewstack),
-                                //     connect_title_visible_notify[sender] => move |x| {
-                                //         sender.input(AppMsg::SetVsBar(x.is_title_visible()))
-                                //     },
-                                // },
+                                #[name(switcher_title)]
+                                #[wrap(Some)]
+                                set_title_widget = &adw::ViewSwitcher {
+                                    set_stack: Some(viewstack),
+                                    #[watch] // when we do wider
+                                    set_policy: adw::ViewSwitcherPolicy::Wide,
+                                },
 
                                 pack_end: menu = &gtk::MenuButton {
                                     add_css_class: "flat",
@@ -299,11 +310,7 @@ impl AsyncComponent for AppModel {
                             },
                             #[local_ref]
                             viewstack -> adw::ViewStack {
-                                connect_visible_child_notify[sender] => move |x| {
-                                    if let Some(c) = x.visible_child_name() {
-                                        sender.input(AppMsg::SetVsChild(c.to_string()))
-                                    }
-                                },
+
                                 #[name(frontpage)]
                                 add = &gtk::ScrolledWindow {
                                     set_vexpand: true,
@@ -360,10 +367,10 @@ impl AsyncComponent for AppModel {
                                 add: model.searchpage.widget(),
                                 add: model.updatepage.widget(),
                             },
+
+                            #[name(switcher_bar)]
                             adw::ViewSwitcherBar {
                                 set_stack: Some(viewstack),
-                                // #[track(model.changed(AppModel::showvsbar()))]
-                                // set_reveal: model.showvsbar,
                             }
                         },
                     },
@@ -495,7 +502,6 @@ impl AsyncComponent for AppModel {
         let rebuild = RebuildModel::builder()
             .launch_with_broker(root.clone().upcast(), &REBUILD_BROKER)
             .forward(sender.input_sender(), identity);
-        let viewstack = adw::ViewStack::new();
         let welcomepage = WelcomeModel::builder()
             .launch(root.clone().into())
             .forward(sender.input_sender(), identity);
@@ -539,7 +545,7 @@ impl AsyncComponent for AppModel {
             showvsbar: false,
             installedpage,
             updatepage,
-            viewstack,
+            viewstack: adw::ViewStack::new(),
             installedpagebusy: vec![],
             rebuild,
             welcomepage,
@@ -1655,17 +1661,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             self.viewstack.set_visible_child_name("explore");
                         }
                     }
-                }
-            }
-            AppMsg::SetVsChild(name) => {
-                if name != self.vschild {
-                    self.set_vschild(name.to_string());
-                    if name != "search" {
-                        sender.input(AppMsg::SetSearch(false))
-                    }
-                }
-                if name == "updates" && self.online {
-                    sender.input(AppMsg::CheckNetwork);
                 }
             }
             AppMsg::SetVsBar(vsbar) => {
