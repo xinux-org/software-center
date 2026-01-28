@@ -17,6 +17,14 @@ fn main() {
     if let Ok(res) = gio::Resource::load(RESOURCES_FILE) {
         info!("Resource loaded: {}", RESOURCES_FILE);
         gio::resources_register(&res);
+
+        let data = res
+            .lookup_data(
+                "/org/xinux/NixSoftwareCenter/style.css",
+                gio::ResourceLookupFlags::NONE,
+            )
+            .unwrap();
+        relm4::set_global_css(&glib::GString::from_utf8_checked(data.to_vec()).unwrap());
     } else {
         error!("Failed to load resources");
     }

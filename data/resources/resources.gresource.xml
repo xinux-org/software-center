@@ -13,4 +13,9 @@
     <file preprocess="xml-stripblanks" alias="nsc-video.svg">../icons/nsc-video.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-web.svg">../icons/nsc-web.svg</file>
   </gresource>
+  <gresource prefix="/org/xinux/NixSoftwareCenter/">
+    <!-- see https://gtk-rs.org/gtk4-rs/git/docs/gtk4/struct.Application.html#automatic-resources -->
+    <!-- <file compressed="true" preprocess="xml-stripblanks" alias="gtk/help-overlay.ui">ui/shortcuts.ui</file> -->
+    <file compressed="true">style.css</file>
+  </gresource>
 </gresources>

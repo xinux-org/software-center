@@ -1,0 +1,15 @@
+/* 
+.badge-number {
+    background-color: #3584e4 !important;
+    color: white !important;
+} */
+
+/* label.badge {
+    background-color: #3584e4 !important;
+    color: white !important;
+} */
+
+viewswitcher button .badge {
+    background-color: red !important; 
+    color: white !important;
+} 

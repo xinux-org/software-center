@@ -1694,7 +1694,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             page.set_badge_number(
                                 total_updates
                                     .try_into()
-                                    .expect("can not convert usize value of total_updates to i32"),
+                                    .unwrap_or_default(),
                             );
                         } else {
                             page.set_title(Some(&gettext("Updates")));
