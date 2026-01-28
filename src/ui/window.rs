@@ -474,7 +474,9 @@ impl AsyncComponent for AppModel {
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
             .forward(sender.input_sender(), identity);
-        let loaderrordialog = LoadErrorModel::builder().launch(()).detach();
+        let loaderrordialog = LoadErrorModel::builder()
+            .launch(())
+            .forward(sender.input_sender(), identity);
         let preferencespage = PreferencesPageModel::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
