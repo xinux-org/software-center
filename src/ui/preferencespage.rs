@@ -233,6 +233,8 @@ impl Component for PreferencesPageModel {
                 log::info!("Setting system config path: {:?}", path_str);
                 
                 let _ = sender.output(AppMsg::UpdateSysconfig(path_str));
+                // fetch installed pkg and update after done selection
+                let _ = sender.output(AppMsg::UpdateInstalledPkgs);
             }
             PreferencesPageMsg::SetFlakePath(path) => {
                 log::info!("Setting flake path: {:?}", path);

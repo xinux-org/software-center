@@ -768,9 +768,6 @@ impl AsyncComponent for AppModel {
                     self.syspkgtype.clone(),
                     self.userpkgtype.clone(),
                 ));
-
-                // fetch installed pkg and update
-                sender.input(AppMsg::UpdateInstalledPkgs);
             }
             AppMsg::UpdateFlake(flake, flakearg) => {
                 info!(
@@ -814,9 +811,6 @@ impl AsyncComponent for AppModel {
                     self.syspkgtype.clone(),
                     self.userpkgtype.clone(),
                 ));
-
-                //  I think itʻs not related to installed page
-                // sender.input(AppMsg::UpdateInstalledPage);
             }
             AppMsg::Initialize(
                 pkgdb,
@@ -1691,11 +1685,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     if let Some(updates_child) = self.viewstack.child_by_name("updates") {
                         let page = self.viewstack.page(&updates_child);
                         if total_updates > 0 {
-                            page.set_badge_number(
-                                total_updates
-                                    .try_into()
-                                    .unwrap_or_default(),
-                            );
+                            page.set_badge_number(total_updates.try_into().unwrap_or_default());
                         } else {
                             page.set_title(Some(&gettext("Updates")));
                         }
