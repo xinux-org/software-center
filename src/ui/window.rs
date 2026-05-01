@@ -226,6 +226,9 @@ impl AsyncComponent for AppModel {
                 add_setter: (&switcher_bar, "reveal", Some(&true.into())),
             },
 
+            // FIXME: use more idiomatic gtk::Stack to switch pages.
+            // see example: https://git.oss.uzinfocom.uz/xinux/settings/src/branch/main/src/ui/wifi/wifi_panel.rs#L141-L142
+            #[transition(Crossfade)]
             #[name(main_stack)]
             if model.busy {
                 gtk::Box {

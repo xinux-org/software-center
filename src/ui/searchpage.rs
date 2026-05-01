@@ -39,6 +39,7 @@ impl SimpleComponent for SearchPageModel {
             set_vadjustment: gtk::Adjustment::NONE,
             adw::Clamp {
                 gtk::Stack {
+                    set_transition_type: gtk::StackTransitionType::Crossfade,
                     set_margin_all: 20,
                     #[local_ref]
                     searchlist -> gtk::ListBox {
