@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   flake-check:
-      runs-on: testing
+      runs-on: native
       steps:
         - name: Clone the repository
           uses: actions/checkout@v6
