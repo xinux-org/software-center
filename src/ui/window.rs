@@ -1851,8 +1851,11 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         let page = self.viewstack.page(&updates_child);
                         if total_updates > 0 {
                             page.set_badge_number(total_updates.try_into().unwrap_or_default());
+                            page.set_needs_attention(true);
                         } else {
                             page.set_title(Some(&gettext("Updates")));
+                            page.set_badge_number(0);
+                            page.set_needs_attention(false);
                         }
                     }
 
