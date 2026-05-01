@@ -26,13 +26,14 @@ use std::{
 
 use crate::parse::packages::PkgMaintainer;
 use crate::parse::util;
-use crate::ui::installworker::InstallAsyncHandlerMsg;
-
-use super::installworker::InstallAsyncHandler;
-use super::installworker::InstallAsyncHandlerInit;
-use super::window::SystemPkgs;
-use super::window::UserPkgs;
-use super::{screenshotfactory::ScreenshotItem, window::AppMsg};
+use crate::ui::{
+    install::installworker::{
+        InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
+    },
+    pkg::screenshotfactory::ScreenshotItem,
+    window::AppMsg,
+    window::{SystemPkgs, UserPkgs},
+};
 
 #[tracker::track]
 #[derive(Debug)]

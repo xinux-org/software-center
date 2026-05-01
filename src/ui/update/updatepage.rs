@@ -1,10 +1,12 @@
-use crate::{APPINFO, parse::util, ui::unavailabledialog::UnavailableDialogModel};
+use crate::{APPINFO, parse::util};
 
-use super::{
-    pkgpage::InstallType,
+use crate::ui::{
+    pkg::pkgpage::InstallType,
     rebuild::RebuildMsg,
-    unavailabledialog::UnavailableDialogMsg,
-    updateworker::{UpdateAsyncHandler, UpdateAsyncHandlerInit, UpdateAsyncHandlerMsg},
+    update::{
+        unavailabledialog::{UnavailableDialogModel, UnavailableDialogMsg},
+        updateworker::{UpdateAsyncHandler, UpdateAsyncHandlerInit, UpdateAsyncHandlerMsg},
+    },
     window::*,
 };
 use adw::prelude::*;

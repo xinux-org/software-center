@@ -1,8 +1,8 @@
 use crate::APPINFO;
 use std::path::Path;
 
-use super::{
-    pkgpage::{InstallType, NotifyPage, PkgAction, WorkPkg},
+use crate::ui::{
+    pkg::pkgpage::{InstallType, NotifyPage, PkgAction, WorkPkg},
     window::*,
 };
 use adw::prelude::*;

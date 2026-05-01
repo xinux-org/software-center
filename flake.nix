@@ -4,7 +4,7 @@
   inputs = {
     # Stable for keeping thins clean
     # # Fresh and new for testing
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "git+https://git.oss.uzinfocom.uz/xinux/nixpkgs?ref=nixos-unstable&shallow=1";
 
     crane.url = "github:ipetkov/crane";
     # The flake-utils library

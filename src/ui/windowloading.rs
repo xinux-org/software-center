@@ -1,6 +1,6 @@
 use super::window::{AppMsg, SystemPkgs};
 use crate::parse::packages::{AppData, appsteamdata};
-use crate::ui::{categories::PkgCategory, window::UserPkgs};
+use crate::ui::{category::categories::PkgCategory, window::UserPkgs};
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;

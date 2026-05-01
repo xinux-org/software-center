@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::*;
@@ -7,8 +7,8 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
 use crate::ui::{rebuild::RebuildMsg, window::REBUILD_BROKER};
 
-use super::{
-    updatepage::UpdatePageMsg,
+use crate::ui::{
+    update::updatepage::UpdatePageMsg,
     window::{SystemPkgs, UserPkgs},
 };
 

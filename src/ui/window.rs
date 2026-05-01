@@ -5,11 +5,6 @@ use crate::{
         packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         util,
     },
-    ui::{
-        categories::PkgCategoryMsg, installedpage::InstalledItem, pkgpage::PkgPageInit,
-        pkgtile::PkgTileMsg, rebuild::RebuildMsg, unavailabledialog::UnavailableDialogMsg,
-        updatepage::UNAVAILABLE_BROKER, welcome::WelcomeMsg,
-    },
 };
 use gettextrs::gettext;
 use log::*;
@@ -32,20 +27,29 @@ use std::{
     path::Path,
 };
 
-use super::{
+use crate::ui::{
     about::AboutPageModel,
-    categories::{PkgCategory, PkgGroup},
-    categorypage::{CategoryPageModel, CategoryPageMsg},
-    categorytile::CategoryTile,
-    installedpage::{InstalledPageModel, InstalledPageMsg},
-    pkgpage::{self, InstallType, PkgInitModel, PkgModel, PkgMsg, WorkPkg},
-    pkgtile::PkgTile,
+    category::{
+        categories::{PkgCategory, PkgCategoryMsg, PkgGroup},
+        categorypage::{CategoryPageModel, CategoryPageMsg},
+        categorytile::CategoryTile,
+    },
+    install::installedpage::{InstalledItem, InstalledPageModel, InstalledPageMsg},
+    pkg::{
+        pkgpage::{self, InstallType, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg},
+        pkgtile::{PkgTile, PkgTileMsg},
+    },
     preferencespage::{PreferencesPageModel, PreferencesPageMsg},
-    rebuild::RebuildModel,
+    rebuild::{RebuildModel, RebuildMsg},
     searchpage::{SearchItem, SearchPageModel, SearchPageMsg},
-    unavailabledialog::UnavailableItemModel,
-    updatepage::{UpdateItem, UpdatePageInit, UpdatePageModel, UpdatePageMsg, UpdateType},
-    welcome::WelcomeModel,
+    update::{
+        unavailabledialog::{UnavailableDialogMsg, UnavailableItemModel},
+        updatepage::{
+            UNAVAILABLE_BROKER, UpdateItem, UpdatePageInit, UpdatePageModel, UpdatePageMsg,
+            UpdateType,
+        },
+    },
+    welcome::{WelcomeModel, WelcomeMsg},
     windowloading::{LoadErrorModel, LoadErrorMsg, WindowAsyncHandler, WindowAsyncHandlerMsg},
 };
 

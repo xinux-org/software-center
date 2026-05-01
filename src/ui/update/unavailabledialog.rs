@@ -9,7 +9,7 @@ use gtk::pango;
 use log::*;
 use relm4::{factory::*, prelude::*};
 
-use super::updatepage::{UpdatePageMsg, UpdateType};
+use crate::ui::update::updatepage::{UpdatePageMsg, UpdateType};
 use gettextrs::gettext;
 
 #[derive(Debug)]

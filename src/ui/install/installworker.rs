@@ -1,7 +1,9 @@
-use super::pkgpage::{InstallType, PkgAction, PkgMsg, WorkPkg};
-use super::rebuild::RebuildMsg;
-use super::window::{SystemPkgs, UserPkgs, REBUILD_BROKER};
-use anyhow::{anyhow, Result};
+use crate::ui::{
+    pkg::pkgpage::{InstallType, PkgAction, PkgMsg, WorkPkg},
+    rebuild::RebuildMsg,
+    window::{REBUILD_BROKER, SystemPkgs, UserPkgs},
+};
+use anyhow::{Result, anyhow};
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::*;
@@ -106,13 +108,15 @@ impl Worker for InstallAsyncHandler {
                                                         "Removed user package: {} success",
                                                         work.pkg
                                                     );
-                                                    let _ = sender.output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender
+                                                        .output(PkgMsg::FinishedProcess(work));
                                                 } else {
                                                     warn!(
                                                         "Removed user package: {} failed",
                                                         work.pkg
                                                     );
-                                                    let _ = sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ =
+                                                        sender.output(PkgMsg::FailedProcess(work));
                                                 }
                                             }
                                             Err(e) => {

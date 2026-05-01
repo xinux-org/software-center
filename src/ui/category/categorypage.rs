@@ -1,6 +1,7 @@
-use crate::ui::categorytile::CategoryTileMsg;
+use crate::ui::category::categorytile::CategoryTileMsg;
 
-use super::{categories::PkgCategory, categorytile::CategoryTile, window::*};
+use super::{categories::PkgCategory, categorytile::CategoryTile};
+use crate::ui::window::*;
 use adw::prelude::*;
 use gettextrs::gettext;
 use log::*;
@@ -50,7 +51,7 @@ impl Component for CategoryPageModel {
                 PkgCategory::Web => gettext("Web"),
                 PkgCategory::Video => gettext("Video"),
             },
-            
+
             gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
                 adw::HeaderBar {},
