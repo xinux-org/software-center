@@ -1,11 +1,11 @@
-use std::path::Path;
-
 use relm4::adw::prelude::*;
 use relm4::gtk::pango;
 use relm4::{factory::*, *};
+use std::path::Path;
 
 use crate::APPINFO;
-#[derive(Default, Debug, PartialEq, Eq)]
+
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct PkgTile {
     pub name: String,
     pub pkg: String,

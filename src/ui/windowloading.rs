@@ -147,7 +147,7 @@ impl Worker for WindowAsyncHandler {
                                 (if let Some(i) = &data.icon {
                                     i.cached.is_some()
                                 } else {
-                                    false
+                                    true // FIX: not all icons loaded. Show misson icon packages temporary?
                                 }) && data.description.is_some()
                                     && data.name.is_some()
                                     && data.launchable.is_some()
@@ -423,8 +423,35 @@ impl Worker for WindowAsyncHandler {
                     }
                     recpicks.shuffle(&mut rng);
 
+                    let devpicks = catpicks
+                        .get(&PkgCategory::Development)
+                        .expect("Cannot get reccomended audio pkgs");
+                    let gamespicks = catpicks
+                        .get(&PkgCategory::Games)
+                        .expect("Cannot get reccomended audio pkgs");
+                    let graphicspicks = catpicks
+                        .get(&PkgCategory::Graphics)
+                        .expect("Cannot get reccomended audio pkgs");
+                    let webpicks = catpicks
+                        .get(&PkgCategory::Web)
+                        .expect("Cannot get reccomended audio pkgs");
+                    let videopicks = catpicks
+                        .get(&PkgCategory::Video)
+                        .expect("Cannot get reccomended audio pkgs");
+
                     let _ = sender.output(AppMsg::Initialize(
-                        pkgdb, nixpkgsdb, systemdb, appdata, recpicks, catpicks, catpkgs,
+                        pkgdb,
+                        nixpkgsdb,
+                        systemdb,
+                        appdata,
+                        recpicks,
+                        devpicks.to_owned(),
+                        gamespicks.to_owned(),
+                        graphicspicks.to_owned(),
+                        webpicks.to_owned(),
+                        videopicks.to_owned(),
+                        catpicks,
+                        catpkgs,
                     ));
                 });
             }

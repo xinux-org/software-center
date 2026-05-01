@@ -83,7 +83,7 @@ impl Component for CategoryPageModel {
                                 set_spacing: 15,
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
-                                    add_css_class: "title-4",
+                                    add_css_class: "title-1",
                                     set_label: &gettext("Recommended"),
                                 },
                                 #[local_ref]
@@ -101,7 +101,7 @@ impl Component for CategoryPageModel {
                                 },
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
-                                    add_css_class: "title-4",
+                                    add_css_class: "title-1",
                                     set_label: &gettext("Other"),
                                 },
                                 #[local_ref]
