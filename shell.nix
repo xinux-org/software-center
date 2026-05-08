@@ -14,6 +14,7 @@ in
       rustc
       rustfmt
       rustPlatform.bindgenHook
+      nixfmt
     ];
     buildInputs = with pkgs;
       [
