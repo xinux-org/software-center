@@ -1,0 +1,21 @@
+{
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "files": {
+          "excludeDirs": [
+            ".direnv",
+            ".devenv",
+            ".nix-mix",
+            ".git",
+            "target",
+            "_build",
+            ".blueprint",
+            "builddir",
+            "build",
+          ]
+        }
+      },
+    }
+  }
+}
