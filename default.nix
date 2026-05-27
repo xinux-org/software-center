@@ -11,7 +11,9 @@ let
   craneLib = crane.mkLib pkgs;
 
   nixos-appstream-data =
-    inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
+    (inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data)
+    .override
+      { set = "all"; };
   commonBuildInputs = with pkgs; [
     gdk-pixbuf
     glib
