@@ -71,7 +71,7 @@ fn main() {
         .map_err(|err| err.exit())
         .unwrap();
 
-    if users::get_effective_uid() != 0 {
+    if uzers::get_effective_uid() != 0 {
         eprintln!("nsc-helper must be run as root");
         std::process::exit(1);
     }
