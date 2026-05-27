@@ -55,8 +55,6 @@ in
     buildInputs = commonBuildInputs;
 
     configurePhase = ''
-      substituteInPlace ./src/lib.rs \
-          --replace-fail "/usr/share/app-info" "${nixos-appstream-data}/share/app-info"
       mesonConfigurePhase
       runHook postConfigure
     '';

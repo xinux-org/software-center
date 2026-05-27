@@ -1,8 +1,8 @@
 project(
   'nix-software-center',
   'rust',
-  version: '0.1.2',
-  meson_version: '>= 0.59',
+  version: '0.1.3',
+  meson_version: '>= 1.9',
   license: 'GPL-3.0',
 )
 
@@ -12,9 +12,9 @@ gnome = import('gnome')
 base_id = 'org.xinux.NixSoftwareCenter'
 
 dependency('openssl', version: '>= 1.0')
-dependency('glib-2.0', version: '>= 2.66')
-dependency('gio-2.0', version: '>= 2.66')
-dependency('gtk4', version: '>= 4.6.0')
+dependency('glib-2.0', version: '>= 2.86.3')
+dependency('gio-2.0', version: '>= 2.86.3')
+dependency('gtk4', version: '>= 4.20.3')
 dependency('libadwaita-1', version: '>=1.2.0')
 dependency('polkit-gobject-1', version: '>= 0.103')
 

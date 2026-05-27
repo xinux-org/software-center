@@ -43,16 +43,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1712858390,
-        "narHash": "sha256-XE7gr+zU3N4SHPAhsgk8cVAFp1iBg+Lxxp3y4dUF1vE=",
-        "owner": "korfuri",
+        "lastModified": 1766634783,
+        "narHash": "sha256-aCJoX3Vz0R9L108stkWJ9q7t22wfOqFy0N/TDn+i4v8=",
+        "owner": "batonac",
         "repo": "nixos-appstream-data",
-        "rev": "0465d42a4433faa63b7a5eb0b8d397937c9fc13a",
+        "rev": "c76aa114a9d95f2b0f172b7a16656c196a791b56",
         "type": "github"
       },
       "original": {
-        "owner": "korfuri",
-        "ref": "flake",
+        "owner": "batonac",
         "repo": "nixos-appstream-data",
         "type": "github"
       }

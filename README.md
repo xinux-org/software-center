@@ -58,7 +58,7 @@ let
   nix-software-center = import (pkgs.fetchFromGitHub {
     owner = "xinux-org";
     repo = "software-center";
-    rev = "0.1.2";
+    rev = "0.1.3";
     sha256 = ""; # add shaa
   }) {};
 in

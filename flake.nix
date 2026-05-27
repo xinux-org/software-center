@@ -10,32 +10,38 @@
     # The flake-utils library
     flake-utils.url = "github:numtide/flake-utils";
 
+    ## Where is the repo?
     nixos-appstream-data = {
-      url = "github:korfuri/nixos-appstream-data/flake";
+      url = "github:batonac/nixos-appstream-data";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-    crane,
-    ...
-  } @ inputs:
-    flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = import nixpkgs {inherit system;};
-    in {
-      # Nix script formatter
-      formatter = pkgs.alejandra;
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      crane,
+      ...
+    }@inputs:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in
+      {
+        # Nix script formatter
+        formatter = pkgs.nixfmt-tree;
 
-      # Development environment
-      devShells.default = import ./shell.nix {inherit pkgs inputs;};
+        # Development environment
+        devShells.default = import ./shell.nix { inherit pkgs inputs; };
 
-      # Output package
-      packages.default = pkgs.callPackage ./. {inherit crane pkgs inputs;};
-    })
+        # Output package
+        packages.default = pkgs.callPackage ./. { inherit crane pkgs inputs; };
+      }
+    )
     // {
       # Hydra CI jobs
       hydraJobs = {
