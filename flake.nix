@@ -10,9 +10,8 @@
     # The flake-utils library
     flake-utils.url = "github:numtide/flake-utils";
 
-    ## Where is the repo?
     nixos-appstream-data = {
-      url = "github:bahrom04-lab/nixos-appstream-data-fork";
+      url = "github:bahrom04-lab/nixos-appstream-data-fork/update-icons";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };

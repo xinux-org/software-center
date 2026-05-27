@@ -43,15 +43,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1766634783,
-        "narHash": "sha256-aCJoX3Vz0R9L108stkWJ9q7t22wfOqFy0N/TDn+i4v8=",
+        "lastModified": 1779897478,
+        "narHash": "sha256-XvfEuWs3XglA8F8pcZJs6Dt2HGTUEOrldkbZ+LKWcaw=",
         "owner": "bahrom04-lab",
         "repo": "nixos-appstream-data-fork",
-        "rev": "c76aa114a9d95f2b0f172b7a16656c196a791b56",
+        "rev": "a76fc5b7a61bca4f7a0b6890eb1aa22169a692d0",
         "type": "github"
       },
       "original": {
         "owner": "bahrom04-lab",
+        "ref": "update-icons",
         "repo": "nixos-appstream-data-fork",
         "type": "github"
       }
