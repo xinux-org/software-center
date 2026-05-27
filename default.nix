@@ -3,13 +3,15 @@
   inputs,
   crane,
   ...
-}: let
+}:
+let
   # Manifest via Cargo.toml
   manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
 
   craneLib = crane.mkLib pkgs;
 
-  nixos-appstream-data = inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
+  nixos-appstream-data =
+    inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
   commonBuildInputs = with pkgs; [
     gdk-pixbuf
     glib
@@ -42,43 +44,47 @@
     buildInputs = commonBuildInputs;
   };
 in
-  craneLib.buildPackage {
-    pname = manifest.name;
-    version = manifest.version;
-    strictDeps = true;
+craneLib.buildPackage {
+  pname = manifest.name;
+  version = manifest.version;
+  strictDeps = true;
 
-    src = pkgs.lib.cleanSource ./.;
+  src = pkgs.lib.cleanSource ./.;
 
-    inherit cargoArtifacts;
+  inherit cargoArtifacts;
 
-    nativeBuildInputs = commonNativeBuildInputs;
-    buildInputs = commonBuildInputs;
+  nativeBuildInputs = commonNativeBuildInputs;
+  buildInputs = commonBuildInputs;
 
-    configurePhase = ''
-      mesonConfigurePhase
-      runHook postConfigure
-    '';
+  configurePhase = ''
+    substituteInPlace ./src/lib.rs \
+        --replace-fail "/usr/share/app-info" "${nixos-appstream-data}/share/app-info"
+    mesonConfigurePhase
+    runHook postConfigure
+  '';
 
-    buildPhase = ''
-      runHook preBuild
-      ninjaBuildPhase
-      runHook postBuild
-    '';
+  buildPhase = ''
+    runHook preBuild
+    ninjaBuildPhase
+    runHook postBuild
+  '';
 
-    installPhase = ''
-      runHook preInstall
-      mesonInstallPhase
-      runHook postInstall
-    '';
+  installPhase = ''
+    runHook preInstall
+    mesonInstallPhase
+    runHook postInstall
+  '';
 
-    postInstall = ''
-      wrapProgram $out/bin/nix-software-center --prefix PATH : '${pkgs.lib.makeBinPath [
+  postInstall = ''
+    wrapProgram $out/bin/nix-software-center --prefix PATH : '${
+      pkgs.lib.makeBinPath [
         pkgs.gnome-console
         pkgs.gtk3 # provides gtk-launch
         pkgs.sqlite
-      ]}'
-    '';
+      ]
+    }'
+  '';
 
-    doNotPostBuildInstallCargoBinaries = true;
-    checkPhase = false;
-  }
+  doNotPostBuildInstallCargoBinaries = true;
+  checkPhase = false;
+}
