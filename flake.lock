@@ -45,14 +45,14 @@
       "locked": {
         "lastModified": 1766634783,
         "narHash": "sha256-aCJoX3Vz0R9L108stkWJ9q7t22wfOqFy0N/TDn+i4v8=",
-        "owner": "batonac",
-        "repo": "nixos-appstream-data",
+        "owner": "bahrom04-lab",
+        "repo": "nixos-appstream-data-fork",
         "rev": "c76aa114a9d95f2b0f172b7a16656c196a791b56",
         "type": "github"
       },
       "original": {
-        "owner": "batonac",
-        "repo": "nixos-appstream-data",
+        "owner": "bahrom04-lab",
+        "repo": "nixos-appstream-data-fork",
         "type": "github"
       }
     },

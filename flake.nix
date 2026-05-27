@@ -12,7 +12,7 @@
 
     ## Where is the repo?
     nixos-appstream-data = {
-      url = "github:batonac/nixos-appstream-data";
+      url = "github:bahrom04-lab/nixos-appstream-data-fork";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
