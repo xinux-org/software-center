@@ -1,6 +1,5 @@
 # https://github.com/snowfallorg/nix-software-center/blob/next/justfile
 builddir := "builddir"
-prefix := justfile_directory() / builddir
 profile := "development"
 bin := "nix-software-center"
 local := "~/.local"
