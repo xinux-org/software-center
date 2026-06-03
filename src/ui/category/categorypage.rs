@@ -63,8 +63,8 @@ impl Component for CategoryPageModel {
                     #[track(model.changed(CategoryPageModel::category()))]
                     set_vadjustment: gtk::Adjustment::NONE,
                     adw::Clamp {
-                        set_maximum_size: 1000,
-                        set_tightening_threshold: 750,
+                        set_maximum_size: 1450,
+                        set_tightening_threshold: 950,
                         if model.busy {
                             #[name(spinner)]
                             gtk::Spinner {
@@ -79,43 +79,49 @@ impl Component for CategoryPageModel {
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
                                 set_valign: gtk::Align::Start,
-                                set_margin_all: 15,
-                                set_spacing: 15,
+                                set_margin_top: 15,
+                                set_spacing: 4,
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
                                     add_css_class: "title-1",
                                     set_label: &gettext("Recommended"),
+                                    set_margin_bottom: 6,
+                                    set_margin_end: 3,
+                                    set_margin_start: 3,
+                                    set_margin_top: 0
                                 },
                                 #[local_ref]
                                 recbox -> gtk::FlowBox {
                                     set_halign: gtk::Align::Fill,
-                                    set_hexpand: true,
-                                    set_valign: gtk::Align::Center,
+                                    set_valign: gtk::Align::Fill,
                                     set_orientation: gtk::Orientation::Horizontal,
                                     set_selection_mode: gtk::SelectionMode::None,
                                     set_homogeneous: true,
-                                    set_max_children_per_line: 3,
+                                    set_max_children_per_line: 4,
                                     set_min_children_per_line: 1,
-                                    set_column_spacing: 14,
-                                    set_row_spacing: 14,
+                                    set_column_spacing: 11,
+                                    set_row_spacing: 11,
                                 },
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
                                     add_css_class: "title-1",
                                     set_label: &gettext("Other"),
+                                    set_margin_bottom: 6,
+                                    set_margin_end: 3,
+                                    set_margin_start: 3,
+                                    set_margin_top: 0
                                 },
                                 #[local_ref]
                                 allbox -> gtk::FlowBox {
                                     set_halign: gtk::Align::Fill,
-                                    set_hexpand: true,
-                                    set_valign: gtk::Align::Center,
+                                    set_valign: gtk::Align::Fill,
                                     set_orientation: gtk::Orientation::Horizontal,
                                     set_selection_mode: gtk::SelectionMode::None,
                                     set_homogeneous: true,
-                                    set_max_children_per_line: 3,
+                                    set_max_children_per_line: 4,
                                     set_min_children_per_line: 1,
-                                    set_column_spacing: 14,
-                                    set_row_spacing: 14,
+                                    set_column_spacing: 11,
+                                    set_row_spacing: 11,
                                 }
                             }
                         }

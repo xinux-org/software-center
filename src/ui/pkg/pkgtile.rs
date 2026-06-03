@@ -34,7 +34,9 @@ impl FactoryComponent for PkgTile {
         gtk::FlowBoxChild {
             set_width_request: 270,
             gtk::Overlay {
+                set_halign: gtk::Align::Fill,
                 add_overlay = &gtk::Box {
+                    set_baseline_position: gtk::BaselinePosition::Center,
                     set_orientation: gtk::Orientation::Horizontal,
                     set_valign: gtk::Align::Start,
                     set_halign: gtk::Align::End,
@@ -67,11 +69,11 @@ impl FactoryComponent for PkgTile {
                         sender.output(PkgTileMsg::Open(pkg.to_string())).unwrap()
                     },
                     gtk::Box {
-                        set_margin_start: 15,
-                        set_margin_end: 15,
-                        set_margin_top: 10,
-                        set_margin_bottom: 10,
-                        set_spacing: 20,
+                        set_margin_start: 12,
+                        set_margin_end: 12,
+                        set_margin_top: 12,
+                        set_margin_bottom: 12,
+                        set_spacing: 15,
                         append = if self.icon.is_some() {
                             gtk::Image {
                                 add_css_class: "icon-dropshadow",
