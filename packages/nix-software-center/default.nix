@@ -30,7 +30,7 @@ stdenv.mkDerivation {
 
   cargoDeps = rustPlatform.fetchCargoVendor {
     src = ../..;
-    hash = "sha256-07CROBXMPoOMSZ3362m24erwA1d/Ndb4d6v7CfSS+Qs=";
+    hash = "sha256-9HmWTtRDVqkCDBhUzjbeT5LMBgZPwlkMbbuzl+WxADU=";
   };
 
   nativeBuildInputs =
@@ -74,7 +74,7 @@ stdenv.mkDerivation {
   postInstall = ''
     mkdir -p $out/share/app-info/
     cp	-r ${nixos-appstream-data}/share/app-info/* $out/share/app-info/
-    
+
     wrapProgram $out/bin/nix-software-center --prefix PATH : '${
       lib.makeBinPath [
         pkgs.gnome-console
