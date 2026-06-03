@@ -74,44 +74,35 @@ with pkgs; [
 
 For any other method of installation, when rebuilding you might be prompted to authenticate twice in a row by `pkexec`
 
-## 'nix profile' installation
-
-```bash
-nix profile install github:xinux-org/software-center
-```
-
-## 'nix-env' Installation
-
-```bash
-git clone https://github.com/xinux-org/software-center
-nix-env -f nix-software-center -i nix-software-center
-```
-
 ## Single run on an flakes enabled system:
 
 ```bash
 nix run github:xinux-org/software-center
 ```
 
-## Single run on non-flakes enabled system:
+## Build & run
+This application has Linux-only dependencies.
 
 ```bash
-nix --extra-experimental-features "nix-command flakes" run github:xinux-org/software-center
+# download dependencies
+nix develop
+
+just install
+
+cd ..
+./settings/builddir/install/bin/settings
+
+# or with nix when ready for release
+nix build . --show-trace
+./settings/result/bin/settings
+
+# app run
+just run
+
+# Optional. Generate translation words from /po/POTFILES.in if needed.
+cd ./po
+xgettext --directory=.. --files-from=POTFILES.in --from-code=UTF-8 -kgettext -o translations.pot
 ```
-
-## Building & Debugging
-
-```bash
-nix build . # root of project
-cd .. # use pkexec outside of shell.nix
-
-RUST_LOG=nix_software_center=trace ./software-center/result/bin/nix-software-center
-
-# with inspector
-GTK_DEBUG=interactive RUST_LOG=nix_software_center=trace ./software-center/result/bin/nix-software-center
-
-```
-
 ## Screenshots
 
 <p align="middle">
