@@ -20,7 +20,7 @@
 }:
 let
   nixos-appstream-data =
-    inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
+    inputs.self.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
 in
 stdenv.mkDerivation {
   pname = "nix-software-center";
@@ -72,6 +72,9 @@ stdenv.mkDerivation {
   '';
 
   postInstall = ''
+    mkdir -p $out/share/app-info/
+    cp	-r ${nixos-appstream-data}/share/app-info/* $out/share/app-info/
+    
     wrapProgram $out/bin/nix-software-center --prefix PATH : '${
       lib.makeBinPath [
         pkgs.gnome-console

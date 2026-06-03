@@ -130,7 +130,8 @@ impl Worker for WindowAsyncHandler {
                     let appdata = match appsteamdata() {
                         Ok(x) => x,
                         Err(e) => {
-                            error!("Error getting appdata: {}", e);
+                          error!("Error getting appdata: {}\n
+                            You need to build nixos-upstread-data first, by doing: nix build .#nixos-appstream-data", e);
                             let _ = sender.output(AppMsg::LoadError(
                                 gettext("Error retrieving appstream data"),
                                 e.to_string(),
