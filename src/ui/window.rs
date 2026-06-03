@@ -211,8 +211,8 @@ impl AsyncComponent for AppModel {
         #[root]
         #[name(main_window)]
         adw::ApplicationWindow {
-            set_default_width: 1150,
-            set_default_height: 800,
+            set_default_width: 1220,
+            set_default_height: 900,
 
             // desktop mode
             add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(

@@ -2,49 +2,30 @@
   description = "Software-center app for NixOS based distros";
 
   inputs = {
-    # Stable for keeping thins clean
-    # # Fresh and new for testing
     nixpkgs.url = "git+https://git.oss.uzinfocom.uz/xinux/nixpkgs?ref=nixos-unstable&shallow=1";
 
-    crane.url = "github:ipetkov/crane";
-    # The flake-utils library
-    flake-utils.url = "github:numtide/flake-utils";
-
+    xinux-lib = {
+      url = "git+https://git.oss.uzinfocom.uz/xinux/lib?ref=main&shallow=1";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixos-appstream-data = {
       url = "github:bahrom04-lab/nixos-appstream-data-fork/update-icons";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
     };
   };
 
   outputs =
-    {
-      self,
-      nixpkgs,
-      flake-utils,
-      crane,
-      ...
-    }@inputs:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-      in
-      {
-        # Nix script formatter
-        formatter = pkgs.nixfmt-tree;
+    inputs:
+    inputs.xinux-lib.mkFlake {
+      inherit inputs;
+      src = ./.;
+      alias.packages.default = "nix-software-center";
+      alias.shells.default = "nix-software-center";
 
-        # Development environment
-        devShells.default = import ./shell.nix { inherit pkgs inputs; };
-
-        # Output package
-        packages.default = pkgs.callPackage ./. { inherit crane pkgs inputs; };
-      }
-    )
-    // {
-      # Hydra CI jobs
-      hydraJobs = {
-        packages = self.packages.x86_64-linux.default;
+      # Extra nix flags to set
+      outputs-builder = channels: {
+        formatter = channels.nixpkgs.nixfmt-tree;
       };
+      hydraJobs = inputs.self.packages.x86_64-linux;
     };
 }

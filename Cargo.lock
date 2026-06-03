@@ -2441,7 +2441,7 @@ dependencies = [
 
 [[package]]
 name = "nix-software-center"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "anyhow",
  "flate2",
