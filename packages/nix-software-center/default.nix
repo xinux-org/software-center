@@ -68,7 +68,7 @@ stdenv.mkDerivation {
 
   patchPhase = ''
     substituteInPlace ./src/lib.rs \
-        --replace "/usr/share/app-info" "${nixos-appstream-data}/share/app-info"
+        --replace "./result/share/app-info" "${nixos-appstream-data}/share/app-info"
   '';
 
   postInstall = ''
