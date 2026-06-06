@@ -9,7 +9,7 @@ project(
 i18n = import('i18n')
 gnome = import('gnome')
 
-base_id = 'org.xinux.NixSoftwareCenter'
+base_id = 'uz.xinux.NixSoftwareCenter'
 
 dependency('openssl', version: '>= 1.0')
 dependency('glib-2.0', version: '>= 2.86.3')

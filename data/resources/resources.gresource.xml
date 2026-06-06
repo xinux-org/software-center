@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/org/xinux/NixSoftwareCenter/icons/scalable/emblems">
+  <gresource prefix="/uz/xinux/NixSoftwareCenter/icons/scalable/emblems">
     <file preprocess="xml-stripblanks" alias="nsc-audio.svg">../icons/nsc-audio.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-development.svg">../icons/nsc-development.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-gaming.svg">../icons/nsc-gaming.svg</file>

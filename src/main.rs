@@ -21,7 +21,7 @@ fn main() {
         // This seem to not working...
         // let data = res
         //     .lookup_data(
-        //         "/org/xinux/NixSoftwareCenter/style.css",
+        //         "/uz/xinux/NixSoftwareCenter/style.css",
         //         gio::ResourceLookupFlags::NONE,
         //     )
         //     .unwrap();
@@ -31,7 +31,7 @@ fn main() {
     }
     gtk::Window::set_default_icon_name(APP_ID);
     let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
-    app.set_resource_base_path(Some("/org/xinux/NixSoftwareCenter"));
+    app.set_resource_base_path(Some("/uz/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
     app.run_async::<AppModel>(());
 }
