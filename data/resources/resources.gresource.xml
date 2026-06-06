@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
-  <gresource prefix="/org/xinux/NixSoftwareCenter/icons/scalable/emblems">
+  <gresource prefix="/uz/xinux/NixSoftwareCenter/icons/scalable/emblems">
     <file preprocess="xml-stripblanks" alias="nsc-audio.svg">../icons/nsc-audio.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-development.svg">../icons/nsc-development.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-gaming.svg">../icons/nsc-gaming.svg</file>
@@ -12,5 +12,11 @@
     <file preprocess="xml-stripblanks" alias="nsc-update-symbolic.svg">../icons/nsc-update-symbolic.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-video.svg">../icons/nsc-video.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-web.svg">../icons/nsc-web.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-education.svg">../icons/uz.xinux.NixSoftwareCenter.Education.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-science.svg">../icons/uz.xinux.NixSoftwareCenter.Science.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-office.svg">../icons/uz.xinux.NixSoftwareCenter.Office.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-network.svg">../icons/uz.xinux.NixSoftwareCenter.Network.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-system.svg">../icons/uz.xinux.NixSoftwareCenter.System.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-utility.svg">../icons/uz.xinux.NixSoftwareCenter.Utilities.svg</file>
   </gresource>
 </gresources>

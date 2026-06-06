@@ -130,7 +130,7 @@ impl Worker for WindowAsyncHandler {
                     let appdata = match appsteamdata() {
                         Ok(x) => x,
                         Err(e) => {
-                          error!("Error getting appdata: {}\n
+                            error!("Error getting appdata: {}\n
                             You need to build nixos-upstread-data first, by doing: nix build .#nixos-appstream-data", e);
                             let _ = sender.output(AppMsg::LoadError(
                                 gettext("Error retrieving appstream data"),
@@ -205,6 +205,12 @@ impl Worker for WindowAsyncHandler {
                         PkgCategory::Graphics,
                         PkgCategory::Web,
                         PkgCategory::Video,
+                        PkgCategory::Education,
+                        PkgCategory::Science,
+                        PkgCategory::Office,
+                        PkgCategory::Network,
+                        PkgCategory::System,
+                        PkgCategory::Utility,
                     ] {
                         desktoppicks.shuffle(&mut rng);
                         let mut cvec = vec![];
@@ -340,6 +346,72 @@ impl Worker for WindowAsyncHandler {
                                     }
                                     false
                                 }
+                                PkgCategory::Education => {
+                                    // Education:
+                                    // - Parsed <categories> tag from .xml in ./src/parse/packages.rs
+                                    if let Some(data) = &appdata.get(&pkg)
+                                        && let Some(categories) = &data.categories
+                                        && categories.contains(&String::from("Education"))
+                                    {
+                                        return true;
+                                    }
+                                    false
+                                }
+                                PkgCategory::Science => {
+                                    // Science:
+                                    // - Parsed <categories> tag from .xml in ./src/parse/packages.rs
+                                    if let Some(data) = &appdata.get(&pkg)
+                                        && let Some(categories) = &data.categories
+                                        && categories.contains(&String::from("Science"))
+                                    {
+                                        return true;
+                                    }
+                                    false
+                                }
+                                PkgCategory::Office => {
+                                    // Office:
+                                    // - Parsed <categories> tag from .xml in ./src/parse/packages.rs
+                                    if let Some(data) = &appdata.get(&pkg)
+                                        && let Some(categories) = &data.categories
+                                        && categories.contains(&String::from("Office"))
+                                    {
+                                        return true;
+                                    }
+                                    false
+                                }
+                                PkgCategory::Network => {
+                                    // Network:
+                                    // - Parsed <categories> tag from .xml in ./src/parse/packages.rs
+                                    if let Some(data) = &appdata.get(&pkg)
+                                        && let Some(categories) = &data.categories
+                                        && categories.contains(&String::from("Network"))
+                                    {
+                                        return true;
+                                    }
+                                    false
+                                }
+                                PkgCategory::System => {
+                                    // System:
+                                    // - Parsed <categories> tag from .xml in ./src/parse/packages.rs
+                                    if let Some(data) = &appdata.get(&pkg)
+                                        && let Some(categories) = &data.categories
+                                        && categories.contains(&String::from("System"))
+                                    {
+                                        return true;
+                                    }
+                                    false
+                                }
+                                PkgCategory::Utility => {
+                                    // Utility:
+                                    // - Parsed <categories> tag from .xml in ./src/parse/packages.rs
+                                    if let Some(data) = &appdata.get(&pkg)
+                                        && let Some(categories) = &data.categories
+                                        && categories.contains(&String::from("Utility"))
+                                    {
+                                        return true;
+                                    }
+                                    false
+                                }
                             }
                         }
 
@@ -391,6 +463,12 @@ impl Worker for WindowAsyncHandler {
                                                 && category == PkgCategory::Games)
                                             || (position.starts_with("pkgs/development")
                                                 && category == PkgCategory::Development)
+                                            || category == PkgCategory::Education
+                                            || category == PkgCategory::Science
+                                            || category == PkgCategory::Office
+                                            || category == PkgCategory::Network
+                                            || category == PkgCategory::System
+                                            || category == PkgCategory::Utility
                                             || recpkgs.contains(x)
                                     } else {
                                         false

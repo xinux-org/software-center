@@ -50,6 +50,12 @@ impl Component for CategoryPageModel {
                 PkgCategory::Graphics => gettext("Graphics"),
                 PkgCategory::Web => gettext("Web"),
                 PkgCategory::Video => gettext("Video"),
+                PkgCategory::Education => gettext("Education"),
+                PkgCategory::Science => gettext("Science"),
+                PkgCategory::Office => gettext("Office"),
+                PkgCategory::Network => gettext("Network"),
+                PkgCategory::System => gettext("System"),
+                PkgCategory::Utility => gettext("Utility"),
             },
 
             gtk::Box {

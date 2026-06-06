@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="data/icons/org.xinux.NixSoftwareCenter.svg"/>
+<img src="data/icons/uz.xinux.NixSoftwareCenter.svg"/>
 
 # Nix Software Center
 
