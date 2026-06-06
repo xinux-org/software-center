@@ -373,7 +373,7 @@ impl AsyncComponent for AppModel {
                                                 set_orientation: gtk::Orientation::Horizontal,
                                                 set_selection_mode: gtk::SelectionMode::None,
                                                 set_homogeneous: true,
-                                                set_max_children_per_line: 3,
+                                                set_max_children_per_line: 4,
                                                 set_min_children_per_line: 1,
                                                 set_column_spacing: 11,
                                                 set_row_spacing: 11,
@@ -1035,6 +1035,12 @@ impl AsyncComponent for AppModel {
                     PkgCategory::Graphics,
                     PkgCategory::Web,
                     PkgCategory::Video,
+                    PkgCategory::Education,
+                    PkgCategory::Science,
+                    PkgCategory::Office,
+                    PkgCategory::Network,
+                    PkgCategory::System,
+                    PkgCategory::Utility,
                 ] {
                     cat_guard.push_back(c);
                 }
@@ -2346,6 +2352,12 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     Some(PkgCategory::Graphics) => self.graphicapps.guard(),
                     Some(PkgCategory::Web) => self.webapps.guard(),
                     Some(PkgCategory::Video) => self.videoapps.guard(),
+                    Some(PkgCategory::Education) => todo!(),
+                    Some(PkgCategory::Science) => todo!(),
+                    Some(PkgCategory::Office) => todo!(),
+                    Some(PkgCategory::Network) => todo!(),
+                    Some(PkgCategory::System) => todo!(),
+                    Some(PkgCategory::Utility) => todo!(),
                     None => self.recommendedapps.guard(),
                 };
                 recapps_guard.clear();
