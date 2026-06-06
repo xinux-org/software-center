@@ -17,6 +17,6 @@
     <file preprocess="xml-stripblanks" alias="nsc-office.svg">../icons/uz.xinux.NixSoftwareCenter.Office.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-network.svg">../icons/uz.xinux.NixSoftwareCenter.Network.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-system.svg">../icons/uz.xinux.NixSoftwareCenter.System.svg</file>
-    <file preprocess="xml-stripblanks" alias="nsc-utility.svg">../icons/uz.xinux.NixSoftwareCenter.Utility.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-utility.svg">../icons/uz.xinux.NixSoftwareCenter.Utilities.svg</file>
   </gresource>
 </gresources>
