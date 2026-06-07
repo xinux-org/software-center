@@ -268,7 +268,7 @@ impl Worker for WindowAsyncHandler {
                                     // - pkgs/games
                                     // - pkgs/applications/emulators
                                     // - pkgs/tools/games
-                                    // - xdg::Games
+                                    // - xdg::Game
                                     if let Some(Some(pos)) = pospkgs.get(&pkg) {
                                         if pos.starts_with("pkgs/games")
                                             || pos.starts_with("pkgs/applications/emulators")
@@ -276,12 +276,11 @@ impl Worker for WindowAsyncHandler {
                                         {
                                             return true;
                                         }
-                                        if let Some(data) = &appdata.get(&pkg) {
-                                            if let Some(categories) = &data.categories {
-                                                if categories.contains(&String::from("Games")) {
-                                                    return true;
-                                                }
-                                            }
+                                        if let Some(data) = &appdata.get(&pkg)
+                                            && let Some(categories) = &data.categories
+                                            && categories.contains(&String::from("Game"))
+                                        {
+                                            return true;
                                         }
                                     }
                                     false
