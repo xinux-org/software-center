@@ -1,8 +1,8 @@
 use super::window::AppMsg;
+use gettextrs::gettext;
 use log::{info, trace};
 use relm4::*;
 use sourceview5::prelude::*;
-use gettextrs::gettext;
 
 #[tracker::track]
 pub struct RebuildModel {
@@ -45,9 +45,9 @@ impl SimpleComponent for RebuildModel {
             set_transient_for: Some(&parent_window),
             set_modal: true,
             #[track(model.changed(RebuildModel::hidden()))]
-            set_default_width: 500,
+            set_default_width: 700,
             #[track(model.changed(RebuildModel::hidden()))]
-            set_default_height: 200,//295),
+            set_default_height: 500,//295),
             set_resizable: true,
             #[watch]
             set_visible: !model.hidden,
@@ -57,7 +57,7 @@ impl SimpleComponent for RebuildModel {
                 set_orientation: gtk::Orientation::Vertical,
                 #[name(statusstack)]
                 gtk::Stack {
-                    set_margin_top: 20,
+                    set_margin_top: 11,
                     set_transition_type: gtk::StackTransitionType::Crossfade,
                     set_vhomogeneous: false,
                     #[name(building)]
@@ -67,11 +67,11 @@ impl SimpleComponent for RebuildModel {
                         gtk::Spinner {
                             #[watch]
                             set_spinning: true,
-                            set_height_request: 60,
+                            set_height_request: 32,
                         },
                         gtk::Label {
                             set_label: &gettext("Building..."),
-                            add_css_class: "title-1",
+                            add_css_class: "title-2",
                         },
                     },
                     #[name(success)]
@@ -81,11 +81,11 @@ impl SimpleComponent for RebuildModel {
                         gtk::Image {
                             add_css_class: "success",
                             set_icon_name: Some("object-select-symbolic"),
-                            set_pixel_size: 128,
+                            set_pixel_size: 64,
                         },
                         gtk::Label {
                             set_label: &gettext("Done!"),
-                            add_css_class: "title-1",
+                            add_css_class: "title-2",
                         },
                         gtk::Label {
                             set_label: &gettext("Rebuild successful!"),
@@ -99,7 +99,7 @@ impl SimpleComponent for RebuildModel {
                         gtk::Image {
                             add_css_class: "error",
                             set_icon_name: Some("dialog-error-symbolic"),
-                            set_pixel_size: 128,
+                            set_pixel_size: 64,
                         },
                         gtk::Label {
                             set_label: &gettext("Error!"),
@@ -112,10 +112,9 @@ impl SimpleComponent for RebuildModel {
                     }
                 },
                 gtk::Frame {
-                    set_margin_all: 20,
+                    set_margin_all: 11,
                     #[name(scrollwindow)]
                     gtk::ScrolledWindow {
-                        set_max_content_height: 500,
                         set_min_content_height: 100,
                         #[name(outview)]
                         sourceview5::View {
@@ -184,7 +183,6 @@ impl SimpleComponent for RebuildModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-
         let model = RebuildModel {
             hidden: true,
             text: String::new(),
