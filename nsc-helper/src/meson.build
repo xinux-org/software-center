@@ -16,7 +16,7 @@ cargo_build = custom_target(
   'cargo-build',
   build_by_default: true,
   build_always_stale: true,
-  output: 'xeonitte-helper',
+  output: 'nsc-helper',
   console: true,
   install: true,
   install_dir: get_option('libexecdir'),
