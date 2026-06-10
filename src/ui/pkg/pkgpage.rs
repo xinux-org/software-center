@@ -1,5 +1,7 @@
+use crate::parse::state;
 use adw::gio;
 use adw::prelude::*;
+use anyhow::Result;
 use gettextrs::gettext;
 use html2pango;
 use image::{ImageFormat, imageops::FilterType};
@@ -9,6 +11,7 @@ use relm4::actions::RelmAction;
 use relm4::actions::RelmActionGroup;
 use relm4::gtk::pango;
 use relm4::{factory::FactoryVecDeque, *};
+use serde::{Deserialize, Serialize};
 use sha256::digest;
 use std::collections::HashSet;
 use std::convert::identity;
@@ -105,7 +108,7 @@ pub enum CarouselPage {
     Single,
 }
 
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+#[derive(Deserialize, Serialize, Debug, Hash, Eq, PartialEq, Clone)]
 pub enum InstallType {
     User,
     System,
@@ -1162,15 +1165,23 @@ impl Component for PkgModel {
                 self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
 
-                if self.installedsystempkgs.contains(&self.pkg)
-                    && !self.installeduserpkgs.contains(match self.userpkgtype {
+                {
+                    let is_system_pkg = self.installedsystempkgs.contains(&self.pkg);
+                    let is_user_pkg = self.installeduserpkgs.contains(match self.userpkgtype {
                         UserPkgs::Env => &self.pname,
                         UserPkgs::Profile => &self.pkg,
-                    })
-                {
-                    self.set_installtype(InstallType::System)
-                } else {
-                    self.set_installtype(InstallType::User)
+                    });
+
+                    match (is_system_pkg, is_user_pkg) {
+                        (true, false) => self.set_installtype(InstallType::System),
+                        (false, true) => self.set_installtype(InstallType::User),
+                        _ => {
+                            let install_type = state::get_state()
+                                .and_then(|state| state.install_type)
+                                .unwrap_or(InstallType::User);
+                            self.set_installtype(install_type);
+                        }
+                    }
                 }
 
                 self.launchable = if let Some(l) = pkgmodel.launchable {
@@ -1650,7 +1661,8 @@ impl Component for PkgModel {
                 launchterm(&cmd);
             }
             PkgMsg::SetInstallType(t) => {
-                self.set_installtype(t);
+                self.set_installtype(t.clone());
+                let _ = state::update_state(|state| state.install_type = Some(t));
             }
             PkgMsg::AddToQueue(work) => {
                 self.workqueue.insert(work.clone());

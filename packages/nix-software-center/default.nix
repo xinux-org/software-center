@@ -17,6 +17,7 @@
   polkit,
   wrapGAppsHook4,
   rustPlatform,
+  libxdg_basedir,
 }:
 let
   nixos-appstream-data =
@@ -30,7 +31,7 @@ stdenv.mkDerivation {
 
   cargoDeps = rustPlatform.fetchCargoVendor {
     src = ../..;
-    hash = "sha256-9HmWTtRDVqkCDBhUzjbeT5LMBgZPwlkMbbuzl+WxADU=";
+    hash = "sha256-aavUd2LnblB687HENxNrZ6iYmpoi40V8T4DKhEwwj8c=";
   };
 
   nativeBuildInputs =
@@ -45,6 +46,7 @@ stdenv.mkDerivation {
       pkg-config
       git
       wrapGAppsHook4
+      libxdg_basedir
     ]
     ++ (with pkgs.rustPlatform; [
       cargoSetupHook
@@ -64,6 +66,7 @@ stdenv.mkDerivation {
     adwaita-icon-theme
     desktop-file-utils
     nixos-appstream-data
+    libxdg_basedir
   ];
 
   patchPhase = ''
