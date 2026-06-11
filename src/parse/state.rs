@@ -1,13 +1,12 @@
-use std::fs;
-
-use anyhow::{Result, anyhow};
-
 use crate::{
     config::{APP_NAME, STATE_FILE},
     ui::pkg::pkgpage::InstallType,
 };
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
+use std::fs;
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct State {
     pub install_type: Option<InstallType>,
 }
@@ -15,11 +14,6 @@ pub struct State {
 pub fn get_state() -> Option<State> {
     let xdg_dirs = xdg::BaseDirectories::with_prefix(APP_NAME);
     let path = xdg_dirs.get_state_file(STATE_FILE)?;
-
-    if !fs::exists(&path).ok()? {
-        return None;
-    };
-
     let raw_state = fs::read_to_string(path).ok()?;
     let state: State = toml::from_str(&raw_state).ok()?;
 
@@ -45,9 +39,9 @@ pub fn save_state(state: State) -> Result<()> {
 
 pub fn update_state<F>(f: F) -> Result<()>
 where
-    F: FnOnce(&mut State) -> (),
+    F: FnOnce(&mut State),
 {
-    let mut state = get_state().unwrap_or_else(|| State { install_type: None });
+    let mut state = get_state().unwrap_or(State { install_type: None });
 
     f(&mut state);
 

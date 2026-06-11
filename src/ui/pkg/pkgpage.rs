@@ -1165,22 +1165,21 @@ impl Component for PkgModel {
                 self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
 
-                {
-                    let is_system_pkg = self.installedsystempkgs.contains(&self.pkg);
-                    let is_user_pkg = self.installeduserpkgs.contains(match self.userpkgtype {
+                let is_system_pkg = self.get_installedsystempkgs().contains(&self.pkg);
+                let is_user_pkg = self
+                    .get_installeduserpkgs()
+                    .contains(match self.userpkgtype {
                         UserPkgs::Env => &self.pname,
                         UserPkgs::Profile => &self.pkg,
                     });
-
-                    match (is_system_pkg, is_user_pkg) {
-                        (true, false) => self.set_installtype(InstallType::System),
-                        (false, true) => self.set_installtype(InstallType::User),
-                        _ => {
-                            let install_type = state::get_state()
-                                .and_then(|state| state.install_type)
-                                .unwrap_or(InstallType::User);
-                            self.set_installtype(install_type);
-                        }
+                match (is_system_pkg, is_user_pkg) {
+                    (true, false) => self.set_installtype(InstallType::System),
+                    (false, true) => self.set_installtype(InstallType::User),
+                    _ => {
+                        let install_type = state::get_state()
+                            .and_then(|state| state.install_type)
+                            .unwrap_or(InstallType::User);
+                        self.set_installtype(install_type);
                     }
                 }
 
