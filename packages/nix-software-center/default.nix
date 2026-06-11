@@ -17,7 +17,6 @@
   polkit,
   wrapGAppsHook4,
   rustPlatform,
-  libxdg_basedir,
 }:
 let
   nixos-appstream-data =
@@ -66,7 +65,6 @@ stdenv.mkDerivation {
     adwaita-icon-theme
     desktop-file-utils
     nixos-appstream-data
-    libxdg_basedir
   ];
 
   patchPhase = ''

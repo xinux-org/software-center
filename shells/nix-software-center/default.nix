@@ -1,7 +1,6 @@
 {
   pkgs,
   inputs,
-  libxdg_basedir,
   ...
 }:
 let
@@ -42,7 +41,6 @@ pkgs.mkShell {
       polkit
       sqlite
       wrapGAppsHook4
-      libxdg_basedir
     ]
     ++ [ nixos-appstream-data ];
   # Set Environment Variables
