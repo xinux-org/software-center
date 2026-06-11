@@ -2,10 +2,10 @@ use std::fs;
 
 use anyhow::{Result, anyhow};
 
-use crate::ui::pkg::pkgpage::InstallType;
-
-const STATE_FILE: &str = "state.toml";
-const APP_NAME: &str = "nix-software-center";
+use crate::{
+    config::{APP_NAME, STATE_FILE},
+    ui::pkg::pkgpage::InstallType,
+};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct State {
