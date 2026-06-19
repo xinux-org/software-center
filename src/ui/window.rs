@@ -10,7 +10,7 @@ use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker,
+    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker, Sender,
     RelmWidgetExt, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
@@ -206,6 +206,7 @@ impl AsyncComponent for AppModel {
     type Input = AppMsg;
     type Output = ();
     type CommandOutput = AppAsyncMsg;
+    type Widgets = AppWidgets;
 
     view! {
         #[root]
@@ -782,6 +783,7 @@ impl AsyncComponent for AppModel {
 
         widgets.main_stack.set_vhomogeneous(false);
         widgets.main_stack.set_hhomogeneous(false);
+        widgets.load_window_size();
         let frontvs = widgets.viewstack.page(&widgets.frontpage);
         let installedvs = widgets.viewstack.page(model.installedpage.widget());
         let updatesvs = widgets.viewstack.page(model.updatepage.widget());
@@ -2424,6 +2426,42 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 self.updatepage.emit(UpdatePageMsg::UpdateOnline(online));
                 self.pkgpage.emit(PkgMsg::UpdateOnline(online));
             }
+        }
+    }
+
+    fn shutdown(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        _output: Sender<Self::Output>,
+    ) { 
+       widgets.save_window_size().ok();
+    }
+}
+
+impl AppWidgets {
+    fn save_window_size(&self) -> Result<(), gtk::glib::BoolError> {
+        let settings = gtk::gio::Settings::new(config::APP_ID);
+        let (width, height) = self.main_window.default_size();
+
+        settings.set_int("window-width", width)?;
+        settings.set_int("window-height", height)?;
+
+        settings.set_boolean("is-maximized", self.main_window.is_maximized())?;
+
+        Ok(())
+    }
+
+    fn load_window_size(&self) {
+        let settings = gtk::gio::Settings::new(config::APP_ID);
+
+        let width = settings.int("window-width");
+        let height = settings.int("window-height");
+        let is_maximized = settings.boolean("is-maximized");
+
+        self.main_window.set_default_size(width, height);
+
+        if is_maximized {
+            self.main_window.maximize();
         }
     }
 }
