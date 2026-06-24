@@ -1258,12 +1258,24 @@ impl Component for PkgModel {
                     }
                 }
 
+                let mut headers = reqwest::header::HeaderMap::new();
+                headers.insert(
+                    reqwest::header::ACCEPT,
+                    reqwest::header::HeaderValue::from_static("image/*"),
+                );
+                let client = reqwest::Client::builder()
+                    .default_headers(headers)
+                    .user_agent("nix-software-center")
+                    .build()
+                    .unwrap();
+
                 for (i, url) in pkgmodel.screenshots.into_iter().enumerate() {
                     if let Ok(home) = env::var("HOME") {
                         let cachedir = format!("{}/.cache/nix-software-center", home);
                         let sha = digest(url.to_string());
                         let scrnpath = format!("{}/screenshots/{}", cachedir, sha);
                         let pkg = self.pkg.clone();
+                        let client = client.clone();
 
                         sender.command(move |out, shutdown| {
                             let url = url.clone();
@@ -1276,7 +1288,7 @@ impl Component for PkgModel {
                                     if Path::new(&format!("{}.png", scrnpath)).exists() {
                                         out.send(PkgAsyncMsg::LoadScreenshot(pkg, i, format!("{}.png", scrnpath)));
                                     } else {
-                                        match reqwest::get(&url).await {
+                                        match client.get(&url).send().await {
                                             Ok(response) => {
                                                 if response.status().is_success() {
                                                     if !Path::new(&format!(
