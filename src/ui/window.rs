@@ -1537,6 +1537,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                                     installedpname.to_string(),
                                                     InstallType::User,
                                                 )),
+                                                version: installedver.to_string(),
                                             });
                                             if !installedver.eq(&newver) {
                                                 updateuseritems.push(UpdateItem {
@@ -1603,6 +1604,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                                 installedpname.to_string(),
                                                 InstallType::User,
                                             )),
+                                            version: installedver.to_string(),
                                         });
                                         if !installedver.eq(&newver) {
                                             updateuseritems.push(UpdateItem {
@@ -1629,6 +1631,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                                 installedpname.clone(),
                                                 InstallType::User,
                                             )),
+                                            version: installedver.to_string(),
                                         });
                                         let possibleversions: Vec<(String,)> = sqlx::query_as(
                                             "SELECT version FROM pkgs WHERE pname =  $1",
@@ -1715,6 +1718,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                     busy: self
                                         .installedpagebusy
                                         .contains(&(installedpkg.clone(), InstallType::User)),
+                                    version: version.to_string(),
                                 });
                                 if let Some(latest) = &self.nixpkgsdb {
                                     if let Ok(latestpool) =
@@ -1798,6 +1802,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                     busy: self
                                         .installedpagebusy
                                         .contains(&(installedpkg.clone(), InstallType::System)),
+                                    version: version.to_string(),
                                 });
                                 if let Some(current) = &self.systemdb {
                                     if let Ok(currentpool) =
