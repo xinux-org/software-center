@@ -1,6 +1,5 @@
 {
   pkgs,
-  inputs,
   stdenv,
   lib,
   cargo,
@@ -17,11 +16,9 @@
   polkit,
   wrapGAppsHook4,
   rustPlatform,
+  nixos-appstream-data,
+  ...
 }:
-let
-  nixos-appstream-data =
-    inputs.self.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
-in
 stdenv.mkDerivation {
   pname = "nix-software-center";
   version = "0.1.4";
@@ -84,4 +81,8 @@ stdenv.mkDerivation {
       ]
     }'
   '';
+
+  meta = {
+    mainProgram = "nix-software-center";
+  };
 }

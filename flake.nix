@@ -12,10 +12,14 @@
       url = "github:bahrom04-lab/nixos-appstream-data-fork/update-icons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-appimage = {
+      url = "github:ralismark/nix-appimage";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    inputs:
+    {self, ...}@inputs:
     inputs.xinux-lib.mkFlake {
       inherit inputs;
       src = ./.;
