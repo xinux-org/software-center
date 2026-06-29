@@ -2327,7 +2327,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 let senderclone = sender.clone();
                 sender.oneshot_command(async move {
                     info!("AppMsg::CheckNetwork");
-                    let online = util::checkonline();
+                    let online = util::checkonline_async().await;
                     if online && !selfonline {
                         senderclone.input(AppMsg::UpdateDB);
                     }
