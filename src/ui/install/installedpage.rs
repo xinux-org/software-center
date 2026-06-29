@@ -42,57 +42,75 @@ impl SimpleComponent for InstalledPageModel {
             set_hscrollbar_policy: gtk::PolicyType::Never,
             #[track(model.changed(InstalledPageModel::updatetracker()))]
             set_vadjustment: gtk::Adjustment::NONE,
-            adw::Clamp {
-                gtk::Box {
-                    set_orientation: gtk::Orientation::Vertical,
-                    set_valign: gtk::Align::Start,
-                    set_margin_all: 15,
-                    set_spacing: 15,
-                    gtk::Label {
-                        #[watch]
-                        set_visible: !model.installeduserlist.is_empty(),
-                        set_halign: gtk::Align::Start,
-                        add_css_class: "title-4",
-                        set_lines: 1,
-                        set_label: &match model.userpkgtype {
-                          UserPkgs::Env => gettext("User (nix-env)"),
-                            UserPkgs::Profile => gettext("User (nix profile)"),
+            if !model.installeduserlist.is_empty() || !model.installedsystemlist.is_empty() {
+                adw::Clamp {
+                    set_maximum_size: 1000,
+                    gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_valign: gtk::Align::Start,
+                        set_margin_all: 15,
+                        set_spacing: 15,
+                        gtk::Label {
+                            #[watch]
+                            set_visible: !model.installeduserlist.is_empty(),
+                            set_halign: gtk::Align::Start,
+                            add_css_class: "title-4",
+                            set_lines: 1,
+                            #[watch]
+                            set_label: &format!(
+                                "{} — {}",
+                                match model.userpkgtype {
+                                    UserPkgs::Env => gettext("User (nix-env)"),
+                                    UserPkgs::Profile => gettext("User (nix profile)"),
+                                },
+                                model.installeduserlist.len()
+                            ),
                         },
-                    },
-                    #[local_ref]
-                    installeduserlist -> gtk::ListBox {
-                        #[watch]
-                        set_visible: !model.installeduserlist.is_empty(),
-                        set_valign: gtk::Align::Start,
-                        add_css_class: "boxed-list",
-                        set_selection_mode: gtk::SelectionMode::None,
-                        connect_row_activated[sender] => move |listbox, row| {
-                            if let Some(i) = listbox.index_of_child(row) {
-                                sender.input(InstalledPageMsg::OpenRow(i as usize, InstallType::User))
+                        #[local_ref]
+                        installeduserlist -> gtk::FlowBox {
+                            set_halign: gtk::Align::Fill,
+                            set_valign: gtk::Align::Fill,
+                            set_orientation: gtk::Orientation::Horizontal,
+                            set_selection_mode: gtk::SelectionMode::None,
+                            set_homogeneous: true,
+                            set_max_children_per_line: 4,
+                            set_min_children_per_line: 1,
+                            set_column_spacing: 11,
+                            set_row_spacing: 11,
+                            connect_child_activated[sender] => move |_, child| {
+                                sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::User))
                             }
-                        }
-                    },
-                    gtk::Label {
-                        #[watch]
-                        set_visible: !model.installedsystemlist.is_empty(),
-                        set_halign: gtk::Align::Start,
-                        add_css_class: "title-4",
-                        set_lines: 1,
-                        set_label: &gettext("System (configuration.nix)"),
-                    },
-                    #[local_ref]
-                    installedsystemlist -> gtk::ListBox {
-                        #[watch]
-                        set_visible: !model.installedsystemlist.is_empty(),
-                        set_valign: gtk::Align::Start,
-                        add_css_class: "boxed-list",
-                        set_selection_mode: gtk::SelectionMode::None,
-                        connect_row_activated[sender] => move |listbox, row| {
-                            if let Some(i) = listbox.index_of_child(row) {
-                                sender.input(InstalledPageMsg::OpenRow(i as usize, InstallType::System))
+                        },
+                        gtk::Label {
+                            #[watch]
+                            set_visible: !model.installedsystemlist.is_empty(),
+                            set_halign: gtk::Align::Start,
+                            add_css_class: "title-4",
+                            set_lines: 1,
+                            #[watch]
+                            set_label: &format!("{} — {}", gettext("System (configuration.nix)"), model.installedsystemlist.len()),
+                        },
+                        #[local_ref]
+                        installedsystemlist -> gtk::FlowBox {
+                            set_halign: gtk::Align::Fill,
+                            set_valign: gtk::Align::Fill,
+                            set_orientation: gtk::Orientation::Horizontal,
+                            set_selection_mode: gtk::SelectionMode::None,
+                            set_homogeneous: true,
+                            set_max_children_per_line: 3,
+                            set_min_children_per_line: 1,
+                            set_column_spacing: 11,
+                            set_row_spacing: 11,
+                            connect_child_activated[sender] => move |_, child| {
+                                sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::System))
                             }
-                        }
+                        },
                     }
+                }
+            } else {
+                adw::StatusPage {
+                    set_icon_name: Some("library-symbolic"),
+                    set_title: &gettext("No apps found"),
                 }
             }
         }
@@ -105,7 +123,7 @@ impl SimpleComponent for InstalledPageModel {
     ) -> ComponentParts<Self> {
         let model = InstalledPageModel {
             installeduserlist: FactoryVecDeque::builder()
-                .launch(gtk::ListBox::new())
+                .launch(gtk::FlowBox::new())
                 .forward(
                     sender.input_sender(),
                     |installed_item_msg| match installed_item_msg {
@@ -113,7 +131,7 @@ impl SimpleComponent for InstalledPageModel {
                     },
                 ),
             installedsystemlist: FactoryVecDeque::builder()
-                .launch(gtk::ListBox::new())
+                .launch(gtk::FlowBox::new())
                 .forward(
                     sender.input_sender(),
                     |installed_item_msg| match installed_item_msg {
@@ -220,6 +238,7 @@ pub struct InstalledItem {
     pub icon: Option<String>,
     pub pkgtype: InstallType,
     pub busy: bool,
+    pub version: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -243,13 +262,16 @@ impl FactoryComponent for InstalledItemModel {
     type Init = InstalledItem;
     type Input = InstalledItemInputMsg;
     type Output = InstalledItemMsg;
-    type ParentWidget = adw::gtk::ListBox;
+    type ParentWidget = adw::gtk::FlowBox;
     // type ParentInput = InstalledPageMsg;
 
     view! {
+    gtk::FlowBoxChild {
+        set_width_request: 270,
         adw::PreferencesRow {
             set_activatable: self.item.pkg.is_some(),
             set_can_focus: false,
+            add_css_class: "card",
             #[wrap(Some)]
             set_child = &gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
@@ -307,16 +329,7 @@ impl FactoryComponent for InstalledItemModel {
                         set_halign: gtk::Align::Start,
                         add_css_class: "dim-label",
                         add_css_class: "caption",
-                        set_label: if let Some(p) = &self.item.pkg { p } else { &self.item.pname },
-                        set_ellipsize: pango::EllipsizeMode::End,
-                        set_lines: 1,
-                        set_wrap: true,
-                        set_max_width_chars: 0,
-                    },
-                    gtk::Label {
-                        set_halign: gtk::Align::Start,
-                        set_label: self.item.summary.as_deref().unwrap_or(""),
-                        set_visible: self.item.summary.is_some(),
+                        set_label: &self.item.version,
                         set_ellipsize: pango::EllipsizeMode::End,
                         set_lines: 1,
                         set_wrap: true,
@@ -343,6 +356,7 @@ impl FactoryComponent for InstalledItemModel {
             }
         }
     }
+    }
 
     fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         let sum = if let Some(s) = parent.summary {
@@ -366,6 +380,7 @@ impl FactoryComponent for InstalledItemModel {
             icon: parent.icon,
             pkgtype: parent.pkgtype,
             busy: parent.busy,
+            version: parent.version,
         };
 
         Self { item }
