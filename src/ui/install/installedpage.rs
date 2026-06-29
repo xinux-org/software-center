@@ -335,15 +335,6 @@ impl FactoryComponent for InstalledItemModel {
                         set_wrap: true,
                         set_max_width_chars: 0,
                     },
-                    gtk::Label {
-                        set_halign: gtk::Align::Start,
-                        set_label: self.item.summary.as_deref().unwrap_or(""),
-                        set_visible: self.item.summary.is_some(),
-                        set_ellipsize: pango::EllipsizeMode::End,
-                        set_lines: 1,
-                        set_wrap: true,
-                        set_max_width_chars: 0,
-                    },
                 },
                 if self.item.busy {
                     gtk::Spinner {
