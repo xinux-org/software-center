@@ -56,10 +56,15 @@ impl SimpleComponent for InstalledPageModel {
                             set_halign: gtk::Align::Start,
                             add_css_class: "title-4",
                             set_lines: 1,
-                            set_label: &match model.userpkgtype {
-                                UserPkgs::Env => gettext("User (nix-env)"),
-                                UserPkgs::Profile => gettext("User (nix profile)"),
-                            },
+                            #[watch]
+                            set_label: &format!(
+                                "{} — {}",
+                                match model.userpkgtype {
+                                    UserPkgs::Env => gettext("User (nix-env)"),
+                                    UserPkgs::Profile => gettext("User (nix profile)"),
+                                },
+                                model.installeduserlist.len()
+                            ),
                         },
                         #[local_ref]
                         installeduserlist -> gtk::FlowBox {
@@ -82,7 +87,8 @@ impl SimpleComponent for InstalledPageModel {
                             set_halign: gtk::Align::Start,
                             add_css_class: "title-4",
                             set_lines: 1,
-                            set_label: &gettext("System (configuration.nix)"),
+                            #[watch]
+                            set_label: &format!("{} — {}", gettext("System (configuration.nix)"), model.installedsystemlist.len()),
                         },
                         #[local_ref]
                         installedsystemlist -> gtk::FlowBox {
