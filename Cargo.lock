@@ -2443,6 +2443,7 @@ name = "nix-software-center"
 version = "0.1.4"
 dependencies = [
  "anyhow",
+ "clap 4.6.1",
  "flate2",
  "gettext-rs",
  "html2pango",

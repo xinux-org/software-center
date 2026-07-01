@@ -1,4 +1,5 @@
 use adw::gio;
+use clap::{arg, command, value_parser};
 use gettextrs::{LocaleCategory, gettext};
 use gtk::{glib, prelude::ApplicationExt};
 use log::{error, info};
@@ -33,7 +34,7 @@ fn main() {
     let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
     app.set_resource_base_path(Some("/uz/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
-    app.run_async::<AppModel>(());
+    app.with_args(Vec::new()).run_async::<AppModel>(());
 }
 
 fn setup_gettext() {
