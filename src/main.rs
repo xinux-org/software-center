@@ -1,5 +1,4 @@
 use adw::gio;
-use clap::{arg, command, value_parser};
 use gettextrs::{LocaleCategory, gettext};
 use gtk::{glib, prelude::ApplicationExt};
 use log::{error, info};

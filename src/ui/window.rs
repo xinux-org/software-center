@@ -5,8 +5,8 @@ use crate::{
         packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         util,
     },
+    utils::cli,
 };
-use clap::{arg, command, value_parser};
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
@@ -162,7 +162,7 @@ pub enum AppMsg {
         HashMap<PkgCategory, Vec<String>>,
         HashMap<PkgCategory, Vec<String>>,
     ),
-    CheckAndOpenPkg(String),
+    OpenPkgByScheme(cli::scheme::Scheme),
     OpenPkg(String),
     // UpdatePkgs(Option<Vec<String>>),
     UpdateInstalledPkgs,
@@ -812,21 +812,13 @@ impl AsyncComponent for AppModel {
         //     page.set_title(Some(&gettext("Updates")));
         // }
 
-        let matches = command!()
-            .arg(
-                arg!(<URIs>)
-                    .value_parser(value_parser!(String))
-                    .required(false),
-            )
-            .get_matches();
+        let cli = crate::utils::cli::cli::parse_cli();
 
-        if let Some(arg) = matches.get_one::<String>("URIs") {
-            let app_id = arg.replace("appstream://", "");
-
+        if let Some(scheme) = cli.scheme {
             let sender1 = sender.clone();
             tokio::spawn(async move {
                 tokio::time::sleep(Duration::from_secs(1)).await;
-                sender1.input(AppMsg::CheckAndOpenPkg(app_id.to_string()));
+                sender1.input(AppMsg::OpenPkgByScheme(scheme));
             });
         }
 
@@ -1129,20 +1121,21 @@ impl AsyncComponent for AppModel {
                     AppAsyncMsg::UpdateRecPkgs(pkgtiles, pkgs_category)
                 });
             }
-            AppMsg::CheckAndOpenPkg(pkg) => {
-                let appdata = self
-                    .appdata
-                    .iter()
-                    .find(|(_, appdata)| appdata.id == pkg)
-                    .map(|(_, appdata)| appdata);
-                if let Some(appdata) = appdata {
-                    let package = appdata.package.clone();
-                    let sender = sender.clone();
-                    sender.input(AppMsg::OpenPkg(package));
-                } else {
-                    warn!("App could not be found be id: {:?}", pkg);
-                };
-            }
+            AppMsg::OpenPkgByScheme(scheme) => match scheme {
+                cli::scheme::Scheme::AppStream { id, alt } => {
+                    let package = self
+                        .appdata
+                        .iter()
+                        .find(|(_, appdata)| appdata.id == id)
+                        .map(|(_, appdata)| appdata.package.clone());
+                    if let Some(package) = package {
+                        sender.input(AppMsg::OpenPkg(package));
+                    } else {
+                        warn!("App could not be found be id: {:?}", package);
+                    }
+                }
+                cli::scheme::Scheme::NixPkg(package) => sender.input(AppMsg::OpenPkg(package)),
+            },
             AppMsg::OpenPkg(pkg) => {
                 info!("AppMsg::OpenPkg {}", pkg);
                 sender.input(AppMsg::CheckNetwork);
