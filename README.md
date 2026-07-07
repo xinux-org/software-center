@@ -32,18 +32,34 @@ A graphical app store for Nix built with [libadwaita](https://gitlab.gnome.org/G
 ```nix
 {
   inputs = {
-    # other inputs
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-software-center.url = "github:xinux-org/software-center";
-# rest of flake.nix
+  };
+  
+  outputs = inputs@{ self, nixpkgs, nix-software-center }: {
+    nixosConfigurations = {
+      workstation = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [ ./configuration.nix ];
+        specialArgs = { inherit inputs; };
+      };
+    };
+  };
+}
 ```
 
 `configuration.nix`
 
 ```
-environment.systemPackages = with pkgs; [
-    inputs.nix-software-center.packages.${system}.default
+{ inputs, config, lib, pkgs, ... }: # add inputs here
+{
+...
+  environment.systemPackages = with pkgs; [
+    inputs.nix-software-center.packages.${stdenv.hostPlatform.system}.default
     # rest of your packages
-];
+  ];
+...
+}
 ```
 
 ## NixOS Installation
