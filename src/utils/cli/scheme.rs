@@ -6,7 +6,7 @@ use regex::Regex;
 
 const REGEX_APPSTREAM: &str = r#"^(?:appstream)(?:://)((?:[[[:alpha:]][0-9]\-_]+\.)*(?:[[[:alpha:]][0-9]\-_]+))(?:\?alt=((?:(?:(?:[[[:alpha:]][0-9]\-_]+\.)*(?:[[[:alpha:]][0-9]\-_]+)),)*(?:(?:[[[:alpha:]][0-9]\-_]+\.)*(?:[[[:alpha:]][0-9]\-_]+))))?"#;
 const REGEX_NIXPKG: &str =
-    r#"^(?:nix-software-center)(?:://)((?:[[[:alpha:]][0-9]\-_]+\.)*(?:[[[:alpha:]][0-9]\-_]+))$"#;
+    r#"^(?:nixpkg)(?:://)((?:[[[:alpha:]][0-9]\-_]+\.)*(?:[[[:alpha:]][0-9]\-_]+))$"#;
 
 #[derive(Debug, Clone)]
 pub enum Scheme {

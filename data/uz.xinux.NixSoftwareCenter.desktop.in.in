@@ -10,4 +10,4 @@ Keywords=Nix;Nixos;nix;nixos;software;package;install;store;app;
 # Translators: Do NOT translate or transliterate this text (this is an icon file name)!
 Icon=@icon@
 StartupNotify=true
-MimeType=x-scheme-handler/appstream;x-scheme-handler/nix-software-center;
+MimeType=x-scheme-handler/appstream;x-scheme-handler/nixpkg;
