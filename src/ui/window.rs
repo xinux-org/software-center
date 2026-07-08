@@ -5,13 +5,14 @@ use crate::{
         packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         util,
     },
+    utils::cli,
 };
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker, Sender,
-    RelmWidgetExt, WorkerController,
+    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker,
+    RelmWidgetExt, Sender, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     factory::FactoryVecDeque,
@@ -25,6 +26,7 @@ use std::{
     convert::identity,
     fs,
     path::Path,
+    time::Duration,
 };
 
 use crate::ui::{
@@ -160,6 +162,7 @@ pub enum AppMsg {
         HashMap<PkgCategory, Vec<String>>,
         HashMap<PkgCategory, Vec<String>>,
     ),
+    OpenPkgByScheme(cli::scheme::Scheme),
     OpenPkg(String),
     // UpdatePkgs(Option<Vec<String>>),
     UpdateInstalledPkgs,
@@ -809,6 +812,16 @@ impl AsyncComponent for AppModel {
         //     page.set_title(Some(&gettext("Updates")));
         // }
 
+        let cli = crate::utils::cli::cli::parse_cli();
+
+        if let Some(scheme) = cli.scheme {
+            let sender1 = sender.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                sender1.input(AppMsg::OpenPkgByScheme(scheme));
+            });
+        }
+
         AsyncComponentParts { model, widgets }
     }
 
@@ -1108,6 +1121,21 @@ impl AsyncComponent for AppModel {
                     AppAsyncMsg::UpdateRecPkgs(pkgtiles, pkgs_category)
                 });
             }
+            AppMsg::OpenPkgByScheme(scheme) => match scheme {
+                cli::scheme::Scheme::AppStream { id, alt } => {
+                    let package = self
+                        .appdata
+                        .iter()
+                        .find(|(_, appdata)| appdata.id == id)
+                        .map(|(_, appdata)| appdata.package.clone());
+                    if let Some(package) = package {
+                        sender.input(AppMsg::OpenPkg(package));
+                    } else {
+                        warn!("App could not be found be id: {:?}", package);
+                    }
+                }
+                cli::scheme::Scheme::NixPkg(package) => sender.input(AppMsg::OpenPkg(package)),
+            },
             AppMsg::OpenPkg(pkg) => {
                 info!("AppMsg::OpenPkg {}", pkg);
                 sender.input(AppMsg::CheckNetwork);
@@ -2434,12 +2462,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
         }
     }
 
-    fn shutdown(
-        &mut self,
-        widgets: &mut Self::Widgets,
-        _output: Sender<Self::Output>,
-    ) { 
-       widgets.save_window_size().ok();
+    fn shutdown(&mut self, widgets: &mut Self::Widgets, _output: Sender<Self::Output>) {
+        widgets.save_window_size().ok();
     }
 }
 

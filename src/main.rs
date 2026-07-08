@@ -33,7 +33,7 @@ fn main() {
     let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
     app.set_resource_base_path(Some("/uz/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
-    app.run_async::<AppModel>(());
+    app.with_args(Vec::new()).run_async::<AppModel>(());
 }
 
 fn setup_gettext() {
