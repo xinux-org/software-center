@@ -1,0 +1,11 @@
+mod about;
+mod category;
+mod installed;
+pub mod package;
+mod preferences;
+mod rebuild;
+mod search;
+mod update;
+mod welcome;
+pub mod window;
+mod windowloading;

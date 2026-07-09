@@ -2,11 +2,13 @@ use adw::gio;
 use gettextrs::{LocaleCategory, gettext};
 use gtk::{glib, prelude::ApplicationExt};
 use log::{error, info};
+use relm4::*;
+
 use nix_software_center::{
     config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE},
     ui::window::AppModel,
 };
-use relm4::*;
+
 fn main() {
     gtk::init().unwrap();
     pretty_env_logger::init();

@@ -1,6 +1,3 @@
-use super::window::{AppMsg, SystemPkgs};
-use crate::parse::packages::{AppData, appsteamdata};
-use crate::ui::{category::categories::PkgCategory, window::UserPkgs};
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
@@ -11,6 +8,14 @@ use relm4::{
 };
 use sqlx::SqlitePool;
 use std::{collections::HashMap, env, path::Path};
+
+use crate::{
+    ui::{
+        category::components::categories::PkgCategory,
+        window::{AppMsg, SystemPkgs, UserPkgs},
+    },
+    utils::packages::{AppData, appsteamdata},
+};
 
 const NIXOS_PATH: &str = "/etc/nixos";
 
@@ -230,12 +235,11 @@ impl Worker for WindowAsyncHandler {
                                         if pos.starts_with("pkgs/applications/audio") {
                                             return true;
                                         }
-                                        if let Some(data) = appdata.get(&pkg) {
-                                            if let Some(categories) = &data.categories {
-                                                if categories.contains(&String::from("Audio")) {
-                                                    return true;
-                                                }
-                                            }
+                                        if let Some(data) = appdata.get(&pkg)
+                                            && let Some(categories) = &data.categories
+                                            && categories.contains(&String::from("Audio"))
+                                        {
+                                            return true;
                                         }
                                     }
                                     false
@@ -252,13 +256,11 @@ impl Worker for WindowAsyncHandler {
                                         {
                                             return true;
                                         }
-                                        if let Some(data) = appdata.get(&pkg) {
-                                            if let Some(categories) = &data.categories {
-                                                if categories.contains(&String::from("Development"))
-                                                {
-                                                    return true;
-                                                }
-                                            }
+                                        if let Some(data) = appdata.get(&pkg)
+                                            && let Some(categories) = &data.categories
+                                            && categories.contains(&String::from("Development"))
+                                        {
+                                            return true;
                                         }
                                     }
                                     false
@@ -295,12 +297,11 @@ impl Worker for WindowAsyncHandler {
                                         {
                                             return true;
                                         }
-                                        if let Some(data) = &appdata.get(&pkg) {
-                                            if let Some(categories) = &data.categories {
-                                                if categories.contains(&String::from("Graphics")) {
-                                                    return true;
-                                                }
-                                            }
+                                        if let Some(data) = &appdata.get(&pkg)
+                                            && let Some(categories) = &data.categories
+                                            && categories.contains(&String::from("Graphics"))
+                                        {
+                                            return true;
                                         }
                                     }
                                     false
@@ -315,12 +316,11 @@ impl Worker for WindowAsyncHandler {
                                         {
                                             return true;
                                         }
-                                        if let Some(data) = &appdata.get(&pkg) {
-                                            if let Some(categories) = &data.categories {
-                                                if categories.contains(&String::from("Network")) {
-                                                    return true;
-                                                }
-                                            }
+                                        if let Some(data) = &appdata.get(&pkg)
+                                            && let Some(categories) = &data.categories
+                                            && categories.contains(&String::from("Network"))
+                                        {
+                                            return true;
                                         }
                                     }
                                     false
@@ -335,12 +335,11 @@ impl Worker for WindowAsyncHandler {
                                         {
                                             return true;
                                         }
-                                        if let Some(data) = &appdata.get(&pkg) {
-                                            if let Some(categories) = &data.categories {
-                                                if categories.contains(&String::from("Video")) {
-                                                    return true;
-                                                }
-                                            }
+                                        if let Some(data) = &appdata.get(&pkg)
+                                            && let Some(categories) = &data.categories
+                                            && categories.contains(&String::from("Video"))
+                                        {
+                                            return true;
                                         }
                                     }
                                     false

@@ -1,0 +1,259 @@
+use adw::prelude::*;
+use gettextrs::gettext;
+use log::*;
+use relm4::{factory::*, *};
+
+use crate::ui::{
+    category::components::{
+        categories::PkgCategory,
+        category_tile::{CategoryTile, CategoryTileMsg},
+    },
+    window::*,
+};
+
+#[tracker::track]
+#[derive(Debug)]
+pub struct CategoryPageModel {
+    category: PkgCategory,
+    #[tracker::no_eq]
+    recommendedapps: FactoryVecDeque<CategoryTile>,
+    #[tracker::no_eq]
+    apps: FactoryVecDeque<CategoryTile>,
+    busy: bool,
+}
+
+#[derive(Debug)]
+pub enum CategoryPageMsg {
+    OpenPkg(String),
+    Open(PkgCategory, Vec<CategoryTile>, Vec<CategoryTile>),
+    Loading(PkgCategory),
+    UpdateInstalled(Vec<String>, Vec<String>),
+}
+
+#[derive(Debug)]
+pub enum CategoryPageAsyncMsg {
+    PushRec(CategoryTile),
+    Push(CategoryTile),
+}
+
+#[relm4::component(pub)]
+impl Component for CategoryPageModel {
+    type Init = ();
+    type Input = CategoryPageMsg;
+    type Output = AppMsg;
+    type CommandOutput = CategoryPageAsyncMsg;
+
+    view! {
+        adw::NavigationPage {
+
+            #[watch]
+            set_title: &match model.category {
+                PkgCategory::Audio => gettext("Audio"),
+                PkgCategory::Development => gettext("Development"),
+                PkgCategory::Games => gettext("Games"),
+                PkgCategory::Graphics => gettext("Graphics"),
+                PkgCategory::Web => gettext("Web"),
+                PkgCategory::Video => gettext("Video"),
+                PkgCategory::Education => gettext("Education"),
+                PkgCategory::Science => gettext("Science"),
+                PkgCategory::Office => gettext("Office"),
+                PkgCategory::Network => gettext("Network"),
+                PkgCategory::System => gettext("System"),
+                PkgCategory::Utility => gettext("Utility"),
+            },
+
+            gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
+                adw::HeaderBar {},
+                gtk::ScrolledWindow {
+                    set_vexpand: true,
+                    set_hexpand: true,
+                    set_hscrollbar_policy: gtk::PolicyType::Never,
+                    set_vscrollbar_policy: gtk::PolicyType::Automatic,
+                    #[track(model.changed(CategoryPageModel::category()))]
+                    set_vadjustment: gtk::Adjustment::NONE,
+                    adw::Clamp {
+                        set_maximum_size: 1450,
+                        set_tightening_threshold: 950,
+                        if model.busy {
+                            #[name(spinner)]
+                            gtk::Spinner {
+                                set_hexpand: true,
+                                set_vexpand: true,
+                                set_halign: gtk::Align::Center,
+                                set_valign: gtk::Align::Center,
+                                set_spinning: true,
+                                set_size_request: (64, 64),
+                            }
+                        } else {
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_valign: gtk::Align::Start,
+                                set_margin_top: 15,
+                                set_spacing: 4,
+                                gtk::Label {
+                                    set_halign: gtk::Align::Start,
+                                    add_css_class: "title-1",
+                                    set_label: &gettext("Recommended"),
+                                    set_margin_bottom: 6,
+                                    set_margin_end: 3,
+                                    set_margin_start: 3,
+                                    set_margin_top: 0
+                                },
+                                #[local_ref]
+                                recbox -> gtk::FlowBox {
+                                    set_halign: gtk::Align::Fill,
+                                    set_valign: gtk::Align::Fill,
+                                    set_orientation: gtk::Orientation::Horizontal,
+                                    set_selection_mode: gtk::SelectionMode::None,
+                                    set_homogeneous: true,
+                                    set_max_children_per_line: 4,
+                                    set_min_children_per_line: 1,
+                                    set_column_spacing: 11,
+                                    set_row_spacing: 11,
+                                },
+                                gtk::Label {
+                                    set_halign: gtk::Align::Start,
+                                    add_css_class: "title-1",
+                                    set_label: &gettext("Other"),
+                                    set_margin_bottom: 6,
+                                    set_margin_end: 3,
+                                    set_margin_start: 3,
+                                    set_margin_top: 0
+                                },
+                                #[local_ref]
+                                allbox -> gtk::FlowBox {
+                                    set_halign: gtk::Align::Fill,
+                                    set_valign: gtk::Align::Fill,
+                                    set_orientation: gtk::Orientation::Horizontal,
+                                    set_selection_mode: gtk::SelectionMode::None,
+                                    set_homogeneous: true,
+                                    set_max_children_per_line: 4,
+                                    set_min_children_per_line: 1,
+                                    set_column_spacing: 11,
+                                    set_row_spacing: 11,
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn init(
+        (): Self::Init,
+        root: Self::Root,
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self> {
+        let model = CategoryPageModel {
+            category: PkgCategory::Audio,
+            recommendedapps: FactoryVecDeque::builder()
+                .launch(gtk::FlowBox::new())
+                .forward(
+                    sender.input_sender(),
+                    |category_tile_msg| match category_tile_msg {
+                        CategoryTileMsg::Open(x) => CategoryPageMsg::OpenPkg(x),
+                    },
+                ),
+            apps: FactoryVecDeque::builder()
+                .launch(gtk::FlowBox::new())
+                .forward(
+                    sender.input_sender(),
+                    |category_tile_msg| match category_tile_msg {
+                        CategoryTileMsg::Open(x) => CategoryPageMsg::OpenPkg(x),
+                    },
+                ),
+            busy: true,
+            tracker: 0,
+        };
+
+        let recbox = model.recommendedapps.widget();
+        let allbox = model.apps.widget();
+
+        let widgets = view_output!();
+
+        ComponentParts { model, widgets }
+    }
+
+    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+        self.reset();
+        match msg {
+            CategoryPageMsg::OpenPkg(pkg) => sender.output(AppMsg::OpenPkg(pkg)).unwrap(),
+            CategoryPageMsg::Open(category, catrec, catall) => {
+                info!("CategoryPageMsg::Open");
+                self.set_category(category);
+                let mut recapps_guard = self.recommendedapps.guard();
+                recapps_guard.clear();
+                recapps_guard.drop();
+                let mut apps_guard = self.apps.guard();
+                apps_guard.clear();
+                apps_guard.drop();
+
+                sender.command(|out, shutdown| {
+                    shutdown
+                        .register(async move {
+                            for app in catrec {
+                                let _ = out.send(CategoryPageAsyncMsg::PushRec(app));
+                                tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+                            }
+                        })
+                        .drop_on_shutdown()
+                });
+
+                sender.command(|out, shutdown| {
+                    shutdown
+                        .register(async move {
+                            for app in catall {
+                                let _ = out.send(CategoryPageAsyncMsg::Push(app));
+                                tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+                            }
+                        })
+                        .drop_on_shutdown()
+                });
+
+                self.busy = false;
+                info!("DONE CategoryPageMsg::Open");
+            }
+            CategoryPageMsg::Loading(category) => {
+                info!("CategoryPageMsg::Loading");
+                self.set_category(category);
+                self.busy = true;
+            }
+            CategoryPageMsg::UpdateInstalled(installeduserpkgs, installedsystempkgs) => {
+                let mut recapps_guard = self.recommendedapps.guard();
+                for i in 0..recapps_guard.len() {
+                    let app = recapps_guard.get_mut(i).unwrap();
+                    app.installeduser = installeduserpkgs.contains(&app.pname);
+                    app.installedsystem = installedsystempkgs.contains(&app.pkg);
+                }
+                let mut apps_guard = self.apps.guard();
+                for i in 0..apps_guard.len() {
+                    let app = apps_guard.get_mut(i).unwrap();
+                    app.installeduser = installeduserpkgs.contains(&app.pname);
+                    app.installedsystem = installedsystempkgs.contains(&app.pkg);
+                }
+            }
+        }
+    }
+
+    fn update_cmd(
+        &mut self,
+        msg: Self::CommandOutput,
+        _sender: ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
+        match msg {
+            CategoryPageAsyncMsg::PushRec(tile) => {
+                let mut recapps_guard = self.recommendedapps.guard();
+                recapps_guard.push_back(tile);
+                recapps_guard.drop();
+            }
+            CategoryPageAsyncMsg::Push(tile) => {
+                let mut apps_guard = self.apps.guard();
+                apps_guard.push_back(tile);
+                apps_guard.drop();
+            }
+        }
+    }
+}

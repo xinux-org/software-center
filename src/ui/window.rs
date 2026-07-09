@@ -1,18 +1,9 @@
-use crate::{
-    APPINFO, config,
-    parse::{
-        config::{editconfig, getconfig},
-        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
-        util,
-    },
-    utils::cli,
-};
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker,
-    RelmWidgetExt, Sender, WorkerController,
+    self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker, Sender,
+    WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     factory::FactoryVecDeque,
@@ -29,30 +20,49 @@ use std::{
     time::Duration,
 };
 
-use crate::ui::{
-    about::AboutPageModel,
-    category::{
-        categories::{PkgCategory, PkgCategoryMsg, PkgGroup},
-        categorypage::{CategoryPageModel, CategoryPageMsg},
-        categorytile::CategoryTile,
-    },
-    install::installedpage::{InstalledItem, InstalledPageModel, InstalledPageMsg},
-    pkg::{
-        pkgpage::{self, InstallType, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg},
-        pkgtile::{PkgTile, PkgTileMsg},
-    },
-    preferencespage::{PreferencesPageModel, PreferencesPageMsg},
-    rebuild::{RebuildModel, RebuildMsg},
-    searchpage::{SearchItem, SearchPageModel, SearchPageMsg},
-    update::{
-        unavailabledialog::{UnavailableDialogMsg, UnavailableItemModel},
-        updatepage::{
-            UNAVAILABLE_BROKER, UpdateItem, UpdatePageInit, UpdatePageModel, UpdatePageMsg,
-            UpdateType,
+use crate::{
+    APPINFO, config,
+    ui::{
+        about::about_page::AboutPageModel,
+        category::{
+            category_page::{CategoryPageModel, CategoryPageMsg},
+            components::{
+                categories::{PkgCategory, PkgCategoryMsg, PkgGroup},
+                category_tile::CategoryTile,
+            },
         },
+        installed::{
+            components::installed_item::InstalledItem,
+            installed_page::{InstalledPageModel, InstalledPageMsg},
+        },
+        package::{
+            components::package_tile::{PkgTile, PkgTileMsg},
+            package_page::{
+                InstallType, License, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg,
+            },
+        },
+        preferences::preferences_page::{PreferencesPageModel, PreferencesPageMsg},
+        rebuild::rebuild_model::{RebuildModel, RebuildMsg},
+        search::{
+            components::search_item::SearchItem,
+            search_page::{SearchPageModel, SearchPageMsg},
+        },
+        update::{
+            components::update_item::UpdateItem,
+            unavailable_dialog::{UnavailableDialogMsg, UnavailableItemModel},
+            update_page::{
+                UNAVAILABLE_BROKER, UpdatePageInit, UpdatePageModel, UpdatePageMsg, UpdateType,
+            },
+        },
+        welcome::welcome_page::{WelcomeModel, WelcomeMsg},
+        windowloading::{LoadErrorModel, LoadErrorMsg, WindowAsyncHandler, WindowAsyncHandlerMsg},
     },
-    welcome::{WelcomeModel, WelcomeMsg},
-    windowloading::{LoadErrorModel, LoadErrorMsg, WindowAsyncHandler, WindowAsyncHandlerMsg},
+    utils::{
+        cli,
+        config::{editconfig, getconfig},
+        online::{checkonline, checkonline_async},
+        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
+    },
 };
 
 pub static REBUILD_BROKER: MessageBroker<RebuildMsg> = MessageBroker::new();
@@ -543,17 +553,17 @@ impl AsyncComponent for AppModel {
         let (config, welcome) = if let Some(config) = getconfig() {
             debug!("Got config: {:?}", config);
             let mut out = false;
-            if let Some(configpath) = &config.systemconfig {
-                if !Path::new(configpath).exists() {
-                    warn!("Invalid system config path: {}", configpath);
-                    out = true
-                }
+            if let Some(configpath) = &config.systemconfig
+                && !Path::new(configpath).exists()
+            {
+                warn!("Invalid system config path: {}", configpath);
+                out = true
             }
-            if let Some(flakepath) = &config.flake {
-                if !Path::new(&flakepath).exists() {
-                    warn!("Invalid flake path: {}", flakepath);
-                    out = true
-                }
+            if let Some(flakepath) = &config.flake
+                && !Path::new(&flakepath).exists()
+            {
+                warn!("Invalid flake path: {}", flakepath);
+                out = true
             }
             (config, out)
         } else {
@@ -570,7 +580,7 @@ impl AsyncComponent for AppModel {
             )
         };
 
-        let userpkgtype = if let Ok(h) = std::env::var("HOME") {
+        let userpkgtype: UserPkgs = if let Ok(h) = std::env::var("HOME") {
             if Path::new(&format!("{}/.nix-profile/manifest.json", h)).exists()
                 || !Path::new("/nix/var/nix/profiles/per-user/root/channels/nixos").exists()
                 || !Path::new(&format!("{}/.nix-profile/manifest.nix", h)).exists()
@@ -614,7 +624,7 @@ impl AsyncComponent for AppModel {
         debug!("userpkgtype: {:?}", userpkgtype);
         debug!("syspkgtype: {:?}", syspkgtype);
 
-        let online = util::checkonline();
+        let online = checkonline();
 
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
@@ -1122,7 +1132,7 @@ impl AsyncComponent for AppModel {
                 });
             }
             AppMsg::OpenPkgByScheme(scheme) => match scheme {
-                cli::scheme::Scheme::AppStream { id, alt } => {
+                cli::scheme::Scheme::AppStream { id, alt: _ } => {
                     let package = self
                         .appdata
                         .iter()
@@ -1194,30 +1204,30 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         let mut launchable = None;
 
                         if let Some(data) = self.appdata.get(&pkg) {
-                            if let Some(n) = &data.name {
-                                if let Some(n) = n.get("C") {
-                                    name = n.to_string();
-                                }
+                            if let Some(n) = &data.name
+                                && let Some(n) = n.get("C")
+                            {
+                                name = n.to_string();
                             }
-                            if let Some(s) = &data.summary {
-                                if let Some(s) = s.get("C") {
-                                    summary = Some(s.to_string());
-                                }
+                            if let Some(s) = &data.summary
+                                && let Some(s) = s.get("C")
+                            {
+                                summary = Some(s.to_string());
                             }
-                            if let Some(d) = &data.description {
-                                if let Some(d) = d.get("C") {
-                                    description = Some(d.to_string());
-                                }
+                            if let Some(d) = &data.description
+                                && let Some(d) = d.get("C")
+                            {
+                                description = Some(d.to_string());
                             }
-                            if let Some(i) = &data.icon {
-                                if let Some(mut i) = i.cached.clone() {
-                                    i.sort_by(|x, y| x.height.cmp(&y.height));
-                                    if let Some(i) = i.last() {
-                                        icon = Some(format!(
-                                            "{}/icons/nixos/{}x{}/{}",
-                                            APPINFO, i.width, i.height, i.name
-                                        ));
-                                    }
+                            if let Some(i) = &data.icon
+                                && let Some(mut i) = i.cached.clone()
+                            {
+                                i.sort_by_key(|x| x.height);
+                                if let Some(i) = i.last() {
+                                    icon = Some(format!(
+                                        "{}/icons/nixos/{}x{}/{}",
+                                        APPINFO, i.width, i.height, i.name
+                                    ));
                                 }
                             }
                             if let Some(s) = &data.screenshots {
@@ -1229,28 +1239,24 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                             } else {
                                                 screenshots.push(u.url.clone());
                                             }
-                                        } else if s.default == Some(true) {
-                                            if let Some(index) =
+                                        } else if s.default == Some(true)
+                                            && let Some(index) =
                                                 screenshots.iter().position(|x| *x == u.url)
-                                            {
-                                                screenshots.remove(index);
-                                                screenshots.insert(0, u.url.clone());
-                                            }
+                                        {
+                                            screenshots.remove(index);
+                                            screenshots.insert(0, u.url.clone());
                                         }
                                     }
                                 }
                             }
-                            if let Some(l) = &data.launchable {
-                                if let Some(d) = l.desktopid.first() {
-                                    launchable = Some(d.to_string());
-                                }
+                            if let Some(l) = &data.launchable
+                                && let Some(d) = l.desktopid.first()
+                            {
+                                launchable = Some(d.to_string());
                             }
                         }
 
-                        fn addlicense(
-                            pkglicense: &LicenseEnum,
-                            licenses: &mut Vec<pkgpage::License>,
-                        ) {
+                        fn addlicense(pkglicense: &LicenseEnum, licenses: &mut Vec<License>) {
                             match pkglicense {
                                 LicenseEnum::Single(l) => {
                                     if let Some(n) = &l.fullname {
@@ -1277,7 +1283,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         } else {
                                             None
                                         };
-                                        licenses.push(pkgpage::License {
+                                        licenses.push(License {
                                             free: if let Some(f) = l.free {
                                                 Some(f)
                                             } else {
@@ -1298,30 +1304,30 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                                 })
                                             },
                                         })
-                                    } else if let Some(s) = &l.spdxid {
-                                        if let Ok(Some(license)) = Expression::parse(s).map(|p| {
+                                    } else if let Some(s) = &l.spdxid
+                                        && let Ok(Some(license)) = Expression::parse(s).map(|p| {
                                             p.requirements()
                                                 .map(|er| er.req.license.id())
                                                 .collect::<Vec<_>>()[0]
-                                        }) {
-                                            licenses.push(pkgpage::License {
-                                                free: Some(
-                                                    license.is_osi_approved()
-                                                        || license.is_fsf_free_libre()
-                                                        || l.free.unwrap_or(false),
-                                                ),
-                                                fullname: license.full_name.to_string(),
-                                                spdxid: Some(license.name.to_string()),
-                                                url: if l.url.is_some() {
-                                                    l.url.clone()
-                                                } else {
-                                                    Some(format!(
-                                                        "https://spdx.org/licenses/{}.html",
-                                                        license.name
-                                                    ))
-                                                },
-                                            })
-                                        }
+                                        })
+                                    {
+                                        licenses.push(License {
+                                            free: Some(
+                                                license.is_osi_approved()
+                                                    || license.is_fsf_free_libre()
+                                                    || l.free.unwrap_or(false),
+                                            ),
+                                            fullname: license.full_name.to_string(),
+                                            spdxid: Some(license.name.to_string()),
+                                            url: if l.url.is_some() {
+                                                l.url.clone()
+                                            } else {
+                                                Some(format!(
+                                                    "https://spdx.org/licenses/{}.html",
+                                                    license.name
+                                                ))
+                                            },
+                                        })
                                     }
                                 }
                                 LicenseEnum::List(lst) => {
@@ -1335,7 +1341,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                             .map(|er| er.req.license.id())
                                             .collect::<Vec<_>>()[0]
                                     }) {
-                                        licenses.push(pkgpage::License {
+                                        licenses.push(License {
                                             free: Some(
                                                 license.is_osi_approved()
                                                     || license.is_fsf_free_libre(),
@@ -1538,20 +1544,20 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                             };
                                             let mut icon = None;
                                             if let Some(data) = self.appdata.get(&pkg_attr) {
-                                                if let Some(n) = &data.name {
-                                                    if let Some(n) = n.get("C") {
-                                                        name = n.to_string();
-                                                    }
+                                                if let Some(n) = &data.name
+                                                    && let Some(n) = n.get("C")
+                                                {
+                                                    name = n.to_string();
                                                 }
-                                                if let Some(s) = &data.summary {
-                                                    if let Some(s) = s.get("C") {
-                                                        summary = Some(s.to_string());
-                                                    }
+                                                if let Some(s) = &data.summary
+                                                    && let Some(s) = s.get("C")
+                                                {
+                                                    summary = Some(s.to_string());
                                                 }
-                                                if let Some(i) = &data.icon {
-                                                    if let Some(i) = &i.cached {
-                                                        icon = Some(i[0].name.clone());
-                                                    }
+                                                if let Some(i) = &data.icon
+                                                    && let Some(i) = &i.cached
+                                                {
+                                                    icon = Some(i[0].name.clone());
                                                 }
                                             }
                                             installeduseritems.push(InstalledItem {
@@ -1605,20 +1611,20 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         };
                                         let mut icon = None;
                                         if let Some(data) = self.appdata.get(pkg) {
-                                            if let Some(n) = &data.name {
-                                                if let Some(n) = n.get("C") {
-                                                    name = n.to_string();
-                                                }
+                                            if let Some(n) = &data.name
+                                                && let Some(n) = n.get("C")
+                                            {
+                                                name = n.to_string();
                                             }
-                                            if let Some(s) = &data.summary {
-                                                if let Some(s) = s.get("C") {
-                                                    summary = Some(s.to_string());
-                                                }
+                                            if let Some(s) = &data.summary
+                                                && let Some(s) = s.get("C")
+                                            {
+                                                summary = Some(s.to_string());
                                             }
-                                            if let Some(i) = &data.icon {
-                                                if let Some(i) = &i.cached {
-                                                    icon = Some(i[0].name.clone());
-                                                }
+                                            if let Some(i) = &data.icon
+                                                && let Some(i) = &i.cached
+                                            {
+                                                icon = Some(i[0].name.clone());
                                             }
                                         }
                                         installeduseritems.push(InstalledItem {
@@ -1720,20 +1726,20 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 };
                                 let mut icon = None;
                                 if let Some(data) = self.appdata.get(installedpkg) {
-                                    if let Some(n) = &data.name {
-                                        if let Some(n) = n.get("C") {
-                                            name = n.to_string();
-                                        }
+                                    if let Some(n) = &data.name
+                                        && let Some(n) = n.get("C")
+                                    {
+                                        name = n.to_string();
                                     }
-                                    if let Some(s) = &data.summary {
-                                        if let Some(s) = s.get("C") {
-                                            summary = Some(s.to_string());
-                                        }
+                                    if let Some(s) = &data.summary
+                                        && let Some(s) = s.get("C")
+                                    {
+                                        summary = Some(s.to_string());
                                     }
-                                    if let Some(i) = &data.icon {
-                                        if let Some(i) = &i.cached {
-                                            icon = Some(i[0].name.clone());
-                                        }
+                                    if let Some(i) = &data.icon
+                                        && let Some(i) = &i.cached
+                                    {
+                                        icon = Some(i[0].name.clone());
                                     }
                                 }
                                 installeduseritems.push(InstalledItem {
@@ -1748,30 +1754,29 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         .contains(&(installedpkg.clone(), InstallType::User)),
                                     version: version.to_string(),
                                 });
-                                if let Some(latest) = &self.nixpkgsdb {
-                                    if let Ok(latestpool) =
+                                if let Some(latest) = &self.nixpkgsdb
+                                    && let Ok(latestpool) =
                                         &SqlitePool::connect(&format!("sqlite://{}", latest)).await
-                                    {
-                                        let (newver,): (String,) = sqlx::query_as(
-                                            "SELECT version FROM pkgs WHERE attribute = $1",
-                                        )
-                                        .bind(installedpkg)
-                                        .fetch_one(latestpool)
-                                        .await
-                                        .unwrap();
-                                        debug!("PROFILE: {} {} {}", installedpkg, version, newver);
-                                        if version != newver {
-                                            updateuseritems.push(UpdateItem {
-                                                name,
-                                                pname,
-                                                pkg: Some(installedpkg.clone()),
-                                                summary,
-                                                icon,
-                                                pkgtype: InstallType::System,
-                                                verfrom: Some(version.clone()),
-                                                verto: Some(newver.clone()),
-                                            })
-                                        }
+                                {
+                                    let (newver,): (String,) = sqlx::query_as(
+                                        "SELECT version FROM pkgs WHERE attribute = $1",
+                                    )
+                                    .bind(installedpkg)
+                                    .fetch_one(latestpool)
+                                    .await
+                                    .unwrap();
+                                    debug!("PROFILE: {} {} {}", installedpkg, version, newver);
+                                    if version != newver {
+                                        updateuseritems.push(UpdateItem {
+                                            name,
+                                            pname,
+                                            pkg: Some(installedpkg.clone()),
+                                            summary,
+                                            icon,
+                                            pkgtype: InstallType::System,
+                                            verfrom: Some(version.clone()),
+                                            verto: Some(newver.clone()),
+                                        })
                                     }
                                 }
                             }
@@ -1779,8 +1784,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     }
 
                     warn!("installeduseritems: {:?}", installeduseritems);
-                    installeduseritems
-                        .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                    installeduseritems.sort_by_key(|a| a.name.to_lowercase());
                     let mut installedsystemitems = vec![];
                     let mut updatesystemitems = vec![];
                     for installedpkg in &self.installedsystempkgs {
@@ -1804,20 +1808,20 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 };
                                 let mut icon = None;
                                 if let Some(data) = self.appdata.get(installedpkg) {
-                                    if let Some(n) = &data.name {
-                                        if let Some(n) = n.get("C") {
-                                            name = n.to_string();
-                                        }
+                                    if let Some(n) = &data.name
+                                        && let Some(n) = n.get("C")
+                                    {
+                                        name = n.to_string();
                                     }
-                                    if let Some(s) = &data.summary {
-                                        if let Some(s) = s.get("C") {
-                                            summary = Some(s.to_string());
-                                        }
+                                    if let Some(s) = &data.summary
+                                        && let Some(s) = s.get("C")
+                                    {
+                                        summary = Some(s.to_string());
                                     }
-                                    if let Some(i) = &data.icon {
-                                        if let Some(i) = &i.cached {
-                                            icon = Some(i[0].name.clone());
-                                        }
+                                    if let Some(i) = &data.icon
+                                        && let Some(i) = &i.cached
+                                    {
+                                        icon = Some(i[0].name.clone());
                                     }
                                 }
                                 installedsystemitems.push(InstalledItem {
@@ -1832,30 +1836,29 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         .contains(&(installedpkg.clone(), InstallType::System)),
                                     version: version.to_string(),
                                 });
-                                if let Some(current) = &self.systemdb {
-                                    if let Ok(currentpool) =
+                                if let Some(current) = &self.systemdb
+                                    && let Ok(currentpool) =
                                         &SqlitePool::connect(&format!("sqlite://{}", current)).await
-                                    {
-                                        let (currver,): (String,) = sqlx::query_as(
-                                            "SELECT version FROM pkgs WHERE attribute = $1",
-                                        )
-                                        .bind(installedpkg)
-                                        .fetch_one(currentpool)
-                                        .await
-                                        .unwrap();
-                                        debug!("SYSTEM: {} {} {}", installedpkg, currver, version);
-                                        if version != currver {
-                                            updatesystemitems.push(UpdateItem {
-                                                name,
-                                                pname,
-                                                pkg: Some(installedpkg.clone()),
-                                                summary,
-                                                icon,
-                                                pkgtype: InstallType::System,
-                                                verfrom: Some(currver.clone()),
-                                                verto: Some(version.clone()),
-                                            })
-                                        }
+                                {
+                                    let (currver,): (String,) = sqlx::query_as(
+                                        "SELECT version FROM pkgs WHERE attribute = $1",
+                                    )
+                                    .bind(installedpkg)
+                                    .fetch_one(currentpool)
+                                    .await
+                                    .unwrap();
+                                    debug!("SYSTEM: {} {} {}", installedpkg, currver, version);
+                                    if version != currver {
+                                        updatesystemitems.push(UpdateItem {
+                                            name,
+                                            pname,
+                                            pkg: Some(installedpkg.clone()),
+                                            summary,
+                                            icon,
+                                            pkgtype: InstallType::System,
+                                            verfrom: Some(currver.clone()),
+                                            verto: Some(version.clone()),
+                                        })
                                     }
                                 }
                             }
@@ -1909,8 +1912,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         SystemPkgs::None => {}
                     }
 
-                    installedsystemitems
-                        .sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+                    installedsystemitems.sort_by_key(|a| a.name.to_lowercase());
                     let total_updates = updateuseritems.len() + updatesystemitems.len();
                     // let total_updates = 5; // testing
                     self.set_updates_count(total_updates);
@@ -2355,7 +2357,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 let senderclone = sender.clone();
                 sender.oneshot_command(async move {
                     info!("AppMsg::CheckNetwork");
-                    let online = util::checkonline_async().await;
+                    let online = checkonline_async().await;
                     if online && !selfonline {
                         senderclone.input(AppMsg::UpdateDB);
                     }
