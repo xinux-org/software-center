@@ -2454,7 +2454,6 @@ dependencies = [
  "pretty_env_logger",
  "quick-xml",
  "rand 0.10.1",
- "regex",
  "relm4",
  "relm4-components",
  "reqwest",
@@ -2468,6 +2467,7 @@ dependencies = [
  "tokio",
  "toml",
  "tracker",
+ "winnow",
  "xdg",
 ]
 
