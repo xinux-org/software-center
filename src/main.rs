@@ -7,9 +7,17 @@ use relm4::*;
 use nix_software_center::{
     config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE},
     ui::window::AppModel,
+    utils::bus::start_search_provider,
 };
 
 fn main() {
+    relm4::spawn_local(async {
+        let _connection = start_search_provider().await;
+        println!("search provider result: {:?}", _connection);
+
+        std::future::pending::<()>().await;
+    });
+
     gtk::init().unwrap();
     pretty_env_logger::init();
     glib::set_application_name(&gettext("Software Center"));

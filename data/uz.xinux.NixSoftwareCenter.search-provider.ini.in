@@ -1,0 +1,5 @@
+[Shell Search Provider]
+DesktopId=@app-id@.desktop
+BusName=@app-id@.SearchProvider
+ObjectPath=/uz/xinux/NixSoftwareCenter/SearchProvider
+Version=2
