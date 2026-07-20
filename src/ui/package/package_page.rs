@@ -33,7 +33,7 @@ use crate::{
         },
         package::components::screenshot::ScreenshotItem,
         window::AppMsg,
-        window::{SystemPkgs, UserPkgs},
+        window::SystemPkgs,
     },
     utils::{online::checkonline, packages::PkgMaintainer, state},
 };
@@ -57,7 +57,6 @@ pub struct PkgModel {
     launchable: Option<Launch>,
 
     syspkgtype: SystemPkgs,
-    userpkgtype: UserPkgs,
 
     #[tracker::no_eq]
     screenshots: FactoryVecDeque<ScreenshotItem>,
@@ -144,7 +143,7 @@ pub struct PkgInitModel {
 #[derive(Debug)]
 pub enum PkgMsg {
     UpdateConfig(NixDataConfig),
-    UpdatePkgTypes(SystemPkgs, UserPkgs),
+    UpdatePkgTypes(SystemPkgs),
     Open(Box<PkgInitModel>),
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
@@ -176,7 +175,6 @@ pub enum PkgAsyncMsg {
 #[derive(Debug)]
 pub struct PkgPageInit {
     pub syspkgs: SystemPkgs,
-    pub userpkgs: UserPkgs,
     pub config: NixDataConfig,
     pub online: bool,
 }
@@ -204,26 +202,13 @@ impl Component for PkgModel {
                         set_visible: model.syspkgtype != SystemPkgs::None,
 
                         #[watch]
-                        set_label: &match model.userpkgtype {
-                            UserPkgs::Env => {
-                                match model.installtype {
-                                    InstallType::User => gettext("User (nix-env)"),
-                                    InstallType::System => gettext("System (configuration.nix)"),
-                                }
-                            }
-                            UserPkgs::Profile => {
-                                match model.installtype {
-                                    InstallType::User =>  gettext("User (nix profile)"),
-                                    InstallType::System => gettext("System (configuration.nix)"),
-                                }
-                            }
+                        set_label: &match model.installtype {
+                            InstallType::User =>  gettext("User (nix profile)"),
+                            InstallType::System => gettext("System (configuration.nix)"),
                         },
 
                         #[wrap(Some)]
-                        set_popover = &gtk::PopoverMenu::from_model(Some(&match model.userpkgtype {
-                            UserPkgs::Env => installtype,
-                            UserPkgs::Profile => installprofiletype,
-                        })) {}
+                        set_popover = &gtk::PopoverMenu::from_model(Some(&installtype)) {}
                     }
                 },
                 gtk::ScrolledWindow {
@@ -336,7 +321,7 @@ impl Component for PkgModel {
                                                                     },
                                                                 }
                                                             }
-                                                        } else if model.installeduserpkgs.contains(match model.userpkgtype { UserPkgs::Env => &model.pname, UserPkgs::Profile => &model.pkg }) {
+                                                        } else if model.installeduserpkgs.contains(&model.pkg) {
                                                             gtk::Box {
                                                                 set_halign: gtk::Align::End,
                                                                 set_valign: gtk::Align::Center,
@@ -1006,10 +991,6 @@ impl Component for PkgModel {
 
     menu! {
         installtype: {
-            &gettext("User (nix-env)") => NixEnvAction,
-            &gettext("System (configuration.nix)") => NixSystemAction,
-        },
-        installprofiletype: {
             &gettext("User (nix profile)") => NixProfileAction,
             &gettext("System (configuration.nix)") => NixSystemAction,
         },
@@ -1027,7 +1008,6 @@ impl Component for PkgModel {
         let installworker = InstallAsyncHandler::builder()
             .detach_worker(InstallAsyncHandlerInit {
                 syspkgs: initparams.syspkgs.clone(),
-                userpkgs: initparams.userpkgs.clone(),
             })
             .forward(sender.input_sender(), identity);
         let config = initparams.config;
@@ -1054,7 +1034,6 @@ impl Component for PkgModel {
             installeduserpkgs: HashSet::new(),
             installedsystempkgs: HashSet::new(),
             syspkgtype: initparams.syspkgs,
-            userpkgtype: initparams.userpkgs,
             workqueue: HashSet::new(),
             launchable: None,
             visible: false,
@@ -1076,12 +1055,6 @@ impl Component for PkgModel {
         widgets.systeminstallstack.set_hhomogeneous(false);
 
         let mut group = RelmActionGroup::<ModeActionGroup>::new();
-        let nixenv: RelmAction<NixEnvAction> = {
-            let sender = sender.clone();
-            RelmAction::new_stateless(move |_| {
-                sender.input(PkgMsg::SetInstallType(InstallType::User));
-            })
-        };
 
         let nixprofile: RelmAction<NixProfileAction> = {
             let sender = sender.clone();
@@ -1097,7 +1070,6 @@ impl Component for PkgModel {
             })
         };
 
-        group.add_action(nixenv);
         group.add_action(nixprofile);
         group.add_action(nixsystem);
 
@@ -1138,11 +1110,10 @@ impl Component for PkgModel {
                 self.installworker
                     .emit(InstallAsyncHandlerMsg::SetConfig(config));
             }
-            PkgMsg::UpdatePkgTypes(syspkgs, userpkgs) => {
+            PkgMsg::UpdatePkgTypes(syspkgs) => {
                 self.syspkgtype = syspkgs.clone();
-                self.userpkgtype = userpkgs.clone();
                 self.installworker
-                    .emit(InstallAsyncHandlerMsg::SetPkgTypes(syspkgs, userpkgs));
+                    .emit(InstallAsyncHandlerMsg::SetPkgTypes(syspkgs));
             }
             PkgMsg::Open(pkgmodel) => {
                 // First clean up from previous package
@@ -1166,12 +1137,7 @@ impl Component for PkgModel {
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
 
                 let is_system_pkg = self.get_installedsystempkgs().contains(&self.pkg);
-                let is_user_pkg = self
-                    .get_installeduserpkgs()
-                    .contains(match self.userpkgtype {
-                        UserPkgs::Env => &self.pname,
-                        UserPkgs::Profile => &self.pkg,
-                    });
+                let is_user_pkg = self.get_installeduserpkgs().contains(&self.pkg);
                 match (is_system_pkg, is_user_pkg) {
                     (true, false) => self.set_installtype(InstallType::System),
                     (false, true) => self.set_installtype(InstallType::User),
@@ -1185,10 +1151,7 @@ impl Component for PkgModel {
 
                 self.launchable = if let Some(l) = pkgmodel.launchable {
                     Some(Launch::GtkApp(l))
-                } else if self.installeduserpkgs.contains(match self.userpkgtype {
-                    UserPkgs::Env => &self.pname,
-                    UserPkgs::Profile => &self.pkg,
-                }) {
+                } else if self.installeduserpkgs.contains(&self.pkg) {
                     if let Ok(o) = Command::new("command").arg("-v").arg(&self.pname).output() {
                         if o.status.success() {
                             Some(Launch::TerminalApp(self.pname.to_string()))
@@ -1477,14 +1440,7 @@ impl Component for PkgModel {
                 match work.pkgtype {
                     InstallType::User => match work.action {
                         PkgAction::Install => {
-                            match self.userpkgtype {
-                                UserPkgs::Env => {
-                                    self.installeduserpkgs.insert(work.pname.to_string())
-                                }
-                                UserPkgs::Profile => {
-                                    self.installeduserpkgs.insert(work.pkg.to_string())
-                                }
-                            };
+                            self.installeduserpkgs.insert(work.pkg.to_string());
                             if self.launchable.is_none()
                                 && let Ok(o) =
                                     Command::new("command").arg("-v").arg(&self.pname).output()
@@ -1496,10 +1452,7 @@ impl Component for PkgModel {
                             }
                         }
                         PkgAction::Remove => {
-                            match self.userpkgtype {
-                                UserPkgs::Env => self.installeduserpkgs.remove(&work.pname),
-                                UserPkgs::Profile => self.installeduserpkgs.remove(&work.pkg),
-                            };
+                            self.installeduserpkgs.remove(&work.pkg);
                         }
                     },
                     InstallType::System => match work.action {
@@ -1600,70 +1553,35 @@ impl Component for PkgModel {
             PkgMsg::NixRun => {
                 if let Some(l) = &self.launchable {
                     match l {
-                        Launch::GtkApp(x) => match self.userpkgtype {
-                            UserPkgs::Env => {
-                                debug!("Launching {} with nix-shell", x);
-                                let _ = Command::new("nix-shell")
-                                        .arg("-p")
-                                        .arg(&self.pkg)
-                                        .arg("--command")
-                                        .arg(format!("XDG_DATA_DIRS=$XDG_DATA_DIRS:$buildInputs/share gtk-launch {}", x))
-                                        .spawn();
-                            }
-                            UserPkgs::Profile => {
-                                debug!("Launching {} with nix shell", x);
-                                let _ = Command::new("nix")
-                                        .arg("shell")
-                                        .arg(format!("nixpkgs#{}", self.pkg))
-                                        .arg("--command")
-                                        .arg("bash")
-                                        .arg("-c")
-                                        .arg(format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.pkg, x))
-                                        .spawn();
-                            }
-                        },
+                        Launch::GtkApp(x) => {
+                            debug!("Launching {} with nix shell", x);
+                            let _ = Command::new("nix")
+                                    .arg("shell")
+                                    .arg(format!("nixpkgs#{}", self.pkg))
+                                    .arg("--command")
+                                    .arg("bash")
+                                    .arg("-c")
+                                    .arg(format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.pkg, x))
+                                    .spawn();
+                        }
                         Launch::TerminalApp(x) => {
-                            let cmd = match self.userpkgtype {
-                                UserPkgs::Env => {
-                                    format!("nix-shell -p {} --command \"{}; $SHELL\"", self.pkg, x)
-                                }
-                                UserPkgs::Profile => {
-                                    format!(
-                                        "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
-                                        self.pkg, x
-                                    )
-                                }
-                            };
+                            let cmd = format!(
+                                "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
+                                self.pkg, x
+                            );
                             launchterm(&cmd);
                         }
                     }
                 } else {
-                    let cmd = match self.userpkgtype {
-                        UserPkgs::Env => {
-                            format!(
-                                "nix-shell -p {} --command \"{}; $SHELL\"",
-                                self.pkg, self.pname
-                            )
-                        }
-                        UserPkgs::Profile => {
-                            format!(
-                                "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
-                                self.pkg, self.pname
-                            )
-                        }
-                    };
+                    let cmd = format!(
+                        "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
+                        self.pkg, self.pname
+                    );
                     launchterm(&cmd);
                 }
             }
             PkgMsg::NixShell => {
-                let cmd = match self.userpkgtype {
-                    UserPkgs::Env => {
-                        format!("nix-shell -p {}", self.pkg)
-                    }
-                    UserPkgs::Profile => {
-                        format!("nix shell nixpkgs#{}", self.pkg)
-                    }
-                };
+                let cmd = format!("nix shell nixpkgs#{}", self.pkg);
                 launchterm(&cmd);
             }
             PkgMsg::SetInstallType(t) => {
@@ -1706,7 +1624,6 @@ fn launchterm(cmd: &str) {
 }
 
 relm4::new_action_group!(ModeActionGroup, "mode");
-relm4::new_stateless_action!(NixEnvAction, ModeActionGroup, "env");
 relm4::new_stateless_action!(NixProfileAction, ModeActionGroup, "profile");
 relm4::new_stateless_action!(NixSystemAction, ModeActionGroup, "system");
 

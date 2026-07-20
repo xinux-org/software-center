@@ -5,7 +5,7 @@ use relm4::{factory::*, *};
 use super::components::installed_item::{InstalledItem, InstalledItemModel, InstalledItemMsg};
 use crate::ui::{
     package::package_page::{InstallType, NotifyPage, PkgAction, WorkPkg},
-    window::{AppMsg, SystemPkgs, UserPkgs},
+    window::{AppMsg, SystemPkgs},
 };
 
 #[tracker::track]
@@ -15,7 +15,6 @@ pub struct InstalledPageModel {
     installeduserlist: FactoryVecDeque<InstalledItemModel>,
     #[tracker::no_eq]
     installedsystemlist: FactoryVecDeque<InstalledItemModel>,
-    userpkgtype: UserPkgs,
     systempkgtype: SystemPkgs,
     updatetracker: u8,
 }
@@ -23,7 +22,7 @@ pub struct InstalledPageModel {
 #[derive(Debug)]
 pub enum InstalledPageMsg {
     Update(Vec<InstalledItem>, Vec<InstalledItem>),
-    UpdatePkgTypes(SystemPkgs, UserPkgs),
+    UpdatePkgTypes(SystemPkgs),
     OpenRow(usize, InstallType),
     Remove(InstalledItem),
     UnsetBusy(WorkPkg),
@@ -31,7 +30,7 @@ pub enum InstalledPageMsg {
 
 #[relm4::component(pub)]
 impl SimpleComponent for InstalledPageModel {
-    type Init = (SystemPkgs, UserPkgs);
+    type Init = SystemPkgs;
     type Input = InstalledPageMsg;
     type Output = AppMsg;
     type Widgets = InstalledPageWidgets;
@@ -58,10 +57,7 @@ impl SimpleComponent for InstalledPageModel {
                             #[watch]
                             set_label: &format!(
                                 "{} — {}",
-                                match model.userpkgtype {
-                                    UserPkgs::Env => gettext("User (nix-env)"),
-                                    UserPkgs::Profile => gettext("User (nix profile)"),
-                                },
+                                gettext("User (nix profile)"),
                                 model.installeduserlist.len()
                             ),
                         },
@@ -116,7 +112,7 @@ impl SimpleComponent for InstalledPageModel {
     }
 
     fn init(
-        (systempkgtype, userpkgtype): Self::Init,
+        systempkgtype: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -138,7 +134,6 @@ impl SimpleComponent for InstalledPageModel {
                     },
                 ),
             updatetracker: 0,
-            userpkgtype,
             systempkgtype,
             tracker: 0,
         };
@@ -167,10 +162,7 @@ impl SimpleComponent for InstalledPageModel {
                     installedsystemlist_guard.push_back(installedsystem);
                 }
             }
-            InstalledPageMsg::UpdatePkgTypes(systempkgtype, userpkgtype) => {
-                self.systempkgtype = systempkgtype;
-                self.userpkgtype = userpkgtype;
-            }
+            InstalledPageMsg::UpdatePkgTypes(systempkgtype) => self.systempkgtype = systempkgtype,
             InstalledPageMsg::OpenRow(row, pkgtype) => match pkgtype {
                 InstallType::User => {
                     let installeduserlist_guard = self.installeduserlist.guard();

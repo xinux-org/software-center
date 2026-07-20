@@ -8,7 +8,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use crate::ui::{
     rebuild::rebuild_model::RebuildMsg,
     update::update_page::UpdatePageMsg,
-    window::{REBUILD_BROKER, SystemPkgs, UserPkgs},
+    window::{REBUILD_BROKER, SystemPkgs},
 };
 
 #[tracker::track]
@@ -18,13 +18,12 @@ pub struct UpdateAsyncHandler {
     process: Option<JoinHandle<()>>,
     config: NixDataConfig,
     syspkgs: SystemPkgs,
-    userpkgs: UserPkgs,
 }
 
 #[derive(Debug)]
 pub enum UpdateAsyncHandlerMsg {
     UpdateConfig(NixDataConfig),
-    UpdatePkgTypes(SystemPkgs, UserPkgs),
+    UpdatePkgTypes(SystemPkgs),
 
     // UpdateChannels,
     // UpdateChannelsAndSystem,
@@ -47,7 +46,6 @@ enum NscCmd {
 
 pub struct UpdateAsyncHandlerInit {
     pub syspkgs: SystemPkgs,
-    pub userpkgs: UserPkgs,
 }
 
 impl Worker for UpdateAsyncHandler {
@@ -65,7 +63,6 @@ impl Worker for UpdateAsyncHandler {
                 generations: None,
             },
             syspkgs: params.syspkgs,
-            userpkgs: params.userpkgs,
             tracker: 0,
         }
     }
@@ -75,10 +72,7 @@ impl Worker for UpdateAsyncHandler {
             UpdateAsyncHandlerMsg::UpdateConfig(config) => {
                 self.config = config;
             }
-            UpdateAsyncHandlerMsg::UpdatePkgTypes(syspkgs, userpkgs) => {
-                self.syspkgs = syspkgs;
-                self.userpkgs = userpkgs;
-            }
+            UpdateAsyncHandlerMsg::UpdatePkgTypes(syspkgs) => self.syspkgs = syspkgs,
             UpdateAsyncHandlerMsg::UpdateSystem => {
                 let config = self.config.clone();
                 let syspkgs = self.syspkgs.clone();
@@ -116,7 +110,6 @@ impl Worker for UpdateAsyncHandler {
                 let syspkgs = self.syspkgs.clone();
                 relm4::spawn(async move {
                     let result = match syspkgs {
-                        SystemPkgs::Legacy => runcmd(NscCmd::Rebuild, config, syspkgs, None).await,
                         SystemPkgs::Flake => runcmd(NscCmd::All, config, syspkgs, None).await,
                         SystemPkgs::None => Ok(true),
                     };
@@ -132,12 +125,8 @@ impl Worker for UpdateAsyncHandler {
                 });
             }
             UpdateAsyncHandlerMsg::UpdateUserPkgs => {
-                let userpkgs = self.userpkgs.clone();
                 relm4::spawn(async move {
-                    let result = match userpkgs {
-                        UserPkgs::Env => updateenv().await,
-                        UserPkgs::Profile => updateprofile(None).await,
-                    };
+                    let result = updateprofile(None).await;
                     match result {
                         Ok(true) => {
                             sender.output(UpdatePageMsg::DoneWorking);
@@ -150,12 +139,8 @@ impl Worker for UpdateAsyncHandler {
                 });
             }
             UpdateAsyncHandlerMsg::UpdateUserPkgsRemove(pkgs) => {
-                let userpkgs = self.userpkgs.clone();
                 relm4::spawn(async move {
-                    let result = match userpkgs {
-                        UserPkgs::Env => updateenv().await,
-                        UserPkgs::Profile => updateprofile(Some(pkgs)).await,
-                    };
+                    let result = updateprofile(Some(pkgs)).await;
                     match result {
                         Ok(true) => {
                             sender.output(UpdatePageMsg::DoneWorking);
@@ -170,24 +155,18 @@ impl Worker for UpdateAsyncHandler {
             UpdateAsyncHandlerMsg::UpdateAll => {
                 let config = self.config.clone();
                 let syspkgs = self.syspkgs.clone();
-                let userpkgs = self.userpkgs.clone();
                 relm4::spawn(async move {
                     let result = runcmd(NscCmd::All, config, syspkgs, None).await;
                     match result {
-                        Ok(true) => {
-                            match match userpkgs {
-                                UserPkgs::Env => updateenv().await,
-                                UserPkgs::Profile => updateprofile(None).await,
-                            } {
-                                Ok(true) => {
-                                    sender.output(UpdatePageMsg::DoneWorking);
-                                }
-                                _ => {
-                                    warn!("UPDATE ALL FAILED");
-                                    sender.output(UpdatePageMsg::FailedWorking);
-                                }
+                        Ok(true) => match updateprofile(None).await {
+                            Ok(true) => {
+                                sender.output(UpdatePageMsg::DoneWorking);
                             }
-                        }
+                            _ => {
+                                warn!("UPDATE ALL FAILED");
+                                sender.output(UpdatePageMsg::FailedWorking);
+                            }
+                        },
                         _ => {
                             warn!("UPDATE ALL FAILED");
                             sender.output(UpdatePageMsg::FailedWorking);
@@ -198,24 +177,18 @@ impl Worker for UpdateAsyncHandler {
             UpdateAsyncHandlerMsg::UpdateAllRemove(userrmpkgs, sysrmpkgs) => {
                 let config = self.config.clone();
                 let syspkgs = self.syspkgs.clone();
-                let userpkgs = self.userpkgs.clone();
                 relm4::spawn(async move {
                     let result = runcmd(NscCmd::All, config, syspkgs, Some(sysrmpkgs)).await;
                     match result {
-                        Ok(true) => {
-                            match match userpkgs {
-                                UserPkgs::Env => updateenv().await,
-                                UserPkgs::Profile => updateprofile(Some(userrmpkgs)).await,
-                            } {
-                                Ok(true) => {
-                                    sender.output(UpdatePageMsg::DoneWorking);
-                                }
-                                _ => {
-                                    warn!("UPDATE ALL FAILED");
-                                    sender.output(UpdatePageMsg::FailedWorking);
-                                }
+                        Ok(true) => match updateprofile(Some(userrmpkgs)).await {
+                            Ok(true) => {
+                                sender.output(UpdatePageMsg::DoneWorking);
                             }
-                        }
+                            _ => {
+                                warn!("UPDATE ALL FAILED");
+                                sender.output(UpdatePageMsg::FailedWorking);
+                            }
+                        },
                         _ => {
                             warn!("UPDATE ALL FAILED");
                             sender.output(UpdatePageMsg::FailedWorking);
@@ -300,50 +273,6 @@ async fn runcmd(
             .stderr(Stdio::piped())
             .spawn()?,
         NscCmd::All => match syspkgs {
-            SystemPkgs::Legacy => {
-                if let Some(rmpkgs) = rmpkgs {
-                    let newconfig =
-                        match nix_editor::write::rmarr(&f, "environment.systemPackages", rmpkgs) {
-                            Ok(x) => x,
-                            Err(_) => {
-                                return Err(anyhow!("Failed to write configuration.nix"));
-                            }
-                        };
-                    let mut cmd = tokio::process::Command::new("pkexec")
-                        .arg(&exe)
-                        .arg("channel")
-                        .arg("--rebuild")
-                        .arg("--update")
-                        .arg("--generations")
-                        .arg(config.generations.unwrap_or(0).to_string())
-                        .arg("--output")
-                        .arg(&systemconfig)
-                        .arg("--")
-                        .arg("switch")
-                        .args(&rebuildargs)
-                        .stderr(Stdio::piped())
-                        .stdin(Stdio::piped())
-                        .spawn()?;
-                    cmd.stdin
-                        .take()
-                        .unwrap()
-                        .write_all(newconfig.as_bytes())
-                        .await?;
-                    cmd
-                } else {
-                    tokio::process::Command::new("pkexec")
-                        .arg(&exe)
-                        .arg("channel")
-                        .arg("--rebuild")
-                        .arg("--generations")
-                        .arg(config.generations.unwrap_or(0).to_string())
-                        .arg("--")
-                        .arg("switch")
-                        .args(&rebuildargs)
-                        .stderr(Stdio::piped())
-                        .spawn()?
-                }
-            }
             SystemPkgs::Flake => {
                 if let Some(rmpkgs) = rmpkgs {
                     let newconfig =
@@ -407,27 +336,6 @@ async fn runcmd(
     while let Ok(Some(line)) = lines.next_line().await {
         REBUILD_BROKER.send(RebuildMsg::UpdateText(line.to_string()));
         trace!("CAUGHT REBUILD LINE: {}", line);
-    }
-    if cmd.wait().await?.success() {
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
-
-async fn updateenv() -> Result<bool> {
-    let mut cmd = tokio::process::Command::new("nix-env")
-        .arg("-u")
-        .stderr(Stdio::piped())
-        .spawn()?;
-
-    let stderr = cmd.stderr.take().unwrap();
-    let reader = tokio::io::BufReader::new(stderr);
-
-    let mut lines = reader.lines();
-    while let Ok(Some(line)) = lines.next_line().await {
-        REBUILD_BROKER.send(RebuildMsg::UpdateText(line.to_string()));
-        trace!("CAUGHT NIXENV LINE: {}", line);
     }
     if cmd.wait().await?.success() {
         Ok(true)

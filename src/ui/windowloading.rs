@@ -12,7 +12,7 @@ use std::{collections::HashMap, env, path::Path};
 use crate::{
     ui::{
         category::components::categories::PkgCategory,
-        window::{AppMsg, SystemPkgs, UserPkgs},
+        window::{AppMsg, SystemPkgs},
     },
     utils::packages::{AppData, appsteamdata},
 };
@@ -23,8 +23,8 @@ pub struct WindowAsyncHandler;
 
 #[derive(Debug)]
 pub enum WindowAsyncHandlerMsg {
-    CheckCache(SystemPkgs, UserPkgs, NixDataConfig),
-    UpdateDB(SystemPkgs, UserPkgs),
+    CheckCache(SystemPkgs, NixDataConfig),
+    UpdateDB(SystemPkgs),
 }
 
 impl Worker for WindowAsyncHandler {
@@ -38,7 +38,7 @@ impl Worker for WindowAsyncHandler {
 
     fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
         match msg {
-            WindowAsyncHandlerMsg::CheckCache(syspkgs, userpkgs, _config) => {
+            WindowAsyncHandlerMsg::CheckCache(syspkgs, _config) => {
                 info!("WindowAsyncHandlerMsg::CheckCache");
                 relm4::spawn(async move {
                     let mut recpicks = vec![];
@@ -85,18 +85,10 @@ impl Worker for WindowAsyncHandler {
                         }
                     };
 
-                    let nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => {
-                            nix_data_xinux::cache::profile::nixpkgslatest().await.ok()
-                        }
-                        UserPkgs::Env => None,
-                    };
+                    let nixpkgsdb = nix_data_xinux::cache::profile::nixpkgslatest().await.ok();
 
                     let systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => {
-                            nix_data_xinux::cache::channel::legacypkgs().await.ok()
-                        }
                         SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
                     };
 
@@ -532,7 +524,7 @@ impl Worker for WindowAsyncHandler {
                     ));
                 });
             }
-            WindowAsyncHandlerMsg::UpdateDB(syspkgs, userpkgs) => {
+            WindowAsyncHandlerMsg::UpdateDB(syspkgs) => {
                 relm4::spawn(async move {
                     let nixos = Path::new(NIXOS_PATH).exists();
 
@@ -562,18 +554,10 @@ impl Worker for WindowAsyncHandler {
                         }
                     };
 
-                    let _nixpkgsdb = match userpkgs {
-                        UserPkgs::Profile => {
-                            nix_data_xinux::cache::profile::nixpkgslatest().await.ok()
-                        }
-                        UserPkgs::Env => None,
-                    };
+                    let _nixpkgsdb = nix_data_xinux::cache::profile::nixpkgslatest().await.ok();
 
                     let _systemdb = match syspkgs {
                         SystemPkgs::None => None,
-                        SystemPkgs::Legacy => {
-                            nix_data_xinux::cache::channel::legacypkgs().await.ok()
-                        }
                         SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
                     };
                 });

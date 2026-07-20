@@ -33,7 +33,6 @@ pub struct UpdatePageModel {
     updateworker: WorkerController<UpdateAsyncHandler>,
     config: NixDataConfig,
     systype: SystemPkgs,
-    usertype: UserPkgs,
     updatetracker: u8,
     #[tracker::no_eq]
     unavailabledialog: Controller<UnavailableDialogModel>,
@@ -43,7 +42,7 @@ pub struct UpdatePageModel {
 #[derive(Debug)]
 pub enum UpdatePageMsg {
     UpdateConfig(NixDataConfig),
-    UpdatePkgTypes(SystemPkgs, UserPkgs),
+    UpdatePkgTypes(SystemPkgs),
     Update(Vec<UpdateItem>, Vec<UpdateItem>),
     OpenRow(usize, InstallType),
     UpdateSystem,
@@ -71,7 +70,6 @@ pub enum UpdateType {
 pub struct UpdatePageInit {
     pub window: gtk::Window,
     pub systype: SystemPkgs,
-    pub usertype: UserPkgs,
     pub config: NixDataConfig,
     pub online: bool,
 }
@@ -140,10 +138,7 @@ impl SimpleComponent for UpdatePageModel {
                             gtk::Label {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "title-4",
-                                set_label: &match model.usertype {
-                                    UserPkgs::Env => gettext("User (nix-env)"),
-                                    UserPkgs::Profile => gettext("User (nix profile)"),
-                                }
+                                set_label: &gettext("User (nix profile)")
                             },
                             gtk::Button {
                                 add_css_class: "suggested-action",
@@ -235,7 +230,6 @@ impl SimpleComponent for UpdatePageModel {
         let updateworker = UpdateAsyncHandler::builder()
             .detach_worker(UpdateAsyncHandlerInit {
                 syspkgs: initparams.systype.clone(),
-                userpkgs: initparams.usertype.clone(),
             })
             .forward(sender.input_sender(), identity);
 
@@ -258,7 +252,6 @@ impl SimpleComponent for UpdatePageModel {
             updateworker,
             config,
             systype: initparams.systype,
-            usertype: initparams.usertype,
             unavailabledialog,
             online: initparams.online,
             tracker: 0,
@@ -282,14 +275,10 @@ impl SimpleComponent for UpdatePageModel {
                 self.updateworker
                     .emit(UpdateAsyncHandlerMsg::UpdateConfig(self.config.clone()));
             }
-            UpdatePageMsg::UpdatePkgTypes(systype, usertype) => {
+            UpdatePageMsg::UpdatePkgTypes(systype) => {
                 self.systype = systype;
-                self.usertype = usertype;
                 self.updateworker
-                    .emit(UpdateAsyncHandlerMsg::UpdatePkgTypes(
-                        self.systype.clone(),
-                        self.usertype.clone(),
-                    ));
+                    .emit(UpdateAsyncHandlerMsg::UpdatePkgTypes(self.systype.clone()));
             }
             UpdatePageMsg::Update(updateuserlist, updatesystemlist) => {
                 info!("UpdatePageMsg::Update");
@@ -338,21 +327,15 @@ impl SimpleComponent for UpdatePageModel {
                 let output = sender.output_sender().clone();
                 REBUILD_BROKER.send(RebuildMsg::Show);
                 relm4::spawn(async move {
-                    let uninstallsys = match systype {
-                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::unavailablepkgs(&[
-                            &systemconfig.unwrap(),
-                        ])
-                        .await
-                        .unwrap_or_default(),
-                        SystemPkgs::Flake => {
-                            nix_data_xinux::cache::flakes::unavailablepkgs(
-                                &[&systemconfig.unwrap()],
-                            )
+                    let uninstallsys =
+                        match systype {
+                            SystemPkgs::Flake => nix_data_xinux::cache::flakes::unavailablepkgs(&[
+                                &systemconfig.unwrap(),
+                            ])
                             .await
-                            .unwrap_or_default()
-                        }
-                        _ => HashMap::new(),
-                    };
+                            .unwrap_or_default(),
+                            SystemPkgs::None => HashMap::new(),
+                        };
                     if uninstallsys.is_empty() {
                         let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateSystem);
                     } else {
@@ -382,28 +365,23 @@ impl SimpleComponent for UpdatePageModel {
                     return;
                 }
                 REBUILD_BROKER.send(RebuildMsg::Show);
-                if self.usertype == UserPkgs::Profile {
-                    let workersender = self.updateworker.sender().clone();
-                    let output = sender.output_sender().clone();
-                    relm4::spawn(async move {
-                        let uninstalluser = nix_data_xinux::cache::profile::unavailablepkgs()
-                            .await
-                            .unwrap_or_default();
-                        if uninstalluser.is_empty() {
-                            let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
-                        } else {
-                            warn!("Uninstalling unavailable packages: {:?}", uninstalluser);
-                            let _ = output.send(AppMsg::GetUnavailableItems(
-                                uninstalluser,
-                                HashMap::new(),
-                                UpdateType::User,
-                            ));
-                        }
-                    });
-                } else {
-                    self.updateworker
-                        .emit(UpdateAsyncHandlerMsg::UpdateUserPkgs);
-                }
+                let workersender = self.updateworker.sender().clone();
+                let output = sender.output_sender().clone();
+                relm4::spawn(async move {
+                    let uninstalluser = nix_data_xinux::cache::profile::unavailablepkgs()
+                        .await
+                        .unwrap_or_default();
+                    if uninstalluser.is_empty() {
+                        let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateUserPkgs);
+                    } else {
+                        warn!("Uninstalling unavailable packages: {:?}", uninstalluser);
+                        let _ = output.send(AppMsg::GetUnavailableItems(
+                            uninstalluser,
+                            HashMap::new(),
+                            UpdateType::User,
+                        ));
+                    }
+                });
             }
             UpdatePageMsg::UpdateAllUserRm(pkgs) => {
                 info!("UpdatePageMsg::UpdateAllUserRm({:?})", pkgs);
@@ -419,34 +397,23 @@ impl SimpleComponent for UpdatePageModel {
                 }
                 info!("UpdatePageMsg::UpdateAll");
                 let systype = self.systype.clone();
-                let usertype = self.usertype.clone();
                 let systemconfig = self.config.systemconfig.clone();
                 let workersender = self.updateworker.sender().clone();
                 let output = sender.output_sender().clone();
                 REBUILD_BROKER.send(RebuildMsg::Show);
                 relm4::spawn(async move {
-                    let uninstallsys = match systype {
-                        SystemPkgs::Legacy => nix_data_xinux::cache::channel::unavailablepkgs(&[
-                            &systemconfig.unwrap(),
-                        ])
+                    let uninstallsys =
+                        match systype {
+                            SystemPkgs::Flake => nix_data_xinux::cache::flakes::unavailablepkgs(&[
+                                &systemconfig.unwrap(),
+                            ])
+                            .await
+                            .unwrap_or_default(),
+                            SystemPkgs::None => HashMap::new(),
+                        };
+                    let uninstalluser = nix_data_xinux::cache::profile::unavailablepkgs()
                         .await
-                        .unwrap_or_default(),
-                        SystemPkgs::Flake => {
-                            nix_data_xinux::cache::flakes::unavailablepkgs(
-                                &[&systemconfig.unwrap()],
-                            )
-                            .await
-                            .unwrap_or_default()
-                        }
-                        _ => HashMap::new(),
-                    };
-                    let uninstalluser = if usertype == UserPkgs::Profile {
-                        nix_data_xinux::cache::profile::unavailablepkgs()
-                            .await
-                            .unwrap_or_default()
-                    } else {
-                        HashMap::new()
-                    };
+                        .unwrap_or_default();
                     if uninstallsys.is_empty() && uninstalluser.is_empty() {
                         let _ = workersender.send(UpdateAsyncHandlerMsg::UpdateAll);
                     } else {
