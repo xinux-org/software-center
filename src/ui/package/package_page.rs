@@ -64,6 +64,7 @@ pub struct PkgModel {
     installworker: WorkerController<InstallAsyncHandler>,
     carpage: CarouselPage,
     installtype: InstallType,
+    installed_pkgs: HashSet<String>,
     installeduserpkgs: HashSet<String>,
     installedsystempkgs: HashSet<String>,
 
@@ -149,10 +150,8 @@ pub enum PkgMsg {
     SetError(String, usize),
     SetCarouselPage(CarouselPage),
     OpenHomepage,
-    InstallUser,
-    RemoveUser,
-    InstallSystem,
-    RemoveSystem,
+    Install,
+    Remove,
     Cancel,
     CancelFinished,
     FinishedProcess(WorkPkg),
@@ -297,220 +296,93 @@ impl Component for PkgModel {
                                         gtk::Box {
                                             set_halign: gtk::Align::End,
                                             set_spacing: 5,
-                                            match model.installtype {
-                                                InstallType::User => {
-                                                    gtk::Box {
-                                                        #[name(userinstallstack)]
-                                                        if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == InstallType::User) /*model.installinguserpkgs.contains(&model.pkg)*/ {
-                                                            gtk::Box {
-                                                                gtk::Spinner {
-                                                                    set_halign: gtk::Align::End,
-                                                                    #[watch]
-                                                                    set_spinning: true, //model.installinguserpkgs.contains(&model.pkg),
-                                                                    set_size_request: (32, 32),
-                                                                    set_can_focus: false,
-                                                                },
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    set_can_focus: false,
-                                                                    set_width_request: 105,
-                                                                    set_label: &gettext("Cancel"),
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Cancel)
-                                                                    },
-                                                                }
-                                                            }
-                                                        } else if model.installeduserpkgs.contains(&model.pkg) {
-                                                            gtk::Box {
-                                                                set_halign: gtk::Align::End,
-                                                                set_valign: gtk::Align::Center,
-                                                                set_spacing: 10,
-                                                                gtk::Button {
-                                                                    #[watch]
-                                                                    set_css_classes: if model.launchable.is_some() { &["suggested-action"] } else { &[] },
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    set_can_focus: false,
-                                                                    set_width_request: 105,
-                                                                    #[watch]
-                                                                    set_label: &if model.launchable.is_some() {  gettext("Open")} else {  gettext("Installed") },
-                                                                    #[watch]
-                                                                    set_sensitive: model.launchable.is_some(),
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Launch)
-                                                                    }
-                                                                },
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    add_css_class: "destructive-action",
-                                                                    set_icon_name: "user-trash-symbolic",
-                                                                    set_can_focus: false,
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::RemoveUser)
-                                                                    }
-                                                                }
-                                                            }
-                                                        // } else if !model.installinguserpkgs.is_empty() {
-                                                        //     gtk::Box {
-                                                        //         gtk::Button {
-                                                        //             set_halign: gtk::Align::End,
-                                                        //             set_valign: gtk::Align::Center,
-                                                        //             set_can_focus: false,
-                                                        //             set_width_request: 105,
-                                                        //             set_label: "Busy",
-                                                        //             set_sensitive: false,
-                                                        //         }
-                                                        //     }
-                                                        } else if !model.online {
-                                                            gtk::Box {
-                                                                set_orientation: gtk::Orientation::Horizontal,
-                                                                set_spacing: 10,
-                                                                set_halign: gtk::Align::End,
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    add_css_class: "error",
-                                                                    set_label: &gettext("Offline"),
-                                                                    set_can_target: false,
-                                                                },
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    set_icon_name: "nsc-refresh-symbolic",
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        let _ = sender.output(AppMsg::CheckNetwork);
-                                                                    }
-                                                                }
-                                                            }
-                                                        } else {
-                                                            adw::SplitButton {
-                                                                add_css_class: "suggested-action",
-                                                                set_halign: gtk::Align::End,
-                                                                set_valign: gtk::Align::Center,
-                                                                set_can_focus: false,
-                                                                set_label: &gettext("Install"),
-                                                                set_width_request: 105,
-                                                                connect_clicked[sender] => move |_| {
-                                                                    sender.input(PkgMsg::InstallUser);
-                                                                },
-                                                                // #[watch]
-                                                                // set_visible: !model.installeduserpkgs.contains(&model.pname) && !model.installinguserpkgs.contains(&model.pkg),
-                                                                #[wrap(Some)]
-                                                                set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {}
-                                                            }
+                                            #[name(install_stack)]
+                                            if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
+                                                gtk::Box {
+                                                    gtk::Spinner {
+                                                        set_halign: gtk::Align::End,
+                                                        #[watch]
+                                                        set_spinning: true,
+                                                        set_size_request: (32, 32),
+                                                        set_can_focus: false,
+                                                    },
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Center,
+                                                        set_can_focus: false,
+                                                        set_width_request: 105,
+                                                        set_label: &gettext("Cancel"),
+                                                        connect_clicked[sender] => move |_| {
+                                                            sender.input(PkgMsg::Cancel)
+                                                        },
+                                                    }
+                                                }
+                                            } else if model.installed_pkgs.contains(&model.pkg) {
+                                                gtk::Box {
+                                                    set_halign: gtk::Align::End,
+                                                    set_valign: gtk::Align::Center,
+                                                    set_spacing: 10,
+                                                    gtk::Button {
+                                                        #[watch]
+                                                        set_css_classes: if model.launchable.is_some() { &["suggested-action"] } else { &[] },
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Center,
+                                                        set_can_focus: false,
+                                                        set_width_request: 105,
+                                                        #[watch]
+                                                        set_label: &if model.launchable.is_some() { gettext("Open") } else { gettext("Installed") },
+                                                        #[watch]
+                                                        set_sensitive: model.launchable.is_some(),
+                                                        connect_clicked[sender] => move |_| {
+                                                            sender.input(PkgMsg::Launch)
+                                                        }
+                                                    },
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::End,
+                                                        add_css_class: "destructive-action",
+                                                        set_icon_name: "user-trash-symbolic",
+                                                        set_can_focus: false,
+                                                        connect_clicked[sender] => move |_| {
+                                                            sender.input(PkgMsg::Remove)
                                                         }
                                                     }
                                                 }
-                                                InstallType::System => {
-                                                    gtk::Box {
-                                                        #[name(systeminstallstack)]
-                                                        if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == InstallType::System) {
-                                                            gtk::Box {
-                                                                gtk::Spinner {
-                                                                    set_halign: gtk::Align::End,
-                                                                    #[watch]
-                                                                    set_spinning: true, //model.installingsystempkgs.contains(&model.pkg),
-                                                                    set_size_request: (32, 32),
-                                                                    set_can_focus: false,
-                                                                },
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    set_can_focus: false,
-                                                                    set_width_request: 105,
-                                                                    set_label: &gettext("Cancel"),
-                                                                    #[watch]
-                                                                    set_sensitive: if let Some(w) = model.workqueue.iter().next() { w.pkg != model.pkg } else {
-                                                                        false
-                                                                    },
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Cancel)
-                                                                    },
-                                                                }
-                                                            }
-                                                        } else if model.installedsystempkgs.contains(&model.pkg) {
-                                                            gtk::Box {
-                                                                set_halign: gtk::Align::End,
-                                                                set_valign: gtk::Align::Center,
-                                                                set_spacing: 10,
-                                                                gtk::Button {
-                                                                    #[watch]
-                                                                    set_css_classes: if model.launchable.is_some() { &["suggested-action"] } else { &[] },
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    set_can_focus: false,
-                                                                    set_width_request: 105,
-                                                                    #[watch]
-                                                                    set_label: &if model.launchable.is_some() {  gettext("Open") } else {  gettext("Installed") },
-                                                                    #[watch]
-                                                                    set_sensitive: model.launchable.is_some(),
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Launch)
-                                                                    }
-                                                                },
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    add_css_class: "destructive-action",
-                                                                    set_icon_name: "user-trash-symbolic",
-                                                                    set_can_focus: false,
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::RemoveSystem)
-                                                                    }
-                                                                }
-                                                            }
-                                                        // } else if !model.installingsystempkgs.is_empty() {
-                                                        //     gtk::Box {
-                                                        //         gtk::Button {
-                                                        //             set_halign: gtk::Align::End,
-                                                        //             set_valign: gtk::Align::Center,
-                                                        //             set_can_focus: false,
-                                                        //             set_width_request: 105,
-                                                        //             set_label: "Busy",
-                                                        //             set_sensitive: false,
-                                                        //         }
-                                                        //     }
-                                                        } else if !model.online {
-                                                            gtk::Box {
-                                                                set_orientation: gtk::Orientation::Horizontal,
-                                                                set_spacing: 10,
-                                                                set_halign: gtk::Align::End,
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    add_css_class: "error",
-                                                                    set_label: &gettext("Offline"),
-                                                                    set_can_target: false,
-                                                                },
-                                                                gtk::Button {
-                                                                    set_halign: gtk::Align::End,
-                                                                    set_valign: gtk::Align::Center,
-                                                                    set_icon_name: "nsc-refresh-symbolic",
-                                                                    connect_clicked[sender] => move |_| {
-                                                                        let _ = sender.output(AppMsg::CheckNetwork);
-                                                                    }
-                                                                }
-                                                            }
-                                                        } else {
-                                                            adw::SplitButton {
-                                                                add_css_class: "suggested-action",
-                                                                set_halign: gtk::Align::End,
-                                                                set_valign: gtk::Align::Center,
-                                                                set_can_focus: false,
-                                                                set_label: &gettext("Install"),
-                                                                set_width_request: 105,
-                                                                connect_clicked[sender] => move |_| {
-                                                                    sender.input(PkgMsg::InstallSystem);
-                                                                },
-                                                                // #[watch]
-                                                                // set_visible: !model.installedsystempkgs.contains(&model.pname) && !model.installingsystempkgs.contains(&model.pkg),
-                                                                #[wrap(Some)]
-                                                                set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {}
-                                                            }
+                                            } else if !model.online {
+                                                gtk::Box {
+                                                    set_orientation: gtk::Orientation::Horizontal,
+                                                    set_spacing: 10,
+                                                    set_halign: gtk::Align::End,
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Center,
+                                                        add_css_class: "error",
+                                                        set_label: &gettext("Offline"),
+                                                        set_can_target: false,
+                                                    },
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Center,
+                                                        set_icon_name: "nsc-refresh-symbolic",
+                                                        connect_clicked[sender] => move |_| {
+                                                            let _ = sender.output(AppMsg::CheckNetwork);
                                                         }
                                                     }
                                                 }
-                                            }
+                                            } else {
+                                                adw::SplitButton {
+                                                    add_css_class: "suggested-action",
+                                                    set_halign: gtk::Align::End,
+                                                    set_valign: gtk::Align::Center,
+                                                    set_can_focus: false,
+                                                    set_label: &gettext("Install"),
+                                                    set_width_request: 105,
+                                                    connect_clicked[sender] => move |_| {
+                                                        sender.input(PkgMsg::Install);
+                                                    },
+                                                    #[wrap(Some)]
+                                                    set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {}
+                                                }
+                                            },
                                         }
                                     }
                                 }
@@ -1031,6 +903,7 @@ impl Component for PkgModel {
             carpage: CarouselPage::Single,
             installtype: InstallType::User,
             maintainers: vec![],
+            installed_pkgs: HashSet::new(),
             installeduserpkgs: HashSet::new(),
             installedsystempkgs: HashSet::new(),
             syspkgtype: initparams.syspkgs,
@@ -1051,8 +924,7 @@ impl Component for PkgModel {
         }",
         );
         let widgets = view_output!();
-        widgets.userinstallstack.set_hhomogeneous(false);
-        widgets.systeminstallstack.set_hhomogeneous(false);
+        widgets.install_stack.set_hhomogeneous(false);
 
         let mut group = RelmActionGroup::<ModeActionGroup>::new();
 
@@ -1148,6 +1020,11 @@ impl Component for PkgModel {
                         self.set_installtype(install_type);
                     }
                 }
+
+                self.set_installed_pkgs(match self.installtype {
+                    InstallType::System => self.installedsystempkgs.clone(),
+                    InstallType::User => self.installeduserpkgs.clone(),
+                });
 
                 self.launchable = if let Some(l) = pkgmodel.launchable {
                     Some(Launch::GtkApp(l))
@@ -1365,7 +1242,7 @@ impl Component for PkgModel {
                     warn!("error: {}", e);
                 }
             }
-            PkgMsg::InstallUser => {
+            PkgMsg::Install => {
                 let online = checkonline();
                 if !online {
                     let _ = sender.output(AppMsg::CheckNetwork);
@@ -1375,7 +1252,7 @@ impl Component for PkgModel {
                 let w = WorkPkg {
                     pkg: self.pkg.to_string(),
                     pname: self.pname.to_string(),
-                    pkgtype: InstallType::User,
+                    pkgtype: self.installtype.clone(),
                     action: PkgAction::Install,
                     block: false,
                     notify: None,
@@ -1385,45 +1262,11 @@ impl Component for PkgModel {
                     self.installworker.emit(InstallAsyncHandlerMsg::Process(w));
                 }
             }
-            PkgMsg::RemoveUser => {
+            PkgMsg::Remove => {
                 let w = WorkPkg {
                     pkg: self.pkg.to_string(),
                     pname: self.pname.to_string(),
-                    pkgtype: InstallType::User,
-                    action: PkgAction::Remove,
-                    block: false,
-                    notify: None,
-                };
-                self.workqueue.insert(w.clone());
-                if self.workqueue.len() == 1 {
-                    self.installworker.emit(InstallAsyncHandlerMsg::Process(w));
-                }
-            }
-            PkgMsg::InstallSystem => {
-                let online = checkonline();
-                if !online {
-                    let _ = sender.output(AppMsg::CheckNetwork);
-                    self.online = false;
-                    return;
-                }
-                let w = WorkPkg {
-                    pkg: self.pkg.to_string(),
-                    pname: self.pname.to_string(),
-                    pkgtype: InstallType::System,
-                    action: PkgAction::Install,
-                    block: false,
-                    notify: None,
-                };
-                self.workqueue.insert(w.clone());
-                if self.workqueue.len() == 1 {
-                    self.installworker.emit(InstallAsyncHandlerMsg::Process(w));
-                }
-            }
-            PkgMsg::RemoveSystem => {
-                let w = WorkPkg {
-                    pkg: self.pkg.to_string(),
-                    pname: self.pname.to_string(),
-                    pkgtype: InstallType::System,
+                    pkgtype: self.installtype.clone(),
                     action: PkgAction::Remove,
                     block: false,
                     notify: None,
@@ -1437,41 +1280,30 @@ impl Component for PkgModel {
                 let _ = nix_data_xinux::utils::refreshicons();
                 self.workqueue.remove(&work);
                 trace!("WORK QUEUE: {}", self.workqueue.len());
-                match work.pkgtype {
-                    InstallType::User => match work.action {
-                        PkgAction::Install => {
-                            self.installeduserpkgs.insert(work.pkg.to_string());
-                            if self.launchable.is_none()
-                                && let Ok(o) =
-                                    Command::new("command").arg("-v").arg(&self.pname).output()
-                                && o.status.success()
-                            {
-                                self.set_launchable(Some(Launch::TerminalApp(
-                                    self.pname.to_string(),
-                                )))
+                match work.action {
+                    PkgAction::Install => {
+                        match work.pkgtype {
+                            InstallType::System => {
+                                self.installeduserpkgs.insert(work.pkg.to_string())
                             }
+                            InstallType::User => self.installedsystempkgs.insert(work.pkg.clone()),
+                        };
+                        self.installed_pkgs.insert(work.pkg.to_string());
+                        if self.launchable.is_none()
+                            && let Ok(o) =
+                                Command::new("command").arg("-v").arg(&self.pname).output()
+                            && o.status.success()
+                        {
+                            self.set_launchable(Some(Launch::TerminalApp(self.pname.to_string())))
                         }
-                        PkgAction::Remove => {
-                            self.installeduserpkgs.remove(&work.pkg);
-                        }
-                    },
-                    InstallType::System => match work.action {
-                        PkgAction::Install => {
-                            self.installedsystempkgs.insert(work.pkg.clone());
-                            if self.launchable.is_none()
-                                && let Ok(o) =
-                                    Command::new("command").arg("-v").arg(&self.pname).output()
-                                && o.status.success()
-                            {
-                                self.set_launchable(Some(Launch::TerminalApp(
-                                    self.pname.to_string(),
-                                )))
-                            }
-                        }
-                        PkgAction::Remove => {
-                            self.installedsystempkgs.remove(&work.pkg);
-                        }
-                    },
+                    }
+                    PkgAction::Remove => {
+                        match work.pkgtype {
+                            InstallType::System => self.installedsystempkgs.remove(&work.pkg),
+                            InstallType::User => self.installeduserpkgs.remove(&work.pkg),
+                        };
+                        self.installed_pkgs.remove(&work.pkg);
+                    }
                 }
                 let _ = sender.output(AppMsg::UpdateInstalledPkgs);
                 if let Some(n) = &work.notify {
@@ -1585,6 +1417,10 @@ impl Component for PkgModel {
                 launchterm(&cmd);
             }
             PkgMsg::SetInstallType(t) => {
+                self.set_installed_pkgs(match t {
+                    InstallType::System => self.installedsystempkgs.clone(),
+                    InstallType::User => self.installeduserpkgs.clone(),
+                });
                 self.set_installtype(t.clone());
                 let _ = state::update_state(|state| state.install_type = Some(t));
             }
