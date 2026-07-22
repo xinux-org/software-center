@@ -299,19 +299,35 @@ impl Component for PkgModel {
                                             #[name(install_stack)]
                                             if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
                                                 gtk::Box {
-                                                    gtk::Spinner {
-                                                        set_halign: gtk::Align::End,
-                                                        #[watch]
-                                                        set_spinning: true,
-                                                        set_size_request: (32, 32),
-                                                        set_can_focus: false,
-                                                    },
+                                                    set_halign: gtk::Align::End,
+                                                    set_valign: gtk::Align::Center,
+                                                    set_spacing: 10,
                                                     gtk::Button {
                                                         set_halign: gtk::Align::End,
                                                         set_valign: gtk::Align::Center,
-                                                        set_can_focus: false,
+                                                        add_css_class: "pill",
                                                         set_width_request: 105,
-                                                        set_label: &gettext("Cancel"),
+                                                        set_sensitive: false,
+                                                        gtk::Box {
+                                                            set_halign: gtk::Align::Center,
+                                                            set_spacing: 10,
+                                                            gtk::Spinner {
+                                                                set_spinning: true,
+                                                                set_size_request: (24, 24),
+                                                                set_can_focus: false,
+                                                            },
+                                                            gtk::Label {
+                                                                 set_label: &gettext("Installing..."),
+                                                            },
+                                                        }
+                                                    },
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Fill,
+                                                        add_css_class: "destructive-action",
+                                                        add_css_class: "circular",
+                                                        set_icon_name: "process-stop-symbolic",
+                                                        set_width_request: 44,
                                                         connect_clicked[sender] => move |_| {
                                                             sender.input(PkgMsg::Cancel)
                                                         },
@@ -324,10 +340,9 @@ impl Component for PkgModel {
                                                     set_spacing: 10,
                                                     gtk::Button {
                                                         #[watch]
-                                                        set_css_classes: if model.launchable.is_some() { &["suggested-action"] } else { &[] },
                                                         set_halign: gtk::Align::End,
                                                         set_valign: gtk::Align::Center,
-                                                        set_can_focus: false,
+                                                        add_css_class: "pill",
                                                         set_width_request: 105,
                                                         #[watch]
                                                         set_label: &if model.launchable.is_some() { gettext("Open") } else { gettext("Installed") },
@@ -339,9 +354,11 @@ impl Component for PkgModel {
                                                     },
                                                     gtk::Button {
                                                         set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Fill,
                                                         add_css_class: "destructive-action",
+                                                        add_css_class: "circular",
                                                         set_icon_name: "user-trash-symbolic",
-                                                        set_can_focus: false,
+                                                        set_width_request: 44,
                                                         connect_clicked[sender] => move |_| {
                                                             sender.input(PkgMsg::Remove)
                                                         }
@@ -349,38 +366,56 @@ impl Component for PkgModel {
                                                 }
                                             } else if !model.online {
                                                 gtk::Box {
-                                                    set_orientation: gtk::Orientation::Horizontal,
                                                     set_spacing: 10,
                                                     set_halign: gtk::Align::End,
+                                                    set_valign: gtk::Align::Center,
                                                     gtk::Button {
                                                         set_halign: gtk::Align::End,
                                                         set_valign: gtk::Align::Center,
                                                         add_css_class: "error",
+                                                        add_css_class: "pill",
+                                                        set_width_request: 105,
                                                         set_label: &gettext("Offline"),
                                                         set_can_target: false,
+                                                        set_can_focus: false,
                                                     },
                                                     gtk::Button {
                                                         set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
+                                                        set_valign: gtk::Align::Fill,
+                                                        add_css_class: "circular",
                                                         set_icon_name: "nsc-refresh-symbolic",
+                                                        set_width_request: 44,
                                                         connect_clicked[sender] => move |_| {
                                                             let _ = sender.output(AppMsg::CheckNetwork);
                                                         }
                                                     }
                                                 }
                                             } else {
-                                                adw::SplitButton {
-                                                    add_css_class: "suggested-action",
+                                                gtk::Box {
                                                     set_halign: gtk::Align::End,
                                                     set_valign: gtk::Align::Center,
-                                                    set_can_focus: false,
-                                                    set_label: &gettext("Install"),
-                                                    set_width_request: 105,
-                                                    connect_clicked[sender] => move |_| {
-                                                        sender.input(PkgMsg::Install);
+                                                    set_spacing: 10,
+                                                    gtk::Button {
+                                                        #[watch]
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Center,
+                                                        add_css_class: "suggested-action",
+                                                        add_css_class: "pill",
+                                                        set_width_request: 105,
+                                                        set_label: &gettext("Install"),
+                                                        connect_clicked[sender] => move |_| {
+                                                            sender.input(PkgMsg::Install);
+                                                        },
                                                     },
-                                                    #[wrap(Some)]
-                                                    set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {}
+                                                    gtk::MenuButton {
+                                                        set_halign: gtk::Align::End,
+                                                        set_valign: gtk::Align::Fill,
+                                                        add_css_class: "circular",
+                                                        set_icon_name: "view-more-symbolic",
+                                                        set_width_request: 44,
+                                                        #[wrap(Some)]
+                                                        set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {},
+                                                    },
                                                 }
                                             },
                                         }
