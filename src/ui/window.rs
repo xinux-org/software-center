@@ -1146,6 +1146,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         let mut platforms = vec![];
                         let mut maintainers = vec![];
                         let mut launchable = None;
+                        let mut url = None;
 
                         if let Some(data) = self.appdata.get(&pkg) {
                             if let Some(n) = &data.name
@@ -1198,6 +1199,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             {
                                 launchable = Some(d.to_string());
                             }
+                            url = data.url.clone();
                         }
 
                         fn addlicense(pkglicense: &LicenseEnum, licenses: &mut Vec<License>) {
@@ -1376,6 +1378,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             installeduserpkgs: self.installeduserpkgs.keys().cloned().collect(),
                             installedsystempkgs: self.installedsystempkgs.clone(),
                             launchable,
+                            url,
                         };
                         if self.viewstack.visible_child_name()
                             != Some(gtk::glib::GString::from("search"))

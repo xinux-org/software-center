@@ -1,9 +1,9 @@
 [Desktop Entry]
 Name=Software Center
-Comment=Install Applications
+Comment=Install Applications [Devel]
 Type=Application
-Exec=nix-software-center %U
-Terminal=false
+Exec=/home/dyrbk/.local/bin/nix-software-center %U
+Terminal=true
 Categories=Settings;System;Utility;
 # Translators: Search terms to find this application. Do NOT translate or localize the semicolons! The list MUST also end with a semicolon!
 Keywords=Nix;Nixos;nix;nixos;software;package;install;store;app;

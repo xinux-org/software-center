@@ -84,10 +84,25 @@ pub struct AppData {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct AppUrl {
+    /// Should be a link to the upstream homepage for the component.
     pub homepage: Option<String>,
+    /// Should point to the software's bug tracking system, for users to report new bugs.
     pub bugtracker: Option<String>,
+    /// Should link a FAQ page for this software, to answer some of the most-asked questions in detail, something which you cannot do in the component's description.
+    pub faq: Option<String>,
+    /// Should provide a web link to an online user's reference, a software manual or help page.
     pub help: Option<String>,
+    /// URLs of this type should point to a webpage showing information on how to donate to the described software project.
     pub donation: Option<String>,
+    /// URLs of this type should point to a webpage where users can submit or modify translations of the upstream project.
+    pub translate: Option<String>,
+    /// URLs of this type should allow the user to contact the developer. This could for example be an HTTPS URL to an online form or a page describing how to contact the developer.
+    pub contact: Option<String>,
+    #[serde(rename = "vcs-browser")]
+    /// URLs of this type should point to a webpage on which the user can browse the sourcecode.
+    pub vcs_browser: Option<String>,
+    /// URLs of this type should point to a webpage showing information on how to contribute to the described software project.
+    pub contribute: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]

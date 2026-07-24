@@ -26,6 +26,8 @@ use std::{
     time::Duration,
 };
 
+use super::components::link_item::{LinkItem, LinkItemInit, LinkType};
+use crate::utils::packages::AppUrl;
 use crate::{
     ui::{
         installed::install_worker::{
@@ -60,6 +62,8 @@ pub struct PkgModel {
 
     #[tracker::no_eq]
     screenshots: FactoryVecDeque<ScreenshotItem>,
+    #[tracker::no_eq]
+    links: FactoryVecDeque<LinkItem>,
     #[tracker::no_eq]
     installworker: WorkerController<InstallAsyncHandler>,
     carpage: CarouselPage,
@@ -139,6 +143,7 @@ pub struct PkgInitModel {
     pub platforms: Vec<String>,
     pub maintainers: Vec<PkgMaintainer>,
     pub launchable: Option<String>,
+    pub url: Option<AppUrl>,
 }
 
 #[derive(Debug)]
@@ -565,6 +570,31 @@ impl Component for PkgModel {
                             },
                         },
                         adw::Clamp {
+                            set_halign: gtk::Align::Fill,
+                            set_valign: gtk::Align::Start,
+                            set_vexpand: true,
+                            set_maximum_size: 1000,
+                            gtk::Box {
+                                set_vexpand: true,
+                                set_valign: gtk::Align::Start,
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_margin_all: 15,
+                                set_spacing: 10,
+                                gtk::Label {
+                                    set_halign: gtk::Align::Start,
+                                    add_css_class: "title-2",
+                                    set_label: &gettext("Links"),
+                                },
+                                gtk::Box {
+                                    set_spacing: 12,
+                                    #[local_ref]
+                                    link_factory -> adw::PreferencesGroup {
+                                        set_hexpand: true,
+                                    },
+                                },
+                            },
+                        },
+                        adw::Clamp {
                             set_vexpand: true,
                             set_halign: gtk::Align::Fill,
                             set_valign: gtk::Align::Start,
@@ -933,6 +963,9 @@ impl Component for PkgModel {
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
+            links: FactoryVecDeque::builder()
+                .launch(adw::PreferencesGroup::new())
+                .forward(sender.input_sender(), |_| PkgMsg::Noop),
             installworker,
             platforms: vec![],
             carpage: CarouselPage::Single,
@@ -948,6 +981,8 @@ impl Component for PkgModel {
             online: initparams.online,
             tracker: 0,
         };
+
+        let link_factory = model.links.widget();
 
         let scrnfactory = model.screenshots.widget();
         relm4::set_global_css(
@@ -1130,6 +1165,68 @@ impl Component for PkgModel {
                     scrn_guard.clear();
                     for _i in 0..pkgmodel.screenshots.len() {
                         scrn_guard.push_back(());
+                    }
+                }
+
+                {
+                    let mut links_guard = self.links.guard();
+                    links_guard.clear();
+
+                    if let Some(url) = pkgmodel.url {
+                        url.homepage.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Website,
+                                link: link,
+                            });
+                        });
+                        url.bugtracker.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::IssueTracker,
+                                link: link,
+                            });
+                        });
+                        url.faq.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::FAQ,
+                                link: link,
+                            });
+                        });
+                        url.help.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Help,
+                                link: link,
+                            });
+                        });
+                        url.donation.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Donate,
+                                link: link,
+                            });
+                        });
+                        url.translate.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Translate,
+                                link: link,
+                            });
+                        });
+                        url.contact.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Contact,
+                                link: link,
+                            });
+                        });
+                        url.vcs_browser.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Source,
+                                link: link,
+                            });
+                        });
+                        url.contribute.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Contribute,
+                                link: link,
+                            });
+                        });
                     }
                 }
 

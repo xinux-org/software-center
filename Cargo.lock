@@ -880,6 +880,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "endi"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66b7e2430c6dff6a955451e2cfc438f09cea1965a9d6f87f7e3b90decc014099"
+
+[[package]]
 name = "env_logger"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1523,6 +1529,21 @@ dependencies = [
  "libc",
  "pango-sys",
  "system-deps",
+]
+
+[[package]]
+name = "gvdb"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc3adcee31520d9e6948d21ed883171c4af26c6bc96ac171769b5aba2fa6d486"
+dependencies = [
+ "flate2",
+ "quick-xml 0.39.4",
+ "serde",
+ "serde_json",
+ "walkdir",
+ "zerocopy",
+ "zvariant",
 ]
 
 [[package]]
@@ -2427,10 +2448,12 @@ dependencies = [
  "nix-data-xinux",
  "nix-editor",
  "pretty_env_logger",
- "quick-xml",
+ "quick-xml 0.40.1",
  "rand 0.10.2",
  "relm4",
  "relm4-components",
+ "relm4-icons",
+ "relm4-icons-build",
  "reqwest",
  "serde",
  "serde_json",
@@ -2913,6 +2936,16 @@ checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
 
 [[package]]
 name = "quick-xml"
+version = "0.39.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdcc8dd4e2f670d309a5f0e83fe36dfdc05af317008fea29144da1a2ac858e5e"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
+name = "quick-xml"
 version = "0.40.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2474bd2e5029e7ccb6abb2ba48cf2383a333851dedf495901544281590c7da7f"
@@ -3241,6 +3274,27 @@ name = "relm4-css"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3b81d263f784b103c815afa29124486b59741eca069ce7a5999efb14f13c368"
+
+[[package]]
+name = "relm4-icons"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "567b4d8b9618ed6db75fc83997d73d343cc21fbf63153f29030f13951f903c6a"
+dependencies = [
+ "gtk4",
+]
+
+[[package]]
+name = "relm4-icons-build"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b1b42c5066d6f47f772b7cdebe36437999defdf85554da426710390f57437d2"
+dependencies = [
+ "gvdb",
+ "serde",
+ "toml",
+ "walkdir",
+]
 
 [[package]]
 name = "relm4-macros"
@@ -5055,4 +5109,43 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
 dependencies = [
  "zune-core",
+]
+
+[[package]]
+name = "zvariant"
+version = "5.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bee2a0bcd2a907786a456fff45aaaaf54c9ba5f50b71ae9ec1a4edd200c94911"
+dependencies = [
+ "endi",
+ "serde",
+ "winnow",
+ "zvariant_derive",
+ "zvariant_utils",
+]
+
+[[package]]
+name = "zvariant_derive"
+version = "5.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38a708216a18780796770bfe3f4739c7c83a3e8f789b755534bbbc06e4e23e12"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+ "zvariant_utils",
+]
+
+[[package]]
+name = "zvariant_utils"
+version = "3.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90cb9383f9b45290407a1258b202d3f8f01db719eb60b4e4055c6375af4fc7c7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn 2.0.119",
+ "winnow",
 ]

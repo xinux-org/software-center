@@ -1,0 +1,21 @@
+fn main() {
+    relm4_icons_build::bundle_icons(
+        "icon_names.rs",
+        Some("uz.xinux.NixSoftwareCenter"),
+        None,
+        None::<&str>,
+        [
+            "code",
+            "copy",
+            "external-link",
+            "globe",
+            "heart-filled",
+            "keyboard-layout",
+            "mail-send",
+            "people",
+            "question-round-outline",
+            "rescue",
+            "sad-computer",
+        ],
+    );
+}
