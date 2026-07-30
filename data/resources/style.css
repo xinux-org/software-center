@@ -1,4 +1,4 @@
-/* 
+/*
 .badge-number {
     background-color: #3584e4 !important;
     color: white !important;
@@ -13,3 +13,11 @@
     background-color: red !important;
     color: white !important;
 }  */
+
+label.badge {
+    background-color: alpha(var(--accent-bg-color), 0.25);
+    border-radius: 9999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: bold;
+}

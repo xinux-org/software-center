@@ -26,18 +26,22 @@ use std::{
     time::Duration,
 };
 
-use super::components::link_item::{LinkItem, LinkItemInit, LinkType};
-use crate::utils::packages::AppUrl;
+use super::components::{
+    link_item::{LinkItem, LinkItemInit, LinkType},
+    release_item::{ReleaseItem, ReleaseItemInit},
+};
 use crate::{
     ui::{
         installed::install_worker::{
             InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
         },
         package::components::screenshot::ScreenshotItem,
-        window::AppMsg,
-        window::SystemPkgs,
+        window::{AppMsg, SystemPkgs},
     },
-    utils::{online::checkonline, packages::PkgMaintainer, state},
+    utils::{
+        packages::{AppUrl, ReleaseType},
+        {online::checkonline, packages::PkgMaintainer, state},
+    },
 };
 
 #[tracker::track]
@@ -64,6 +68,10 @@ pub struct PkgModel {
     screenshots: FactoryVecDeque<ScreenshotItem>,
     #[tracker::no_eq]
     links: FactoryVecDeque<LinkItem>,
+    #[tracker::no_eq]
+    releases: FactoryVecDeque<ReleaseItem>,
+    #[tracker::no_eq]
+    latest_release: FactoryVecDeque<ReleaseItem>,
     #[tracker::no_eq]
     installworker: WorkerController<InstallAsyncHandler>,
     carpage: CarouselPage,
@@ -144,6 +152,7 @@ pub struct PkgInitModel {
     pub maintainers: Vec<PkgMaintainer>,
     pub launchable: Option<String>,
     pub url: Option<AppUrl>,
+    pub releases: Vec<crate::utils::packages::AppRelease>,
 }
 
 #[derive(Debug)]
@@ -574,6 +583,27 @@ impl Component for PkgModel {
                             set_valign: gtk::Align::Start,
                             set_vexpand: true,
                             set_maximum_size: 1000,
+
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_spacing: 12,
+
+                                #[local_ref]
+                                latest_release_factory -> adw::PreferencesGroup {},
+
+                                adw::PreferencesGroup {
+                                    adw::ButtonRow {
+                                        set_title: &gettext("Version History"),
+                                        set_end_icon_name: Some("right-symbolic"),
+                                    }
+                                }
+                            },
+                        },
+                        adw::Clamp {
+                            set_halign: gtk::Align::Fill,
+                            set_valign: gtk::Align::Start,
+                            set_vexpand: true,
+                            set_maximum_size: 1000,
                             gtk::Box {
                                 set_vexpand: true,
                                 set_valign: gtk::Align::Start,
@@ -966,6 +996,12 @@ impl Component for PkgModel {
             links: FactoryVecDeque::builder()
                 .launch(adw::PreferencesGroup::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
+            releases: FactoryVecDeque::builder()
+                .launch(adw::PreferencesGroup::new())
+                .forward(sender.input_sender(), |_| PkgMsg::Noop),
+            latest_release: FactoryVecDeque::builder()
+                .launch(adw::PreferencesGroup::new())
+                .forward(sender.input_sender(), |_| PkgMsg::Noop),
             installworker,
             platforms: vec![],
             carpage: CarouselPage::Single,
@@ -983,6 +1019,9 @@ impl Component for PkgModel {
         };
 
         let link_factory = model.links.widget();
+
+        let releases_factory = model.releases.widget();
+        let latest_release_factory = model.latest_release.widget();
 
         let scrnfactory = model.screenshots.widget();
         relm4::set_global_css(
@@ -1227,6 +1266,69 @@ impl Component for PkgModel {
                                 link: link,
                             });
                         });
+                    }
+                }
+
+                {
+                    let releases = pkgmodel
+                        .releases
+                        .iter()
+                        .filter(|release| release.release_type == ReleaseType::Stable)
+                        .map(|release| {
+                            let description = release
+                                .description
+                                .as_ref()
+                                .and_then(|description| description.get("C"))
+                                .map(|description| {
+                                    let mut input = description.to_string();
+                                    // Fix formatting
+                                    while input.contains('\n') {
+                                        input = input.replace('\n', " ");
+                                    }
+                                    while input.contains('\t') {
+                                        input = input.replace('\t', " ");
+                                    }
+                                    while input.contains("  ") {
+                                        input = input.replace("  ", " ");
+                                    }
+                                    let mut pango = html2pango::markup_html(&input)
+                                        .unwrap_or_else(|_| {
+                                            warn!("Pango failed to parse description");
+                                            input.to_string()
+                                        })
+                                        .trim()
+                                        .to_string();
+                                    while pango.contains("\n ") {
+                                        pango = pango.replace("\n ", "\n");
+                                    }
+                                    while pango.ends_with('\n') {
+                                        pango.pop();
+                                    }
+
+                                    pango.strip_prefix('\n').unwrap_or(&pango).to_string()
+                                });
+
+                            ReleaseItemInit {
+                                version: release.version.as_ref().map(|v| v.to_string()),
+                                date: release.timestamp.or(release.date),
+                                description,
+                                url: release.url.as_ref().and_then(|url| url.default.clone()),
+                                installed: release.version == self.version,
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    let mut latest_release_guard = self.latest_release.guard();
+                    latest_release_guard.clear();
+                    if let Some(release) = releases.get(0) {
+                        latest_release_guard.push_back(release.clone());
+                    }
+
+                    let mut releases_guard = self.releases.guard();
+                    releases_guard.clear();
+
+                    for release in releases {
+                        releases_guard.push_back(release);
                     }
                 }
 

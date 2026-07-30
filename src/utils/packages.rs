@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc, serde::ts_seconds_option};
 use flate2::bufread::GzDecoder;
 use log::*;
 use serde::{Deserialize, Serialize};
@@ -80,6 +81,8 @@ pub struct AppData {
     pub screenshots: Option<Vec<AppScreenshot>>,
     #[serde(rename = "Categories")]
     pub categories: Option<Vec<String>>,
+    #[serde(rename = "Releases")]
+    pub releases: Option<Vec<AppRelease>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -144,6 +147,37 @@ pub struct AppScreenshot {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct AppScreenshotImage {
     pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct AppRelease {
+    pub version: Option<String>,
+    #[serde(default, rename = "type")]
+    pub release_type: ReleaseType,
+    pub date: Option<DateTime<Utc>>,
+    #[serde(with = "ts_seconds_option", rename = "unix-timestamp")]
+    pub timestamp: Option<DateTime<Utc>>,
+    pub description: Option<HashMap<String, String>>,
+    pub url: Option<ReleaseUrl>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ReleaseType {
+    Stable,
+    Development,
+    Snapshot,
+}
+
+impl Default for ReleaseType {
+    fn default() -> Self {
+        Self::Stable
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct ReleaseUrl {
+    pub default: Option<String>,
 }
 
 pub fn appsteamdata() -> Result<HashMap<String, AppData>> {

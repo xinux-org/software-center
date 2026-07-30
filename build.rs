@@ -15,6 +15,7 @@ fn main() {
             "people",
             "question-round-outline",
             "rescue",
+            "right",
             "sad-computer",
         ],
     );
