@@ -161,18 +161,13 @@ pub struct AppRelease {
     pub url: Option<ReleaseUrl>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ReleaseType {
+    #[default]
     Stable,
     Development,
     Snapshot,
-}
-
-impl Default for ReleaseType {
-    fn default() -> Self {
-        Self::Stable
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]

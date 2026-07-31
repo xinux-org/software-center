@@ -39,7 +39,7 @@ use crate::{
         window::{AppMsg, SystemPkgs},
     },
     utils::{
-        packages::{AppUrl, ReleaseType},
+        packages::{AppRelease, AppUrl, ReleaseType},
         {online::checkonline, packages::PkgMaintainer, state},
     },
 };
@@ -152,7 +152,7 @@ pub struct PkgInitModel {
     pub maintainers: Vec<PkgMaintainer>,
     pub launchable: Option<String>,
     pub url: Option<AppUrl>,
-    pub releases: Vec<crate::utils::packages::AppRelease>,
+    pub releases: Vec<AppRelease>,
 }
 
 #[derive(Debug)]
@@ -583,14 +583,11 @@ impl Component for PkgModel {
                             set_valign: gtk::Align::Start,
                             set_vexpand: true,
                             set_maximum_size: 1000,
-
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
                                 set_spacing: 12,
-
                                 #[local_ref]
                                 latest_release_factory -> adw::PreferencesGroup {},
-
                                 adw::PreferencesGroup {
                                     adw::ButtonRow {
                                         set_title: &gettext("Version History"),

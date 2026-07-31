@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use gettextrs::gettext;
+use gettextrs::{gettext, ngettext};
 use relm4::adw::prelude::*;
 use relm4::{factory::*, *};
 
@@ -44,6 +44,7 @@ impl FactoryComponent for ReleaseItem {
                     set_spacing: 8,
                     gtk::Label {
                         add_css_class: "accent",
+                        add_css_class: "heading",
                         #[watch]
                         set_visible: self.version.is_some(),
                         #[watch]
@@ -60,9 +61,10 @@ impl FactoryComponent for ReleaseItem {
                         set_hexpand: true,
                         set_halign: gtk::Align::End,
                         add_css_class: "dimmed",
-                        // TODO: humanize
                         #[watch]
-                        set_label: "8 days ago"
+                        set_visible: !self.date.is_none(),
+                        #[watch]
+                        set_label: self.date.as_deref().unwrap_or_default(),
                     }
                 },
                 gtk::Label {
@@ -79,9 +81,26 @@ impl FactoryComponent for ReleaseItem {
     }
 
     fn init_model(init: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
+        let now = Utc::now();
+        let date = init.date.map(|date| {
+            let delta = now.signed_duration_since(date);
+
+            let days = delta.num_days();
+
+            match days {
+                ..0 => "".to_string(),
+                0 => gettext("Today"),
+                1..30 => ngettext("A day ago", "%d days ago", days as u32)
+                    .replace("%d", &days.to_string()),
+                30..365 => ngettext("A month ago", "%d months ago", days as u32 / 30)
+                    .replace("%d", &(days / 30).to_string()),
+                365.. => ngettext("A year ago", "%d years ago", days as u32 / 365)
+                    .replace("%d", &(days / 365).to_string()),
+            }
+        });
+
         Self {
-            // TODO: humanize
-            date: None, //init.date,
+            date: date,
             version: init.version,
             description: init.description,
             url: init.url,
