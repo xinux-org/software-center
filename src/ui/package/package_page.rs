@@ -29,6 +29,7 @@ use std::{
 use super::components::{
     link_item::{LinkItem, LinkItemInit, LinkType},
     release_item::{ReleaseItem, ReleaseItemInit},
+    releases_dialog::{ReleasesDialog, ReleasesMsg},
 };
 use crate::{
     ui::{
@@ -69,11 +70,14 @@ pub struct PkgModel {
     #[tracker::no_eq]
     links: FactoryVecDeque<LinkItem>,
     #[tracker::no_eq]
-    releases: FactoryVecDeque<ReleaseItem>,
-    #[tracker::no_eq]
     latest_release: FactoryVecDeque<ReleaseItem>,
     #[tracker::no_eq]
     installworker: WorkerController<InstallAsyncHandler>,
+
+    releases: Vec<ReleaseItemInit>,
+    #[tracker::no_eq]
+    releases_dialog: Controller<ReleasesDialog>,
+
     carpage: CarouselPage,
     installtype: InstallType,
     installed_pkgs: HashSet<String>,
@@ -176,6 +180,7 @@ pub enum PkgMsg {
     SetInstallType(InstallType),
     AddToQueue(WorkPkg),
     UpdateOnline(bool),
+    ShowReleases,
     Noop,
 }
 
@@ -592,6 +597,9 @@ impl Component for PkgModel {
                                     adw::ButtonRow {
                                         set_title: &gettext("Version History"),
                                         set_end_icon_name: Some("right-symbolic"),
+                                        connect_activated[sender] => move |_| {
+                                            sender.input(PkgMsg::ShowReleases);
+                                        }
                                     }
                                 }
                             },
@@ -976,6 +984,9 @@ impl Component for PkgModel {
             .forward(sender.input_sender(), identity);
         let config = initparams.config;
         installworker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
+
+        let releases_dialog = ReleasesDialog::builder().launch(()).detach();
+
         let model = PkgModel {
             config,
             name: String::default(),
@@ -993,13 +1004,14 @@ impl Component for PkgModel {
             links: FactoryVecDeque::builder()
                 .launch(adw::PreferencesGroup::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
-            releases: FactoryVecDeque::builder()
-                .launch(adw::PreferencesGroup::new())
-                .forward(sender.input_sender(), |_| PkgMsg::Noop),
             latest_release: FactoryVecDeque::builder()
                 .launch(adw::PreferencesGroup::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
             installworker,
+
+            releases: vec![],
+            releases_dialog,
+
             platforms: vec![],
             carpage: CarouselPage::Single,
             installtype: InstallType::User,
@@ -1017,7 +1029,6 @@ impl Component for PkgModel {
 
         let link_factory = model.links.widget();
 
-        let releases_factory = model.releases.widget();
         let latest_release_factory = model.latest_release.widget();
 
         let scrnfactory = model.screenshots.widget();
@@ -1315,18 +1326,15 @@ impl Component for PkgModel {
                         })
                         .collect::<Vec<_>>();
 
-                    let mut latest_release_guard = self.latest_release.guard();
-                    latest_release_guard.clear();
-                    if let Some(release) = releases.get(0) {
-                        latest_release_guard.push_back(release.clone());
+                    {
+                        let mut latest_release_guard = self.latest_release.guard();
+                        latest_release_guard.clear();
+                        if let Some(release) = releases.get(0) {
+                            latest_release_guard.push_back(release.clone());
+                        }
                     }
 
-                    let mut releases_guard = self.releases.guard();
-                    releases_guard.clear();
-
-                    for release in releases {
-                        releases_guard.push_back(release);
-                    }
+                    self.set_releases(releases);
                 }
 
                 let mut headers = reqwest::header::HeaderMap::new();
@@ -1664,6 +1672,10 @@ impl Component for PkgModel {
             }
             PkgMsg::UpdateOnline(online) => {
                 self.set_online(online);
+            }
+            PkgMsg::ShowReleases => {
+                self.releases_dialog
+                    .emit(ReleasesMsg::Show(self.releases.clone()));
             }
             PkgMsg::Noop => (),
         }

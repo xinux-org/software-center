@@ -12,7 +12,7 @@ pub struct ReleaseItem {
     pub installed: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReleaseItemInit {
     pub version: Option<String>,
     pub date: Option<DateTime<Utc>>,
