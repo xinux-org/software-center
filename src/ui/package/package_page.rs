@@ -592,6 +592,8 @@ impl Component for PkgModel {
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
                                 set_spacing: 12,
+                                #[watch]
+                                set_visible: model.releases_dialog.is_some(),
                                 #[local_ref]
                                 latest_release_factory -> adw::PreferencesGroup {},
                                 adw::PreferencesGroup {
@@ -1318,7 +1320,7 @@ impl Component for PkgModel {
                                 version: release.version.as_ref().map(|v| v.to_string()),
                                 date: release.timestamp.or(release.date),
                                 description,
-                                url: release.url.as_ref().and_then(|url| url.default.clone()),
+                                url: release.url.as_ref().and_then(|url| url.details.clone()),
                                 installed: release.version == self.version,
                             }
                         })

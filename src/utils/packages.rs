@@ -172,7 +172,7 @@ pub enum ReleaseType {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ReleaseUrl {
-    pub default: Option<String>,
+    pub details: Option<String>,
 }
 
 pub fn appsteamdata() -> Result<HashMap<String, AppData>> {

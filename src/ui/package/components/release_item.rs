@@ -21,15 +21,12 @@ pub struct ReleaseItemInit {
     pub installed: bool,
 }
 
-#[derive(Debug)]
-pub enum ReleaseItemMsg {}
-
 #[relm4::factory(pub)]
 impl FactoryComponent for ReleaseItem {
     type CommandOutput = ();
     type Init = ReleaseItemInit;
     type Input = ();
-    type Output = ReleaseItemMsg;
+    type Output = ();
     type ParentWidget = adw::PreferencesGroup;
 
     view! {
@@ -60,12 +57,13 @@ impl FactoryComponent for ReleaseItem {
                     gtk::Label {
                         set_hexpand: true,
                         set_halign: gtk::Align::End,
+                        set_valign: gtk::Align::Start,
                         add_css_class: "dimmed",
                         #[watch]
                         set_visible: !self.date.is_none(),
                         #[watch]
                         set_label: self.date.as_deref().unwrap_or_default(),
-                    }
+                    },
                 },
                 gtk::Label {
                     set_valign: gtk::Align::Start,
@@ -75,6 +73,21 @@ impl FactoryComponent for ReleaseItem {
                     set_css_classes: if self.description.as_ref().map(|d| !d.is_empty()).unwrap_or(false) {&["body"]} else {&["body", "dimmed"]},
                     #[watch]
                     set_markup: &self.description.as_ref().map(|d| d.to_string()).unwrap_or_else(|| gettext("No details for this release")),
+                },
+                gtk::Box {
+                    set_spacing: 4,
+                    set_visible: self.url.is_some(),
+                    gtk::Label {
+                        add_css_class: "accent",
+                        set_label: &format!(r#"<a href="{0}" title="{0}">{1}</a>"#, self.url.as_deref().unwrap_or_default(), gettext("Get More Information")),
+                        set_tooltip: self.url.as_deref().unwrap_or_default(),
+                        set_use_markup: true,
+                    },
+                    gtk::Image {
+                        add_css_class: "accent",
+                        set_icon_name: Some("external-link-symbolic"),
+                        set_pixel_size: 12,
+                    },
                 },
             },
         }
