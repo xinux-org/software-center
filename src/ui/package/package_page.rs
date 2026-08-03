@@ -533,90 +533,85 @@ impl Component for PkgModel {
                                 set_carousel: Some(scrnfactory)
                             }
                         },
+
                         adw::Clamp {
                             set_halign: gtk::Align::Fill,
                             set_valign: gtk::Align::Start,
                             set_vexpand_set: true,
                             set_maximum_size: 1000,
-                            #[watch]
-                            set_visible: !(model.summary.is_none() && model.description.is_none()),
-                            gtk::Box {
-                                set_vexpand: true,
-                                set_valign: gtk::Align::Start,
-                                set_orientation: gtk::Orientation::Vertical,
-                                set_margin_all: 15,
-                                set_spacing: 10,
-                                gtk::Label {
-                                    add_css_class: "title-2",
-                                    set_valign: gtk::Align::Start,
-                                    set_halign: gtk::Align::Start,
-                                    #[watch]
-                                    set_label: if let Some(s) = model.summary.as_ref() { s } else { "" },
-                                    #[watch]
-                                    set_visible: model.summary.is_some(),
-                                    set_wrap: true,
-                                    set_xalign: 0.0,
-                                },
-                                gtk::Label {
-                                    set_valign: gtk::Align::Start,
-                                    set_halign: gtk::Align::Start,
-                                    #[watch]
-                                    set_markup: {
-                                        if let Some(d) = model.description.as_ref() {
-                                            d
-                                        } else { "" }
-                                    },
-                                    #[watch]
-                                    set_visible: model.description.is_some(),
-                                    set_wrap: true,
-                                    set_xalign: 0.0,
-                                },
-                            },
-                        },
-                        adw::Clamp {
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Start,
-                            set_vexpand: true,
-                            set_maximum_size: 1000,
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
-                                set_spacing: 12,
+                                set_spacing: 15,
+                                set_margin_vertical: 30,
+
                                 #[watch]
-                                set_visible: model.releases_dialog.is_some(),
-                                #[local_ref]
-                                latest_release_factory -> adw::PreferencesGroup {},
-                                adw::PreferencesGroup {
-                                    adw::ButtonRow {
-                                        set_title: &gettext("Version History"),
-                                        set_end_icon_name: Some("right-symbolic"),
-                                        connect_activated[sender] => move |_| {
-                                            sender.input(PkgMsg::ShowReleases);
+                                set_visible: !(model.summary.is_none() && model.description.is_none()),
+                                gtk::Box {
+                                    set_vexpand: true,
+                                    set_valign: gtk::Align::Start,
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_spacing: 10,
+                                    gtk::Label {
+                                        add_css_class: "title-2",
+                                        set_valign: gtk::Align::Start,
+                                        set_halign: gtk::Align::Start,
+                                        #[watch]
+                                        set_label: if let Some(s) = model.summary.as_ref() { s } else { "" },
+                                        #[watch]
+                                        set_visible: model.summary.is_some(),
+                                        set_wrap: true,
+                                        set_xalign: 0.0,
+                                    },
+                                    gtk::Label {
+                                        set_valign: gtk::Align::Start,
+                                        set_halign: gtk::Align::Start,
+                                        #[watch]
+                                        set_markup: {
+                                            if let Some(d) = model.description.as_ref() {
+                                                d
+                                            } else { "" }
+                                        },
+                                        #[watch]
+                                        set_visible: model.description.is_some(),
+                                        set_wrap: true,
+                                        set_xalign: 0.0,
+                                    },
+                                },
+
+                                gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_spacing: 12,
+                                    #[watch]
+                                    set_visible: model.releases_dialog.is_some(),
+                                    #[local_ref]
+                                    latest_release_factory -> adw::PreferencesGroup {},
+                                    adw::PreferencesGroup {
+                                        adw::ButtonRow {
+                                            set_title: &gettext("Version History"),
+                                            set_end_icon_name: Some("right-symbolic"),
+                                            connect_activated[sender] => move |_| {
+                                                sender.input(PkgMsg::ShowReleases);
+                                            }
                                         }
                                     }
-                                }
-                            },
-                        },
-                        adw::Clamp {
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Start,
-                            set_vexpand: true,
-                            set_maximum_size: 1000,
-                            gtk::Box {
-                                set_vexpand: true,
-                                set_valign: gtk::Align::Start,
-                                set_orientation: gtk::Orientation::Vertical,
-                                set_margin_all: 15,
-                                set_spacing: 10,
-                                gtk::Label {
-                                    set_halign: gtk::Align::Start,
-                                    add_css_class: "title-2",
-                                    set_label: &gettext("Links"),
                                 },
+
                                 gtk::Box {
-                                    set_spacing: 12,
-                                    #[local_ref]
-                                    link_factory -> adw::PreferencesGroup {
-                                        set_hexpand: true,
+                                    set_vexpand: true,
+                                    set_valign: gtk::Align::Start,
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_spacing: 10,
+                                    gtk::Label {
+                                        set_halign: gtk::Align::Start,
+                                        add_css_class: "title-2",
+                                        set_label: &gettext("Links"),
+                                    },
+                                    gtk::Box {
+                                        set_spacing: 12,
+                                        #[local_ref]
+                                        link_factory -> adw::PreferencesGroup {
+                                            set_hexpand: true,
+                                        },
                                     },
                                 },
                             },
