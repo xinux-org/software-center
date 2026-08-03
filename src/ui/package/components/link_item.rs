@@ -1,4 +1,5 @@
 use gettextrs::gettext;
+use relm4::adw::gio;
 use relm4::adw::prelude::*;
 use relm4::{factory::*, *};
 
@@ -27,18 +28,12 @@ pub struct LinkItemInit {
     pub link: String,
 }
 
-#[derive(Debug)]
-pub enum LinkItemMsg {
-    Open,
-    Copy,
-}
-
 #[relm4::factory(pub)]
 impl FactoryComponent for LinkItem {
     type CommandOutput = ();
     type Init = LinkItemInit;
     type Input = ();
-    type Output = LinkItemMsg;
+    type Output = ();
     type ParentWidget = adw::PreferencesGroup;
 
     view! {
@@ -89,6 +84,9 @@ impl FactoryComponent for LinkItem {
                     set_margin_end: 4,
                     set_icon_name: Some("external-link-symbolic"),
                 },
+            },
+            connect_activated[link = self.link.clone()] => move |_| {
+                gio::AppInfo::launch_default_for_uri(&link, gio::AppLaunchContext::NONE);
             },
         },
     }
