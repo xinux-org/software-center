@@ -10,7 +10,6 @@ use relm4::{
     gtk::{self},
     prelude::{AsyncComponent, AsyncComponentParts},
 };
-use spdx::Expression;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 use std::{
     collections::{HashMap, HashSet},
@@ -37,9 +36,7 @@ use crate::{
         },
         package::{
             components::package_tile::{PkgTile, PkgTileMsg},
-            package_page::{
-                InstallType, License, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg,
-            },
+            package_page::{InstallType, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg},
         },
         preferences::preferences_page::{PreferencesPageModel, PreferencesPageMsg},
         rebuild::rebuild_model::{RebuildModel, RebuildMsg},
@@ -61,7 +58,7 @@ use crate::{
         cli,
         config::{editconfig, getconfig},
         online::{checkonline, checkonline_async},
-        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
+        packages::AppData,
     },
 };
 
@@ -1094,22 +1091,9 @@ impl AsyncComponent for AppModel {
                 info!("AppMsg::OpenPkg {}", pkg);
                 sender.input(AppMsg::CheckNetwork);
                 if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
-                    let pkgdata: Result<
-                        (
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                        ),
-                        _,
-                    > = sqlx::query_as(
+                    let pkgdata: Result<(String, String, String, String), _> = sqlx::query_as(
                         r#"
-SELECT pname, version, system, description, longdescription, homepage, license, platforms, maintainers
+SELECT pname, version, description, longdescription
 FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1
                     "#,
                     )
@@ -1117,18 +1101,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     .fetch_one(pool)
                     .await;
 
-                    if let Ok((
-                        pname,
-                        version,
-                        system,
-                        description,
-                        longdescription,
-                        homepage,
-                        licensejson,
-                        platformsjson,
-                        maintainersjson,
-                    )) = pkgdata
-                    {
+                    if let Ok((pname, version, description, longdescription)) = pkgdata {
                         let mut name = pname.to_string();
                         let mut summary = if description.is_empty() {
                             None
@@ -1142,9 +1115,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         };
                         let mut icon = None;
                         let mut screenshots = vec![];
-                        let mut licenses = vec![];
-                        let mut platforms = vec![];
-                        let mut maintainers = vec![];
                         let mut launchable = None;
                         let mut url = None;
 
@@ -1204,158 +1174,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             url = data.url.clone();
                         }
 
-                        fn addlicense(pkglicense: &LicenseEnum, licenses: &mut Vec<License>) {
-                            match pkglicense {
-                                LicenseEnum::Single(l) => {
-                                    if let Some(n) = &l.fullname {
-                                        let parsed = if let Some(id) = &l.spdxid {
-                                            if let Ok(Some(license)) =
-                                                Expression::parse(id).map(|p| {
-                                                    p.requirements()
-                                                        .map(|er| er.req.license.id())
-                                                        .collect::<Vec<_>>()[0]
-                                                })
-                                            {
-                                                Some(license)
-                                            } else {
-                                                None
-                                            }
-                                        } else if let Ok(Some(license)) =
-                                            Expression::parse(n).map(|p| {
-                                                p.requirements()
-                                                    .map(|er| er.req.license.id())
-                                                    .collect::<Vec<_>>()[0]
-                                            })
-                                        {
-                                            Some(license)
-                                        } else {
-                                            None
-                                        };
-                                        licenses.push(License {
-                                            free: if let Some(f) = l.free {
-                                                Some(f)
-                                            } else {
-                                                parsed.map(|p| {
-                                                    p.is_osi_approved() || p.is_fsf_free_libre()
-                                                })
-                                            },
-                                            fullname: n.to_string(),
-                                            spdxid: l.spdxid.clone(),
-                                            url: if let Some(u) = &l.url {
-                                                Some(u.to_string())
-                                            } else {
-                                                parsed.map(|p| {
-                                                    format!(
-                                                        "https://spdx.org/licenses/{}.html",
-                                                        p.name
-                                                    )
-                                                })
-                                            },
-                                        })
-                                    } else if let Some(s) = &l.spdxid
-                                        && let Ok(Some(license)) = Expression::parse(s).map(|p| {
-                                            p.requirements()
-                                                .map(|er| er.req.license.id())
-                                                .collect::<Vec<_>>()[0]
-                                        })
-                                    {
-                                        licenses.push(License {
-                                            free: Some(
-                                                license.is_osi_approved()
-                                                    || license.is_fsf_free_libre()
-                                                    || l.free.unwrap_or(false),
-                                            ),
-                                            fullname: license.full_name.to_string(),
-                                            spdxid: Some(license.name.to_string()),
-                                            url: if l.url.is_some() {
-                                                l.url.clone()
-                                            } else {
-                                                Some(format!(
-                                                    "https://spdx.org/licenses/{}.html",
-                                                    license.name
-                                                ))
-                                            },
-                                        })
-                                    }
-                                }
-                                LicenseEnum::List(lst) => {
-                                    for l in lst {
-                                        addlicense(&LicenseEnum::Single(l.clone()), licenses);
-                                    }
-                                }
-                                LicenseEnum::SingleStr(s) => {
-                                    if let Ok(Some(license)) = Expression::parse(s).map(|p| {
-                                        p.requirements()
-                                            .map(|er| er.req.license.id())
-                                            .collect::<Vec<_>>()[0]
-                                    }) {
-                                        licenses.push(License {
-                                            free: Some(
-                                                license.is_osi_approved()
-                                                    || license.is_fsf_free_libre(),
-                                            ),
-                                            fullname: license.full_name.to_string(),
-                                            spdxid: Some(license.name.to_string()),
-                                            url: Some(format!(
-                                                "https://spdx.org/licenses/{}.html",
-                                                license.name
-                                            )),
-                                        })
-                                    }
-                                }
-                                LicenseEnum::VecStr(lst) => {
-                                    for s in lst {
-                                        addlicense(&LicenseEnum::SingleStr(s.clone()), licenses);
-                                    }
-                                }
-                                LicenseEnum::Mixed(v) => {
-                                    for l in v {
-                                        addlicense(l, licenses);
-                                    }
-                                }
-                            }
-                        }
-
-                        if let Ok(pkglicense) = serde_json::from_str::<LicenseEnum>(&licensejson) {
-                            addlicense(&pkglicense, &mut licenses);
-                        }
-
-                        let platformslst = serde_json::from_str::<Platform>(&platformsjson);
-                        if let Ok(p) = platformslst {
-                            match p {
-                                Platform::Single(p) => {
-                                    if !platforms.contains(&p) && p != system {
-                                        platforms.push(p);
-                                    }
-                                }
-                                Platform::List(v) => {
-                                    for p in v {
-                                        if !platforms.contains(&p.to_string()) && p != system {
-                                            platforms.push(p.to_string());
-                                        }
-                                    }
-                                }
-                                Platform::ListList(vv) => {
-                                    for v in vv {
-                                        for p in v {
-                                            if !platforms.contains(&p.to_string()) && p != system {
-                                                platforms.push(p.to_string());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        platforms.sort();
-                        platforms.insert(0, system);
-
-                        if let Ok(m) = serde_json::from_str::<Vec<PkgMaintainer>>(&maintainersjson)
-                        {
-                            for m in m {
-                                maintainers.push(m);
-                            }
-                        }
-
                         let releases = app_data
                             .and_then(|ad| ad.releases.clone())
                             .unwrap_or_else(|| Vec::new());
@@ -1373,14 +1191,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             icon,
                             pkg,
                             screenshots,
-                            homepage: if homepage.is_empty() {
-                                None
-                            } else {
-                                Some(homepage)
-                            },
-                            platforms,
-                            licenses,
-                            maintainers,
                             installeduserpkgs: self.installeduserpkgs.keys().cloned().collect(),
                             installedsystempkgs: self.installedsystempkgs.clone(),
                             launchable,

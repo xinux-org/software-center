@@ -1,4 +1,3 @@
-use adw::gio;
 use adw::prelude::*;
 use anyhow::Result;
 use gettextrs::gettext;
@@ -20,7 +19,6 @@ use std::process::Command;
 use std::{
     env,
     error::Error,
-    fmt::Write,
     fs::{self, File},
     io::BufReader,
     path::Path,
@@ -43,7 +41,7 @@ use crate::{
     },
     utils::{
         packages::{AppRelease, AppUrl, ReleaseType},
-        {online::checkonline, packages::PkgMaintainer, state},
+        {online::checkonline, state},
     },
 };
 
@@ -59,10 +57,6 @@ pub struct PkgModel {
     icon: Option<String>,
     version: Option<String>,
 
-    homepage: Option<String>,
-    licenses: Vec<License>,
-    platforms: Vec<String>,
-    maintainers: Vec<PkgMaintainer>,
     launchable: Option<Launch>,
 
     syspkgtype: SystemPkgs,
@@ -151,10 +145,6 @@ pub struct PkgInitModel {
     pub version: Option<String>,
     pub icon: Option<String>,
     pub screenshots: Vec<String>,
-    pub homepage: Option<String>,
-    pub licenses: Vec<License>,
-    pub platforms: Vec<String>,
-    pub maintainers: Vec<PkgMaintainer>,
     pub launchable: Option<String>,
     pub url: Option<AppUrl>,
     pub releases: Vec<AppRelease>,
@@ -168,7 +158,6 @@ pub enum PkgMsg {
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
     SetCarouselPage(CarouselPage),
-    OpenHomepage,
     Install,
     Remove,
     Cancel,
@@ -632,328 +621,6 @@ impl Component for PkgModel {
                                 },
                             },
                         },
-                        adw::Clamp {
-                            set_vexpand: true,
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Start,
-                            set_maximum_size: 1000,
-                            #[name(btnbox)]
-                            gtk::FlowBox {
-                                add_css_class: "linked",
-                                set_halign: gtk::Align::Fill,
-                                set_hexpand: true,
-                                set_margin_bottom: 10,
-                                set_homogeneous: true,
-                                set_row_spacing: 5,
-                                set_column_spacing: 4,
-                                set_selection_mode: gtk::SelectionMode::None,
-                                set_max_children_per_line: 4,
-                                append = &gtk::FlowBoxChild {
-                                    // set_can_target: false,
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    #[watch]
-                                                    set_css_classes: &[ if model.licenses.iter().any(|x| x.free == Some(false)) { "error" } else if model.licenses.iter().all(|x| x.free == Some(true)) { "success" } else { "warning" } ],
-                                                    set_halign: gtk::Align::Center,
-                                                    #[watch]
-                                                    set_icon_name: if model.licenses.iter().any(|x| x.free == Some(false)) { Some("dialog-warning-symbolic") } else if model.licenses.iter().all(|x| x.free == Some(true)) { Some("emblem-default-symbolic") } else { Some("dialog-question-symbolic") },
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_halign: gtk::Align::Fill,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        #[watch]
-                                                        set_label: &if model.licenses.len() > 1 { gettext("Licenses") } else { gettext("License") }
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_hexpand: true,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: &{
-                                                            let mut s = String::new();
-                                                            for license in model.licenses.iter() {
-                                                                if model.licenses.iter().len() == 1 {
-                                                                    if let Some(id) = &license.spdxid {
-                                                                        s.push_str(id)
-                                                                    } else {
-                                                                        s.push_str(&license.fullname)
-                                                                    }
-                                                                } else if model.licenses.iter().len() == 2 && model.licenses.first() == Some(license) {
-                                                                    if let Some(id) = &license.spdxid {
-                                                                        let _ = write!(s, "{} ", id);
-                                                                    } else {
-                                                                        let _ = write!(s, "{} ", license.fullname);
-                                                                    }
-                                                                } else if Some(license) == model.licenses.iter().last() {
-                                                                    if let Some(id) = &license.spdxid {
-                                                                        let _ = write!(s, "and {}", id);
-                                                                    } else {
-                                                                        let _ = write!(s, "and {}", license.fullname);
-                                                                    }
-                                                                } else if let Some(id) = &license.spdxid {
-                                                                    let _ = write!(s, "{}, ", id);
-                                                                } else {
-                                                                    let _ = write!(s, "{}, ", license.fullname);
-                                                                }
-                                                            }
-                                                            if model.licenses.is_empty() {
-                                                                s.push_str(&gettext("Unknown"));
-                                                            }
-                                                            s.to_string()
-                                                        },
-                                                        #[watch]
-                                                        set_visible: !model.licenses.is_empty()
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    }
-                                },
-                                append = &gtk::FlowBoxChild {
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            connect_clicked[sender] => move |_| {
-                                                sender.input(PkgMsg::OpenHomepage)
-                                            },
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    add_css_class: "accent",
-                                                    set_halign: gtk::Align::Center,
-                                                    set_icon_name: Some("user-home-symbolic"),
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_halign: gtk::Align::Fill,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_hexpand: true,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        set_valign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        set_label: &gettext("Homepage")
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_valign: gtk::Align::Center,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: if let Some(u) = &model.homepage {
-                                                            u
-                                                        } else {
-                                                            ""
-                                                        },
-                                                        #[watch]
-                                                        set_visible: model.homepage.is_some(),
-                                                    }
-                                                }
-
-                                            }
-                                        },
-                                    }
-                                },
-                                append = &gtk::FlowBoxChild {
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    add_css_class: "success",
-                                                    set_icon_name: Some("video-display-symbolic"),
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        set_label: &gettext("Platforms")
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_hexpand: true,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: &{
-                                                            let mut s = String::new();
-                                                            for p in model.platforms.iter() {
-                                                                if model.platforms.iter().len() == 1 {
-                                                                    s.push_str(p);
-                                                                } else if model.platforms.iter().len() == 2 && model.platforms.first() == Some(p) {
-                                                                    let _ = write!(s, "{} ", p);
-                                                                } else if Some(p) == model.platforms.iter().last() {
-                                                                    let _ = write!(s, "and {}", p);
-                                                                } else {
-                                                                    let _ = write!(s, "{}, ", p);
-                                                                }
-                                                            }
-                                                            if model.platforms.is_empty() {
-                                                                s.push_str(&gettext("Unknown"));
-                                                            }
-                                                            s.to_string()
-                                                        },
-                                                        #[watch]
-                                                        set_visible: !model.platforms.is_empty()
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    }
-                                },
-                                append = &gtk::FlowBoxChild {
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    add_css_class: "circular",
-                                                    #[watch]
-                                                    set_css_classes: &[ if model.maintainers.is_empty() { "error" } else { "accent" } ],
-                                                    set_halign: gtk::Align::Center,
-                                                    set_icon_name: Some("system-users-symbolic"),
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        #[watch]
-                                                        set_label: &if model.maintainers.len() > 1 { gettext("Maintainers") } else { gettext("Maintainer") }
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_hexpand: true,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: &{
-                                                            let mut s = String::new();
-                                                            let maintainerlist = model.maintainers.iter().filter(|m| m.name.is_some() || m.github.is_some()).collect::<Vec<_>>();
-                                                            for p in &maintainerlist {
-                                                                if maintainerlist.len() == 1 {
-                                                                    if let Some(n) = &p.name {
-                                                                        s.push_str(n);
-                                                                    } else if let Some(g) = &p.github {
-                                                                        s.push_str(g);
-                                                                    }
-                                                                } else if maintainerlist.len() == 2 && model.maintainers.first() == Some(p) {
-                                                                    if let Some(n) = &p.name {
-                                                                        let _ = write!(s, "{} ", n.as_str());
-                                                                    } else if let Some(g) = &p.github {
-                                                                        s.push_str(g);
-                                                                    }
-                                                                } else if Some(p) == maintainerlist.last() {
-                                                                    if let Some(n) = &p.name {
-                                                                        let _ = write!(s, "and {}", n.as_str());
-                                                                    } else if let Some(g) = &p.github {
-                                                                        let _ = write!(s, "and {}", g.as_str());
-                                                                    }
-                                                                } else if let Some(n) = &p.name {
-                                                                    let _ = write!(s, "{}, ", n.as_str());
-                                                                } else if let Some(g) = &p.github {
-                                                                    let _ = write!(s, "{}, ", g.as_str());
-                                                                }
-                                                            }
-                                                            if model.maintainers.is_empty() {
-                                                                s.push_str(&gettext("Unknown"));
-                                                            }
-                                                            s.to_string()
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    }
-                                },
-                            }
-                        },
                         gtk::Separator {
                             set_vexpand: true,
                             add_css_class: "spacer"
@@ -997,8 +664,6 @@ impl Component for PkgModel {
             description: None,
             version: None,
             icon: None,
-            homepage: None,
-            licenses: vec![],
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
@@ -1012,10 +677,8 @@ impl Component for PkgModel {
 
             releases_dialog: None,
 
-            platforms: vec![],
             carpage: CarouselPage::Single,
             installtype: InstallType::User,
-            maintainers: vec![],
             installed_pkgs: HashSet::new(),
             installeduserpkgs: HashSet::new(),
             installedsystempkgs: HashSet::new(),
@@ -1118,9 +781,6 @@ impl Component for PkgModel {
                 self.set_name(pkgmodel.name);
                 self.set_icon(pkgmodel.icon);
                 self.set_version(pkgmodel.version);
-                self.set_platforms(pkgmodel.platforms);
-                self.set_maintainers(pkgmodel.maintainers);
-                self.set_licenses(pkgmodel.licenses);
                 self.set_pname(pkgmodel.pname);
                 self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
@@ -1198,8 +858,6 @@ impl Component for PkgModel {
                     }
                     self.description = Some(pango.strip_prefix('\n').unwrap_or(&pango).to_string());
                 }
-
-                self.homepage = pkgmodel.homepage;
 
                 if pkgmodel.screenshots.len() <= 1 {
                     self.carpage = CarouselPage::Single;
@@ -1478,14 +1136,6 @@ impl Component for PkgModel {
             }
             PkgMsg::SetCarouselPage(page) => {
                 self.carpage = page;
-            }
-            PkgMsg::OpenHomepage => {
-                if let Some(u) = &self.homepage
-                    && let Err(e) =
-                        gio::AppInfo::launch_default_for_uri(u, gio::AppLaunchContext::NONE)
-                {
-                    warn!("error: {}", e);
-                }
             }
             PkgMsg::Install => {
                 let online = checkonline();
