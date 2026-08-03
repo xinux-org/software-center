@@ -8,6 +8,7 @@ use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::actions::RelmAction;
 use relm4::actions::RelmActionGroup;
+use relm4::component::Connector;
 use relm4::gtk::pango;
 use relm4::{factory::FactoryVecDeque, *};
 use serde::{Deserialize, Serialize};
@@ -29,8 +30,9 @@ use std::{
 use super::components::{
     link_item::{LinkItem, LinkItemInit, LinkType},
     release_item::{ReleaseItem, ReleaseItemInit},
-    releases_dialog::{ReleasesDialog, ReleasesMsg},
+    releases_dialog::ReleasesDialog,
 };
+use crate::ui::package::components::releases_dialog::ReleasesInit;
 use crate::{
     ui::{
         installed::install_worker::{
@@ -74,9 +76,8 @@ pub struct PkgModel {
     #[tracker::no_eq]
     installworker: WorkerController<InstallAsyncHandler>,
 
-    releases: Vec<ReleaseItemInit>,
     #[tracker::no_eq]
-    releases_dialog: Controller<ReleasesDialog>,
+    releases_dialog: Option<Connector<ReleasesDialog>>,
 
     carpage: CarouselPage,
     installtype: InstallType,
@@ -985,8 +986,6 @@ impl Component for PkgModel {
         let config = initparams.config;
         installworker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
 
-        let releases_dialog = ReleasesDialog::builder().launch(()).detach();
-
         let model = PkgModel {
             config,
             name: String::default(),
@@ -1009,8 +1008,7 @@ impl Component for PkgModel {
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
             installworker,
 
-            releases: vec![],
-            releases_dialog,
+            releases_dialog: None,
 
             platforms: vec![],
             carpage: CarouselPage::Single,
@@ -1091,7 +1089,7 @@ impl Component for PkgModel {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         self.reset();
         match msg {
             PkgMsg::UpdateConfig(config) => {
@@ -1334,7 +1332,13 @@ impl Component for PkgModel {
                         }
                     }
 
-                    self.set_releases(releases);
+                    if releases.is_empty() {
+                        self.set_releases_dialog(None);
+                    } else {
+                        self.set_releases_dialog(Some(
+                            ReleasesDialog::builder().launch(ReleasesInit { releases: releases }),
+                        ));
+                    }
                 }
 
                 let mut headers = reqwest::header::HeaderMap::new();
@@ -1675,7 +1679,8 @@ impl Component for PkgModel {
             }
             PkgMsg::ShowReleases => {
                 self.releases_dialog
-                    .emit(ReleasesMsg::Show(self.releases.clone()));
+                    .as_ref()
+                    .map(|dialog| dialog.widget().present(Some(root)));
             }
             PkgMsg::Noop => (),
         }
