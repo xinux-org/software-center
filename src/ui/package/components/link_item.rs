@@ -1,7 +1,10 @@
 use gettextrs::gettext;
-use relm4::adw::gio;
-use relm4::adw::prelude::*;
-use relm4::{factory::*, *};
+use relm4::{
+    FactorySender,
+    adw::{self, gio, prelude::*},
+    gtk,
+    prelude::*,
+};
 
 #[derive(Debug)]
 pub struct LinkItem {

@@ -1,6 +1,10 @@
-use adw::prelude::*;
+use relm4::{
+    adw::{self, prelude::*},
+    factory::FactoryVecDeque,
+    prelude::*,
+};
+
 use gettextrs::gettext;
-use relm4::{factory::FactoryVecDeque, *};
 
 use super::release_item::{ReleaseItem, ReleaseItemInit};
 

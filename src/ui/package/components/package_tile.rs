@@ -1,6 +1,8 @@
-use relm4::adw::prelude::*;
-use relm4::gtk::pango;
-use relm4::{factory::*, *};
+use relm4::{
+    adw::prelude::*,
+    factory::*,
+    gtk::{self, pango},
+};
 use std::path::Path;
 
 use crate::APPINFO;
