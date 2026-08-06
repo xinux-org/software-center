@@ -28,12 +28,17 @@ pub struct LinkItemInit {
     pub link: String,
 }
 
+#[derive(Debug)]
+pub enum LinkItemMsg {
+    ShowToast(String),
+}
+
 #[relm4::factory(pub)]
 impl FactoryComponent for LinkItem {
     type CommandOutput = ();
     type Init = LinkItemInit;
     type Input = ();
-    type Output = ();
+    type Output = LinkItemMsg;
     type ParentWidget = adw::PreferencesGroup;
 
     view! {
@@ -71,8 +76,9 @@ impl FactoryComponent for LinkItem {
                 gtk::Button {
                     add_css_class: "flat",
                     set_icon_name: "copy-symbolic",
-                    connect_clicked[link = self.link.to_string()] => move |btn| {
+                    connect_clicked[sender, link = self.link.to_string()] => move |btn| {
                         btn.clipboard().set_text(&link);
+                        sender.output(LinkItemMsg::ShowToast(gettext("Copied!")));
                     },
                 },
                 gtk::Separator {
