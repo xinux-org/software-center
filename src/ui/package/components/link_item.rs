@@ -44,30 +44,10 @@ impl FactoryComponent for LinkItem {
     view! {
         adw::ActionRow {
             set_activatable: true,
-            set_title: &match self.link_type {
-                LinkType::Website => gettext("Project Website"),
-                LinkType::IssueTracker => gettext("Issue Tracker"),
-                LinkType::FAQ => gettext("FAQ"),
-                LinkType::Help => gettext("Help"),
-                LinkType::Donate => gettext("Donate"),
-                LinkType::Translate => gettext("Translate"),
-                LinkType::Contact => gettext("Contact"),
-                LinkType::Source => gettext("Source Code"),
-                LinkType::Contribute => gettext("Contribute"),
-            },
+            set_title: &self.link_type.to_text(),
             set_subtitle: &self.link,
             add_prefix = &gtk::Image {
-                set_icon_name: match self.link_type {
-                    LinkType::Website => Some("globe-symbolic"),
-                    LinkType::IssueTracker => Some("sad-computer-symbolic"),
-                    LinkType::FAQ => Some("question-round-outline-symbolic"),
-                    LinkType::Help => Some("rescue-symbolic"),
-                    LinkType::Donate => Some("heart-filled-symbolic"),
-                    LinkType::Translate => Some("keyboard-layout-symbolic"),
-                    LinkType::Contact => Some("mail-send-symbolic"),
-                    LinkType::Source => Some("code-symbolic"),
-                    LinkType::Contribute => Some("people-symbolic"),
-                },
+                set_icon_name: self.link_type.to_icon(),
             },
             add_suffix = &gtk::Box {
                 set_halign: gtk::Align::End,
@@ -101,6 +81,36 @@ impl FactoryComponent for LinkItem {
         Self {
             link: parent.link,
             link_type: parent.link_type,
+        }
+    }
+}
+
+impl LinkType {
+    fn to_text(&self) -> String {
+        match self {
+            LinkType::Website => gettext("Project Website"),
+            LinkType::IssueTracker => gettext("Issue Tracker"),
+            LinkType::FAQ => gettext("FAQ"),
+            LinkType::Help => gettext("Help"),
+            LinkType::Donate => gettext("Donate"),
+            LinkType::Translate => gettext("Translate"),
+            LinkType::Contact => gettext("Contact"),
+            LinkType::Source => gettext("Source Code"),
+            LinkType::Contribute => gettext("Contribute"),
+        }
+    }
+
+    fn to_icon(&self) -> Option<&str> {
+        match self {
+            LinkType::Website => Some("globe-symbolic"),
+            LinkType::IssueTracker => Some("sad-computer-symbolic"),
+            LinkType::FAQ => Some("question-round-outline-symbolic"),
+            LinkType::Help => Some("rescue-symbolic"),
+            LinkType::Donate => Some("heart-filled-symbolic"),
+            LinkType::Translate => Some("keyboard-layout-symbolic"),
+            LinkType::Contact => Some("mail-send-symbolic"),
+            LinkType::Source => Some("code-symbolic"),
+            LinkType::Contribute => Some("people-symbolic"),
         }
     }
 }
