@@ -1,3 +1,4 @@
+use enum_assoc::Assoc;
 use gettextrs::gettext;
 use relm4::adw::gio;
 use relm4::adw::prelude::*;
@@ -9,16 +10,27 @@ pub struct LinkItem {
     link: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Assoc)]
+#[func(pub fn title(&self) -> String)]
+#[func(pub const fn icon(&self) -> Option<&'static str>)]
 pub enum LinkType {
+    #[assoc(title = gettext("Project Website"), icon = "globe-symbolic")]
     Website,
+    #[assoc(title = gettext("Issue Tracker"), icon = "sad-computer-symbolic")]
     IssueTracker,
+    #[assoc(title = gettext("FAQ"), icon = "question-round-outline-symbolic")]
     FAQ,
+    #[assoc(title = gettext("Help"), icon = "rescue-symbolic")]
     Help,
+    #[assoc(title = gettext("Donate"), icon = "heart-filled-symbolic")]
     Donate,
+    #[assoc(title = gettext("Translate"), icon = "keyboard-layout-symbolic")]
     Translate,
+    #[assoc(title = gettext("Contact"), icon = "mail-send-symbolic")]
     Contact,
+    #[assoc(title = gettext("Source Code"), icon = "code-symbolic")]
     Source,
+    #[assoc(title = gettext("Contribute"), icon = "people-symbolic")]
     Contribute,
 }
 
@@ -44,30 +56,10 @@ impl FactoryComponent for LinkItem {
     view! {
         adw::ActionRow {
             set_activatable: true,
-            set_title: &match self.link_type {
-                LinkType::Website => gettext("Project Website"),
-                LinkType::IssueTracker => gettext("Issue Tracker"),
-                LinkType::FAQ => gettext("FAQ"),
-                LinkType::Help => gettext("Help"),
-                LinkType::Donate => gettext("Donate"),
-                LinkType::Translate => gettext("Translate"),
-                LinkType::Contact => gettext("Contact"),
-                LinkType::Source => gettext("Source Code"),
-                LinkType::Contribute => gettext("Contribute"),
-            },
+            set_title: &self.link_type.title(),
             set_subtitle: &self.link,
             add_prefix = &gtk::Image {
-                set_icon_name: match self.link_type {
-                    LinkType::Website => Some("globe-symbolic"),
-                    LinkType::IssueTracker => Some("sad-computer-symbolic"),
-                    LinkType::FAQ => Some("question-round-outline-symbolic"),
-                    LinkType::Help => Some("rescue-symbolic"),
-                    LinkType::Donate => Some("heart-filled-symbolic"),
-                    LinkType::Translate => Some("keyboard-layout-symbolic"),
-                    LinkType::Contact => Some("mail-send-symbolic"),
-                    LinkType::Source => Some("code-symbolic"),
-                    LinkType::Contribute => Some("people-symbolic"),
-                },
+                set_icon_name: self.link_type.icon(),
             },
             add_suffix = &gtk::Box {
                 set_halign: gtk::Align::End,
