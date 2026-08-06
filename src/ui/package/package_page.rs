@@ -1,49 +1,50 @@
-use adw::prelude::*;
 use anyhow::Result;
 use gettextrs::gettext;
 use html2pango;
 use image::{ImageFormat, imageops::FilterType};
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
-use relm4::actions::RelmAction;
-use relm4::actions::RelmActionGroup;
-use relm4::component::Connector;
-use relm4::gtk::pango;
-use relm4::{factory::FactoryVecDeque, *};
+use relm4::{
+    WorkerController,
+    actions::{RelmAction, RelmActionGroup},
+    adw::{self, prelude::*},
+    component::Connector,
+    factory::FactoryVecDeque,
+    gtk::{self, pango},
+    prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use sha256::digest;
-use std::collections::HashSet;
-use std::convert::identity;
-use std::io::Cursor;
-use std::process::Command;
 use std::{
+    collections::HashSet,
+    convert::identity,
     env,
     error::Error,
     fs::{self, File},
-    io::BufReader,
+    io::{BufReader, Cursor},
     path::Path,
+    process::Command,
     time::Duration,
 };
 
-use super::components::{
-    link_item::{LinkItem, LinkItemInit, LinkType},
-    release_item::{ReleaseItem, ReleaseItemInit},
-    releases_dialog::ReleasesDialog,
-};
-use crate::ui::package::components::link_item::LinkItemMsg;
-use crate::ui::package::components::releases_dialog::ReleasesInit;
 use crate::{
     ui::{
         installed::install_worker::{
             InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
         },
-        package::components::screenshot::ScreenshotItem,
         window::{AppMsg, SystemPkgs},
     },
     utils::{
         packages::{AppRelease, AppUrl, ReleaseType},
         {online::checkonline, state},
     },
+};
+
+use super::components::{
+    link_item::{LinkItem, LinkItemInit, LinkItemMsg, LinkType},
+    release_item::{ReleaseItem, ReleaseItemInit},
+    releases_dialog::{ReleasesDialog, ReleasesInit},
+    screenshot::ScreenshotItem,
 };
 
 #[tracker::track]
@@ -609,6 +610,8 @@ impl Component for PkgModel {
                                         set_valign: gtk::Align::Start,
                                         set_orientation: gtk::Orientation::Vertical,
                                         set_spacing: 10,
+                                        #[watch]
+                                        set_visible: !model.links.is_empty(),
                                         gtk::Label {
                                             set_halign: gtk::Align::Start,
                                             add_css_class: "title-2",

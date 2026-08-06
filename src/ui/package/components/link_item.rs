@@ -1,8 +1,11 @@
 use enum_assoc::Assoc;
 use gettextrs::gettext;
-use relm4::adw::gio;
-use relm4::adw::prelude::*;
-use relm4::{factory::*, *};
+use relm4::{
+    FactorySender,
+    adw::{self, gio, prelude::*},
+    gtk,
+    prelude::*,
+};
 
 #[derive(Debug)]
 pub struct LinkItem {
@@ -93,6 +96,36 @@ impl FactoryComponent for LinkItem {
         Self {
             link: parent.link,
             link_type: parent.link_type,
+        }
+    }
+}
+
+impl LinkType {
+    fn to_text(&self) -> String {
+        match self {
+            LinkType::Website => gettext("Project Website"),
+            LinkType::IssueTracker => gettext("Issue Tracker"),
+            LinkType::FAQ => gettext("FAQ"),
+            LinkType::Help => gettext("Help"),
+            LinkType::Donate => gettext("Donate"),
+            LinkType::Translate => gettext("Translate"),
+            LinkType::Contact => gettext("Contact"),
+            LinkType::Source => gettext("Source Code"),
+            LinkType::Contribute => gettext("Contribute"),
+        }
+    }
+
+    fn to_icon(&self) -> Option<&str> {
+        match self {
+            LinkType::Website => Some("globe-symbolic"),
+            LinkType::IssueTracker => Some("sad-computer-symbolic"),
+            LinkType::FAQ => Some("question-round-outline-symbolic"),
+            LinkType::Help => Some("rescue-symbolic"),
+            LinkType::Donate => Some("heart-filled-symbolic"),
+            LinkType::Translate => Some("keyboard-layout-symbolic"),
+            LinkType::Contact => Some("mail-send-symbolic"),
+            LinkType::Source => Some("code-symbolic"),
+            LinkType::Contribute => Some("people-symbolic"),
         }
     }
 }

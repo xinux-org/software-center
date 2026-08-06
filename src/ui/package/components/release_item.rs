@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
 use gettextrs::{gettext, ngettext};
-use relm4::adw::prelude::*;
-use relm4::{factory::*, *};
+use relm4::{
+    adw::{self, prelude::*},
+    gtk,
+    prelude::*,
+};
 
 #[derive(Debug)]
 pub struct ReleaseItem {
