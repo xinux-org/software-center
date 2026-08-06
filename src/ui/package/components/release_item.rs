@@ -69,6 +69,7 @@ impl FactoryComponent for ReleaseItem {
                     set_valign: gtk::Align::Start,
                     set_halign: gtk::Align::Start,
                     set_wrap: true,
+                    set_selectable: true,
                     #[watch]
                     set_css_classes: if self.description.as_ref().map(|d| !d.is_empty()).unwrap_or(false) {&["body"]} else {&["body", "dimmed"]},
                     #[watch]

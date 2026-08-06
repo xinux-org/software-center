@@ -555,6 +555,7 @@ impl Component for PkgModel {
                                         add_css_class: "title-2",
                                         set_valign: gtk::Align::Start,
                                         set_halign: gtk::Align::Start,
+                                        set_selectable: true,
                                         #[watch]
                                         set_label: if let Some(s) = model.summary.as_ref() { s } else { "" },
                                         #[watch]
@@ -565,6 +566,7 @@ impl Component for PkgModel {
                                     gtk::Label {
                                         set_valign: gtk::Align::Start,
                                         set_halign: gtk::Align::Start,
+                                        set_selectable: true,
                                         #[watch]
                                         set_markup: {
                                             if let Some(d) = model.description.as_ref() {
