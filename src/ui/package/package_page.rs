@@ -609,6 +609,8 @@ impl Component for PkgModel {
                                         set_valign: gtk::Align::Start,
                                         set_orientation: gtk::Orientation::Vertical,
                                         set_spacing: 10,
+                                        #[watch]
+                                        set_visible: !model.links.is_empty(),
                                         gtk::Label {
                                             set_halign: gtk::Align::Start,
                                             add_css_class: "title-2",
