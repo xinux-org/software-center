@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-23 14:01+0500\n"
+"POT-Creation-Date: 2026-08-07 11:06+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,252 +17,90 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/ui/unavailabledialog.rs:39
-msgid "Some packages are unavailable!"
-msgstr ""
-
-#: src/ui/unavailabledialog.rs:40
-msgid "If you continue this update, some packages will be removed"
-msgstr ""
-
-#: src/ui/unavailabledialog.rs:48
-msgid "User Packages"
-msgstr ""
-
-#: src/ui/unavailabledialog.rs:58
-msgid "System Packages"
-msgstr ""
-
-#: src/ui/unavailabledialog.rs:66 src/ui/pkgpage.rs:338 src/ui/pkgpage.rs:442
-msgid "Cancel"
-msgstr ""
-
-#: src/ui/unavailabledialog.rs:67 src/ui/welcome.rs:165
-msgid "Continue"
-msgstr ""
-
-#: src/ui/preferencespage.rs:51 src/ui/welcome.rs:75
-msgid "Configuration file"
-msgstr ""
-
-#: src/ui/preferencespage.rs:76 src/ui/preferencespage.rs:132
-#: src/ui/welcome.rs:91 src/ui/welcome.rs:96 src/ui/welcome.rs:137
-#: src/ui/welcome.rs:142
-msgid "(None)"
-msgstr ""
-
-#: src/ui/preferencespage.rs:92
-msgid "Use nix flakes"
-msgstr ""
-
-#: src/ui/preferencespage.rs:110 src/ui/welcome.rs:120
-msgid "Flake file"
-msgstr ""
-
-#: src/ui/preferencespage.rs:151
-msgid "Flake arguments (--flake path/to/flake.nix#ENTRY)"
-msgstr ""
-
-#: src/ui/installedpage.rs:55 src/ui/updatepage.rs:132 src/ui/pkgpage.rs:216
-#: src/ui/pkgpage.rs:995
-msgid "User (nix-env)"
-msgstr ""
-
-#: src/ui/installedpage.rs:56 src/ui/updatepage.rs:133 src/ui/pkgpage.rs:222
-#: src/ui/pkgpage.rs:999
-msgid "User (nix profile)"
-msgstr ""
-
-#: src/ui/installedpage.rs:78 src/ui/updatepage.rs:168 src/ui/pkgpage.rs:217
-#: src/ui/pkgpage.rs:223 src/ui/pkgpage.rs:996 src/ui/pkgpage.rs:1000
-msgid "System (configuration.nix)"
-msgstr ""
-
-#: src/ui/categorypage.rs:57 src/ui/categories.rs:67
-msgid "Audio"
-msgstr ""
-
-#: src/ui/categorypage.rs:58 src/ui/categories.rs:68
-msgid "Development"
-msgstr ""
-
-#: src/ui/categorypage.rs:59 src/ui/categories.rs:69
-msgid "Games"
-msgstr ""
-
-#: src/ui/categorypage.rs:60 src/ui/categories.rs:70
-msgid "Graphics"
-msgstr ""
-
-#: src/ui/categorypage.rs:61 src/ui/categories.rs:71
-msgid "Web"
-msgstr ""
-
-#: src/ui/categorypage.rs:62 src/ui/categories.rs:72
-msgid "Video"
-msgstr ""
-
-#: src/ui/categorypage.rs:95 src/ui/window.rs:348
-msgid "Recommended"
-msgstr ""
-
-#: src/ui/categorypage.rs:113
-msgid "Other"
-msgstr ""
-
-#: src/ui/updatepage.rs:83
-msgid "No internet connection"
-msgstr ""
-
-#: src/ui/updatepage.rs:84
-msgid "Please connect to the internet to update your system"
-msgstr ""
-
-#: src/ui/updatepage.rs:90
-msgid "Refresh"
-msgstr ""
-
-#: src/ui/updatepage.rs:110 src/ui/window.rs:635
-msgid "Updates"
-msgstr ""
-
-#: src/ui/updatepage.rs:117
-msgid "Update Everything"
-msgstr ""
-
-#: src/ui/updatepage.rs:141
-msgid "Update All"
-msgstr ""
-
-#: src/ui/updatepage.rs:175
-msgid "Update"
-msgstr ""
-
-#: src/ui/updatepage.rs:210
-msgid "Everything is up to date!"
-msgstr ""
-
-#: src/ui/welcome.rs:62
-msgid "Welcome the Nix Software Center!"
-msgstr ""
-
-#: src/ui/welcome.rs:67
-msgid ""
-"If your configuration file is not in the default location, you can change it "
-"here."
-msgstr ""
-
-#: src/ui/welcome.rs:121
-msgid ""
-"If you are using flakes, you can specify the path to your flake.nix file "
-"here."
-msgstr ""
-
-#: src/ui/rebuild.rs:74
+#: src/ui/rebuild/rebuild_model.rs:74
 msgid "Building..."
 msgstr ""
 
-#: src/ui/rebuild.rs:88
+#: src/ui/rebuild/rebuild_model.rs:88
 msgid "Done!"
 msgstr ""
 
-#: src/ui/rebuild.rs:92
+#: src/ui/rebuild/rebuild_model.rs:92
 msgid "Rebuild successful!"
 msgstr ""
 
-#: src/ui/rebuild.rs:106
+#: src/ui/rebuild/rebuild_model.rs:106
 msgid "Error!"
 msgstr ""
 
-#: src/ui/rebuild.rs:110
+#: src/ui/rebuild/rebuild_model.rs:110
 msgid "Rebuild failed! See below for error message."
 msgstr ""
 
-#: src/ui/rebuild.rs:149
+#: src/ui/rebuild/rebuild_model.rs:148
 msgid "Close"
 msgstr ""
 
-#: src/ui/pkgpage.rs:309 src/ui/pkgpage.rs:826 src/ui/pkgpage.rs:893
-#: src/ui/pkgpage.rs:972
-msgid "Unknown"
-msgstr ""
-
-#: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465
-msgid "Open"
-msgstr ""
-
-#: src/ui/pkgpage.rs:357 src/ui/pkgpage.rs:465 src/ui/window.rs:634
-msgid "Installed"
-msgstr ""
-
-#: src/ui/pkgpage.rs:394 src/ui/pkgpage.rs:502
-msgid "Offline"
-msgstr ""
-
-#: src/ui/pkgpage.rs:412 src/ui/pkgpage.rs:520
-msgid "Install"
-msgstr ""
-
-#: src/ui/pkgpage.rs:732
-msgid "Homepage"
-msgstr ""
-
-#: src/ui/pkgpage.rs:785
-msgid "Licenses"
-msgstr ""
-
-#: src/ui/pkgpage.rs:785
-msgid "License"
-msgstr ""
-
-#: src/ui/pkgpage.rs:866
-msgid "Platforms"
-msgstr ""
-
-#: src/ui/pkgpage.rs:930
-msgid "Maintainers"
-msgstr ""
-
-#: src/ui/pkgpage.rs:930
-msgid "Maintainer"
-msgstr ""
-
-#: src/ui/pkgpage.rs:1003
-msgid "Run without installing"
-msgstr ""
-
-#: src/ui/pkgpage.rs:1004
-msgid "Open interactive shell"
-msgstr ""
-
-#: src/ui/window.rs:221 src/ui/window.rs:273
+#: src/ui/window.rs:264
 msgid "Nix Software Center"
 msgstr ""
 
-#: src/ui/window.rs:237
-msgid "Loading..."
+#: src/ui/window.rs:281
+msgid "Refreshing..."
 msgstr ""
 
-#: src/ui/window.rs:330
+#: src/ui/window.rs:364
 msgid "Categories"
 msgstr ""
 
-#: src/ui/window.rs:386
+#: src/ui/window.rs:387
+msgid "Recommended"
+msgstr ""
+
+#: src/ui/window.rs:408
+msgid "Development"
+msgstr ""
+
+#: src/ui/window.rs:429
+msgid "Game"
+msgstr ""
+
+#: src/ui/window.rs:450
+msgid "Graphic"
+msgstr ""
+
+#: src/ui/window.rs:471
+msgid "Web"
+msgstr ""
+
+#: src/ui/window.rs:492
+msgid "Video"
+msgstr ""
+
+#: src/ui/window.rs:531
 msgid "Preferences"
 msgstr ""
 
-#: src/ui/window.rs:387
+#: src/ui/window.rs:532
 msgid "About"
 msgstr ""
 
-#: src/ui/window.rs:633
+#: src/ui/window.rs:769
 msgid "Explore"
 msgstr ""
 
-#: src/ui/window.rs:1620 src/ui/window.rs:1641
+#: src/ui/window.rs:770
+msgid "Installed"
+msgstr ""
+
+#: src/ui/window.rs:771 src/ui/window.rs:1459
+msgid "Updates"
+msgstr ""
+
+#: src/ui/window.rs:1430
 msgid "NixOS System"
 msgstr ""
 
-#: src/ui/window.rs:1624 src/ui/window.rs:1645
+#: src/ui/window.rs:1434
 msgid "NixOS internal packages and modules"
 msgstr ""
