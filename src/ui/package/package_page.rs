@@ -59,6 +59,11 @@ pub struct PkgModel {
     icon: Option<String>,
     version: Option<String>,
 
+    broken: bool,
+    insecure: bool,
+    unsupported: bool,
+    unfree: bool,
+
     launchable: Option<Launch>,
 
     syspkgtype: SystemPkgs,
@@ -152,6 +157,10 @@ pub struct PkgInitModel {
     pub launchable: Option<String>,
     pub url: Option<AppUrl>,
     pub releases: Vec<AppRelease>,
+    pub broken: bool,
+    pub insecure: bool,
+    pub unsupported: bool,
+    pub unfree: bool,
 }
 
 #[derive(Debug)]
@@ -239,205 +248,338 @@ impl Component for PkgModel {
                                 set_maximum_size: 1000,
                                 set_halign: gtk::Align::Fill,
                                 set_valign: gtk::Align::Start,
-                                // Details box
+
                                 gtk::Box {
-                                    set_orientation: gtk::Orientation::Horizontal,
-                                    set_spacing: 10,
-                                    set_margin_all: 15,
-                                    append = if model.icon.is_some() {
-                                        gtk::Image {
-                                            add_css_class: "icon-dropshadow",
-                                            set_halign: gtk::Align::Start,
-                                            #[watch]
-                                            set_from_file: model.icon.clone(),
-                                            set_pixel_size: 128,
-                                        }
-                                    } else {
-                                        gtk::Image {
-                                            add_css_class: "icon-dropshadow",
-                                            set_halign: gtk::Align::Start,
-                                            set_icon_name: Some("package-x-generic"),
-                                            set_pixel_size: 128,
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_margin_bottom: 20,
+                                    // Details box
+                                    gtk::Box {
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_spacing: 10,
+                                        set_margin_all: 15,
+                                        append = if model.icon.is_some() {
+                                            gtk::Image {
+                                                add_css_class: "icon-dropshadow",
+                                                set_halign: gtk::Align::Start,
+                                                #[watch]
+                                                set_from_file: model.icon.clone(),
+                                                set_pixel_size: 128,
+                                            }
+                                        } else {
+                                            gtk::Image {
+                                                add_css_class: "icon-dropshadow",
+                                                set_halign: gtk::Align::Start,
+                                                set_icon_name: Some("package-x-generic"),
+                                                set_pixel_size: 128,
+                                            }
+                                        },
+                                        gtk::FlowBox {
+                                            set_halign: gtk::Align::Fill,
+                                            set_orientation: gtk::Orientation::Horizontal,
+                                            set_min_children_per_line: 1,
+                                            set_max_children_per_line: 2,
+                                            set_selection_mode: gtk::SelectionMode::None,
+                                            // Details
+                                            append = &gtk::FlowBoxChild {
+                                                set_can_target: false,
+                                                gtk::Box {
+                                                    set_halign: gtk::Align::Fill,
+                                                    set_valign: gtk::Align::Center,
+                                                    set_hexpand: true,
+                                                    set_orientation: gtk::Orientation::Vertical,
+                                                    set_spacing: 6,
+                                                    gtk::Label {
+                                                        add_css_class: "title-1",
+                                                        set_halign: gtk::Align::Start,
+                                                        set_wrap: true,
+                                                        set_wrap_mode: pango::WrapMode::WordChar,
+                                                        set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                        #[watch]
+                                                        set_label: &model.name,
+                                                    },
+                                                    gtk::Label {
+                                                        add_css_class: "dim-label",
+                                                        add_css_class: "heading",
+                                                        set_halign: gtk::Align::Start,
+                                                        set_wrap: true,
+                                                        set_wrap_mode: pango::WrapMode::WordChar,
+                                                        set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                        #[watch]
+                                                        set_label: &model.pkg,
+                                                    },
+                                                    gtk::Label {
+                                                        add_css_class: "dim-label",
+                                                        set_halign: gtk::Align::Start,
+                                                        set_wrap: true,
+                                                        set_wrap_mode: pango::WrapMode::WordChar,
+                                                        set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                        #[watch]
+                                                        set_label: &model.version.clone().unwrap_or_else(||  gettext("Unknown").to_string()),
+                                                    },
+                                                },
+                                            },
+
+                                            // Install options
+                                            append = &gtk::FlowBoxChild {
+                                                set_halign: gtk::Align::End,
+                                                gtk::Box {
+                                                    set_halign: gtk::Align::End,
+                                                    set_spacing: 5,
+                                                    #[name(install_stack)]
+                                                    if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
+                                                        gtk::Box {
+                                                            set_halign: gtk::Align::End,
+                                                            set_valign: gtk::Align::Center,
+                                                            set_spacing: 10,
+                                                            gtk::Button {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                add_css_class: "pill",
+                                                                set_width_request: 105,
+                                                                set_sensitive: false,
+                                                                gtk::Box {
+                                                                    set_halign: gtk::Align::Center,
+                                                                    set_spacing: 10,
+                                                                    gtk::Spinner {
+                                                                        set_spinning: true,
+                                                                        set_size_request: (24, 24),
+                                                                        set_can_focus: false,
+                                                                    },
+                                                                    gtk::Label {
+                                                                        set_label: &gettext("Installing..."),
+                                                                    },
+                                                                }
+                                                            },
+                                                            gtk::Button {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Fill,
+                                                                add_css_class: "destructive-action",
+                                                                add_css_class: "circular",
+                                                                set_icon_name: "process-stop-symbolic",
+                                                                set_width_request: 44,
+                                                                connect_clicked[sender] => move |_| {
+                                                                    sender.input(PkgMsg::Cancel)
+                                                                },
+                                                            }
+                                                        }
+                                                    } else if model.installed_pkgs.contains(&model.pkg) {
+                                                        gtk::Box {
+                                                            set_halign: gtk::Align::End,
+                                                            set_valign: gtk::Align::Center,
+                                                            set_spacing: 10,
+                                                            gtk::Button {
+                                                                #[watch]
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                add_css_class: "pill",
+                                                                set_width_request: 105,
+                                                                #[watch]
+                                                                set_label: &if model.launchable.is_some() { gettext("Open") } else { gettext("Installed") },
+                                                                #[watch]
+                                                                set_sensitive: model.launchable.is_some(),
+                                                                connect_clicked[sender] => move |_| {
+                                                                    sender.input(PkgMsg::Launch)
+                                                                }
+                                                            },
+                                                            gtk::Button {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Fill,
+                                                                add_css_class: "destructive-action",
+                                                                add_css_class: "circular",
+                                                                set_icon_name: "user-trash-symbolic",
+                                                                set_width_request: 44,
+                                                                connect_clicked[sender] => move |_| {
+                                                                    sender.input(PkgMsg::Remove)
+                                                                }
+                                                            }
+                                                        }
+                                                    } else if !model.online {
+                                                        gtk::Box {
+                                                            set_spacing: 10,
+                                                            set_halign: gtk::Align::End,
+                                                            set_valign: gtk::Align::Center,
+                                                            gtk::Button {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                add_css_class: "error",
+                                                                add_css_class: "pill",
+                                                                set_width_request: 105,
+                                                                set_label: &gettext("Offline"),
+                                                                set_can_target: false,
+                                                                set_can_focus: false,
+                                                            },
+                                                            gtk::Button {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Fill,
+                                                                add_css_class: "circular",
+                                                                set_icon_name: "nsc-refresh-symbolic",
+                                                                set_width_request: 44,
+                                                                connect_clicked[sender] => move |_| {
+                                                                    let _ = sender.output(AppMsg::CheckNetwork);
+                                                                }
+                                                            }
+                                                        }
+                                                    } else {
+                                                        gtk::Box {
+                                                            set_halign: gtk::Align::End,
+                                                            set_valign: gtk::Align::Center,
+                                                            set_spacing: 10,
+                                                            gtk::Button {
+                                                                #[watch]
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                add_css_class: "suggested-action",
+                                                                add_css_class: "pill",
+                                                                set_width_request: 105,
+                                                                set_label: &gettext("Install"),
+                                                                connect_clicked[sender] => move |_| {
+                                                                    sender.input(PkgMsg::Install);
+                                                                },
+                                                            },
+                                                            gtk::MenuButton {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Fill,
+                                                                add_css_class: "circular",
+                                                                set_icon_name: "view-more-symbolic",
+                                                                set_width_request: 44,
+                                                                #[wrap(Some)]
+                                                                set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {},
+                                                            },
+                                                        }
+                                                    },
+                                                }
+                                            }
                                         }
                                     },
-                                    gtk::FlowBox {
-                                        set_halign: gtk::Align::Fill,
-                                        set_orientation: gtk::Orientation::Horizontal,
-                                        set_min_children_per_line: 1,
-                                        set_max_children_per_line: 2,
-                                        set_selection_mode: gtk::SelectionMode::None,
-                                        // Details
-                                        append = &gtk::FlowBoxChild {
-                                            set_can_target: false,
+
+                                    gtk::ScrolledWindow {
+                                        set_vscrollbar_policy: gtk::PolicyType::Never,
+                                        gtk::Box {
+                                            set_spacing: 12,
+                                            set_homogeneous: true,
                                             gtk::Box {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_hexpand: true,
                                                 set_orientation: gtk::Orientation::Vertical,
-                                                set_spacing: 6,
-                                                gtk::Label {
-                                                    add_css_class: "title-1",
-                                                    set_halign: gtk::Align::Start,
-                                                    set_wrap: true,
-                                                    set_wrap_mode: pango::WrapMode::WordChar,
-                                                    set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                set_spacing: 8,
+                                                gtk::Button {
+                                                    set_halign: gtk::Align::Center,
+                                                    add_css_class: "round",
                                                     #[watch]
-                                                    set_label: &model.name,
+                                                    set_class_active: ("warning", model.unfree),
+                                                    gtk::Box {
+                                                        set_spacing: 6,
+                                                        set_margin_horizontal: 2,
+                                                        set_halign: gtk::Align::Center,
+                                                        gtk::Image {
+                                                            set_icon_name: Some("people-symbolic"),
+                                                            #[watch]
+                                                            set_visible: !model.unfree,
+                                                        },
+                                                        gtk::Image {
+                                                            set_icon_name: Some("license-symbolic"),
+                                                        },
+                                                        gtk::Image {
+                                                            set_icon_name: Some("nsc-proprietary-code-symbolic"),
+                                                            #[watch]
+                                                            set_visible: model.unfree,
+                                                        },
+                                                    },
                                                 },
                                                 gtk::Label {
-                                                    add_css_class: "dim-label",
-                                                    add_css_class: "heading",
-                                                    set_halign: gtk::Align::Start,
-                                                    set_wrap: true,
-                                                    set_wrap_mode: pango::WrapMode::WordChar,
-                                                    set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
                                                     #[watch]
-                                                    set_label: &model.pkg,
+                                                    set_label: &if model.unfree {gettext("Proprietary")} else {gettext("Free Software")},
+                                                },
+                                            },
+                                            gtk::Box {
+                                                set_orientation: gtk::Orientation::Vertical,
+                                                set_spacing: 8,
+                                                gtk::Button {
+                                                    set_halign: gtk::Align::Center,
+                                                    add_css_class: "round",
+                                                    #[watch]
+                                                    set_class_active: ("error", model.broken),
+                                                    gtk::Box {
+                                                        set_spacing: 6,
+                                                        set_margin_horizontal: 2,
+                                                        set_halign: gtk::Align::Center,
+                                                        gtk::Image {
+                                                            set_icon_name: Some("issue-symbolic"),
+                                                            #[watch]
+                                                            set_visible: !model.broken,
+                                                        },
+                                                        gtk::Image {
+                                                            set_icon_name: Some("issue-symbolic"),
+                                                            #[watch]
+                                                            set_visible: model.broken,
+                                                        },
+                                                    },
                                                 },
                                                 gtk::Label {
-                                                    add_css_class: "dim-label",
-                                                    set_halign: gtk::Align::Start,
-                                                    set_wrap: true,
-                                                    set_wrap_mode: pango::WrapMode::WordChar,
-                                                    set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
                                                     #[watch]
-                                                    set_label: &model.version.clone().unwrap_or_else(||  gettext("Unknown").to_string()),
+                                                    set_label: &if model.broken {gettext("Broken")} else {gettext("Not Broken")},
+                                                },
+                                            },
+                                            gtk::Box {
+                                                set_orientation: gtk::Orientation::Vertical,
+                                                set_spacing: 8,
+                                                gtk::Button {
+                                                    set_halign: gtk::Align::Center,
+                                                    add_css_class: "round",
+                                                    #[watch]
+                                                    set_class_active: ("error", model.insecure),
+                                                    gtk::Box {
+                                                        set_spacing: 6,
+                                                        set_margin_horizontal: 2,
+                                                        set_halign: gtk::Align::Center,
+                                                        gtk::Image {
+                                                            set_icon_name: Some("shield-safe-symbolic"),
+                                                            #[watch]
+                                                            set_visible: !model.insecure,
+                                                        },
+                                                        gtk::Image {
+                                                            set_icon_name: Some("shield-danger-symbolic"),
+                                                            #[watch]
+                                                            set_visible: model.insecure,
+                                                        },
+                                                    },
+                                                },
+                                                gtk::Label {
+                                                    #[watch]
+                                                    set_label: &if model.insecure {gettext("Insecure")} else {gettext("Secure")},
+                                                },
+                                            },
+                                            gtk::Box {
+                                                set_orientation: gtk::Orientation::Vertical,
+                                                set_spacing: 8,
+                                                gtk::Button {
+                                                    set_halign: gtk::Align::Center,
+                                                    add_css_class: "round",
+                                                    #[watch]
+                                                    set_class_active: ("error", model.unsupported),
+                                                    gtk::Box {
+                                                        set_spacing: 6,
+                                                        set_margin_horizontal: 2,
+                                                        set_halign: gtk::Align::Center,
+                                                        gtk::Image {
+                                                            set_icon_name: Some("checkmark-small-symbolic"),
+                                                            #[watch]
+                                                            set_visible: !model.unsupported,
+                                                        },
+                                                        gtk::Image {
+                                                            set_icon_name: Some("cross-small-symbolic"),
+                                                            #[watch]
+                                                            set_visible: model.unsupported,
+                                                        },
+                                                    },
+                                                },
+                                                gtk::Label {
+                                                    #[watch]
+                                                    set_label: &if model.unsupported {gettext("Unsupported")} else {gettext("Supported")},
                                                 },
                                             },
                                         },
+                                    },
+                                },
 
-                                        // Install options
-                                        append = &gtk::FlowBoxChild {
-                                            set_halign: gtk::Align::End,
-                                            gtk::Box {
-                                                set_halign: gtk::Align::End,
-                                                set_spacing: 5,
-                                                #[name(install_stack)]
-                                                if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
-                                                    gtk::Box {
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
-                                                        set_spacing: 10,
-                                                        gtk::Button {
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Center,
-                                                            add_css_class: "pill",
-                                                            set_width_request: 105,
-                                                            set_sensitive: false,
-                                                            gtk::Box {
-                                                                set_halign: gtk::Align::Center,
-                                                                set_spacing: 10,
-                                                                gtk::Spinner {
-                                                                    set_spinning: true,
-                                                                    set_size_request: (24, 24),
-                                                                    set_can_focus: false,
-                                                                },
-                                                                gtk::Label {
-                                                                    set_label: &gettext("Installing..."),
-                                                                },
-                                                            }
-                                                        },
-                                                        gtk::Button {
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Fill,
-                                                            add_css_class: "destructive-action",
-                                                            add_css_class: "circular",
-                                                            set_icon_name: "process-stop-symbolic",
-                                                            set_width_request: 44,
-                                                            connect_clicked[sender] => move |_| {
-                                                                sender.input(PkgMsg::Cancel)
-                                                            },
-                                                        }
-                                                    }
-                                                } else if model.installed_pkgs.contains(&model.pkg) {
-                                                    gtk::Box {
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
-                                                        set_spacing: 10,
-                                                        gtk::Button {
-                                                            #[watch]
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Center,
-                                                            add_css_class: "pill",
-                                                            set_width_request: 105,
-                                                            #[watch]
-                                                            set_label: &if model.launchable.is_some() { gettext("Open") } else { gettext("Installed") },
-                                                            #[watch]
-                                                            set_sensitive: model.launchable.is_some(),
-                                                            connect_clicked[sender] => move |_| {
-                                                                sender.input(PkgMsg::Launch)
-                                                            }
-                                                        },
-                                                        gtk::Button {
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Fill,
-                                                            add_css_class: "destructive-action",
-                                                            add_css_class: "circular",
-                                                            set_icon_name: "user-trash-symbolic",
-                                                            set_width_request: 44,
-                                                            connect_clicked[sender] => move |_| {
-                                                                sender.input(PkgMsg::Remove)
-                                                            }
-                                                        }
-                                                    }
-                                                } else if !model.online {
-                                                    gtk::Box {
-                                                        set_spacing: 10,
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
-                                                        gtk::Button {
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Center,
-                                                            add_css_class: "error",
-                                                            add_css_class: "pill",
-                                                            set_width_request: 105,
-                                                            set_label: &gettext("Offline"),
-                                                            set_can_target: false,
-                                                            set_can_focus: false,
-                                                        },
-                                                        gtk::Button {
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Fill,
-                                                            add_css_class: "circular",
-                                                            set_icon_name: "nsc-refresh-symbolic",
-                                                            set_width_request: 44,
-                                                            connect_clicked[sender] => move |_| {
-                                                                let _ = sender.output(AppMsg::CheckNetwork);
-                                                            }
-                                                        }
-                                                    }
-                                                } else {
-                                                    gtk::Box {
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
-                                                        set_spacing: 10,
-                                                        gtk::Button {
-                                                            #[watch]
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Center,
-                                                            add_css_class: "suggested-action",
-                                                            add_css_class: "pill",
-                                                            set_width_request: 105,
-                                                            set_label: &gettext("Install"),
-                                                            connect_clicked[sender] => move |_| {
-                                                                sender.input(PkgMsg::Install);
-                                                            },
-                                                        },
-                                                        gtk::MenuButton {
-                                                            set_halign: gtk::Align::End,
-                                                            set_valign: gtk::Align::Fill,
-                                                            add_css_class: "circular",
-                                                            set_icon_name: "view-more-symbolic",
-                                                            set_width_request: 44,
-                                                            #[wrap(Some)]
-                                                            set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {},
-                                                        },
-                                                    }
-                                                },
-                                            }
-                                        }
-                                    }
-                                }
                             },
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
@@ -671,6 +813,12 @@ impl Component for PkgModel {
             description: None,
             version: None,
             icon: None,
+
+            broken: false,
+            insecure: false,
+            unsupported: false,
+            unfree: false,
+
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
@@ -795,6 +943,12 @@ impl Component for PkgModel {
                 self.set_icon(pkgmodel.icon);
                 self.set_version(pkgmodel.version);
                 self.set_pname(pkgmodel.pname);
+
+                self.set_broken(pkgmodel.broken);
+                self.set_insecure(pkgmodel.insecure);
+                self.set_unsupported(pkgmodel.unsupported);
+                self.set_unfree(pkgmodel.unfree);
+
                 self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
 

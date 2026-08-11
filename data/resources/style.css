@@ -21,3 +21,7 @@ label.badge {
     font-size: 12px;
     font-weight: bold;
 }
+
+button.round {
+    border-radius: 9999px;
+}

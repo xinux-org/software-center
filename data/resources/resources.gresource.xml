@@ -16,6 +16,7 @@
     <file preprocess="xml-stripblanks" alias="nsc-update-symbolic.svg">../icons/nsc-update-symbolic.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-video.svg">../icons/nsc-video.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-web.svg">../icons/nsc-web.svg</file>
+    <file preprocess="xml-stripblanks" alias="nsc-proprietary-code-symbolic.svg">../icons/nsc-proprietary-code-symbolic.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-education.svg">../icons/uz.xinux.NixSoftwareCenter.Education.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-science.svg">../icons/uz.xinux.NixSoftwareCenter.Science.svg</file>
     <file preprocess="xml-stripblanks" alias="nsc-office.svg">../icons/uz.xinux.NixSoftwareCenter.Office.svg</file>

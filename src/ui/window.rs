@@ -1091,9 +1091,12 @@ impl AsyncComponent for AppModel {
                 info!("AppMsg::OpenPkg {}", pkg);
                 sender.input(AppMsg::CheckNetwork);
                 if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
-                    let pkgdata: Result<(String, String, String, String), _> = sqlx::query_as(
+                    let pkgdata: Result<
+                        (String, String, String, String, bool, bool, bool, bool),
+                        _,
+                    > = sqlx::query_as(
                         r#"
-SELECT pname, version, description, longdescription
+SELECT pname, version, description, longdescription, broken, insecure, unsupported, unfree
 FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1
                     "#,
                     )
@@ -1101,7 +1104,17 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     .fetch_one(pool)
                     .await;
 
-                    if let Ok((pname, version, description, longdescription)) = pkgdata {
+                    if let Ok((
+                        pname,
+                        version,
+                        description,
+                        longdescription,
+                        broken,
+                        insecure,
+                        unsupported,
+                        unfree,
+                    )) = pkgdata
+                    {
                         let mut name = pname.to_string();
                         let mut summary = if description.is_empty() {
                             None
@@ -1196,6 +1209,10 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             launchable,
                             url,
                             releases,
+                            broken,
+                            insecure,
+                            unsupported,
+                            unfree,
                         };
                         if self.viewstack.visible_child_name()
                             != Some(gtk::glib::GString::from("search"))
