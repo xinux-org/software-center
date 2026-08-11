@@ -59,6 +59,8 @@ pub struct PkgModel {
     icon: Option<String>,
     version: Option<String>,
 
+    position: String,
+
     broken: bool,
     insecure: bool,
     unsupported: bool,
@@ -157,6 +159,7 @@ pub struct PkgInitModel {
     pub launchable: Option<String>,
     pub url: Option<AppUrl>,
     pub releases: Vec<AppRelease>,
+    pub position: String,
     pub broken: bool,
     pub insecure: bool,
     pub unsupported: bool,
@@ -814,6 +817,8 @@ impl Component for PkgModel {
             version: None,
             icon: None,
 
+            position: String::default(),
+
             broken: false,
             insecure: false,
             unsupported: false,
@@ -943,6 +948,8 @@ impl Component for PkgModel {
                 self.set_icon(pkgmodel.icon);
                 self.set_version(pkgmodel.version);
                 self.set_pname(pkgmodel.pname);
+
+                self.set_position(pkgmodel.position);
 
                 self.set_broken(pkgmodel.broken);
                 self.set_insecure(pkgmodel.insecure);
@@ -1100,6 +1107,12 @@ impl Component for PkgModel {
                             });
                         });
                     }
+
+                    links_guard.push_back(LinkItemInit {
+                        link_type: LinkType::NixSource,
+                        link: "https://github.com/NixOS/nixpkgs/blob/nixos-unstable/".to_string()
+                            + &self.position.replace(':', "#L"),
+                    });
                 }
 
                 {

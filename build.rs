@@ -23,6 +23,7 @@ fn main() {
             "sad-computer",
             "shield-danger",
             "shield-safe",
+            "shoe-box",
         ],
     );
 }

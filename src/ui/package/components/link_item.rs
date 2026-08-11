@@ -35,6 +35,8 @@ pub enum LinkType {
     Source,
     #[assoc(title = gettext("Contribute"), icon = "people-symbolic")]
     Contribute,
+    #[assoc(title = gettext("Nix Source"), icon = "shoe-box-symbolic")]
+    NixSource,
 }
 
 #[derive(Debug)]

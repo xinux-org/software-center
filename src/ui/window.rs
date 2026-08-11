@@ -1092,11 +1092,21 @@ impl AsyncComponent for AppModel {
                 sender.input(AppMsg::CheckNetwork);
                 if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
                     let pkgdata: Result<
-                        (String, String, String, String, bool, bool, bool, bool),
+                        (
+                            String,
+                            String,
+                            String,
+                            String,
+                            String,
+                            bool,
+                            bool,
+                            bool,
+                            bool,
+                        ),
                         _,
                     > = sqlx::query_as(
                         r#"
-SELECT pname, version, description, longdescription, broken, insecure, unsupported, unfree
+SELECT pname, version, description, longdescription, position, broken, insecure, unsupported, unfree
 FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1
                     "#,
                     )
@@ -1109,6 +1119,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         version,
                         description,
                         longdescription,
+                        position,
                         broken,
                         insecure,
                         unsupported,
@@ -1209,6 +1220,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             launchable,
                             url,
                             releases,
+                            position,
                             broken,
                             insecure,
                             unsupported,
