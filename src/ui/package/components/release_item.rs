@@ -55,6 +55,7 @@ impl FactoryComponent for ReleaseItem {
                         add_css_class: "badge",
                         #[watch]
                         set_visible: self.installed,
+                        #[watch]
                         set_label: &gettext("Installed"),
                     },
                     gtk::Label {
