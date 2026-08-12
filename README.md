@@ -7,7 +7,6 @@
 [![Built with Nix][builtwithnix badge]][builtwithnix]
 [![License: GPLv3][GPLv3 badge]][GPLv3]
 [![Chat on Matrix][matrix badge]][matrix]
-[![Chat on Discord][discord badge]][discord]
 
 A graphical app store for Nix built with [libadwaita](https://gitlab.gnome.org/GNOME/libadwaita), [GTK4](https://www.gtk.org/), and [Relm4](https://relm4.org/). Heavily inspired by [GNOME Software](https://gitlab.gnome.org/GNOME/gnome-software).
 
@@ -20,10 +19,10 @@ A graphical app store for Nix built with [libadwaita](https://gitlab.gnome.org/G
 
 - Install packages to `configuration.nix`
   - Flakes support can be enabled in the preferences menu
-- Install packages with `nix profile` or `nix-env`
+- Install packages with `nix profile`
 - Show updates for all installed packages
 - Search for packages
-- Launch applications without installing via `nix-shell` and `nix run`
+- Launch applications without installing via `nix shell` and `nix run`
 
 ## NixOS Flakes Installation
 
@@ -33,9 +32,9 @@ A graphical app store for Nix built with [libadwaita](https://gitlab.gnome.org/G
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nix-software-center.url = "github:xinux-org/software-center";
+    nix-software-center.url = "git+https://git.oss.uzinfocom.uz/xinux/software-center";
   };
-  
+
   outputs = inputs@{ self, nixpkgs, nix-software-center }: {
     nixosConfigurations = {
       workstation = nixpkgs.lib.nixosSystem {
@@ -50,7 +49,7 @@ A graphical app store for Nix built with [libadwaita](https://gitlab.gnome.org/G
 
 `configuration.nix`
 
-```
+```nix
 { inputs, config, lib, pkgs, ... }: # add inputs here
 {
 ...
@@ -71,12 +70,13 @@ if you are on unstable channel or any version after 22.11:
 ```nix
 { config, pkgs, lib, ... }:
 let
-  nix-software-center = import (pkgs.fetchFromGitHub {
-    owner = "xinux-org";
-    repo = "software-center";
-    rev = "0.1.3";
-    sha256 = ""; # add shaa
-  }) {};
+  nix-software-center = fetchFromForgejo {
+      domain = "git.oss.uzinfocom.uz";
+      owner = "xinux";
+      repo = "software-center";
+      tag = finalAttrs.version;
+      hash = ""; # add shaa
+    };
 in
 
 ...
@@ -93,10 +93,11 @@ For any other method of installation, when rebuilding you might be prompted to a
 ## Single run on an flakes enabled system:
 
 ```bash
-nix run github:xinux-org/software-center
+nix run git+https://git.oss.uzinfocom.uz/xinux/software-center
 ```
 
 ## Build & run
+
 This application has Linux-only dependencies.
 
 ```bash
@@ -105,36 +106,33 @@ nix develop
 
 just install
 
-cd ..
-./settings/builddir/install/bin/settings
+just run
 
 # or with nix when ready for release
 nix build . --show-trace
 ./settings/result/bin/settings
 
-# app run
-just run
-
 # Optional. Generate translation words from /po/POTFILES.in if needed.
 cd ./po
 xgettext --directory=.. --files-from=POTFILES.in --from-code=UTF-8 -kgettext -o translations.pot
 ```
-## Screenshots
 
+## Screenshots
+<!--
 <p align="middle">
   <img src="data/screenshots/frontpage-light.png#gh-light-mode-only"/>
-  <img src="data/screenshots/frontpage-dark.png#gh-dark-mode-only"/> 
+  <img src="data/screenshots/frontpage-dark.png#gh-dark-mode-only"/>
 </p>
 
 <p align="middle">
   <img src="data/screenshots/application-light.png#gh-light-mode-only"/>
-  <img src="data/screenshots/application-dark.png#gh-dark-mode-only"/> 
+  <img src="data/screenshots/application-dark.png#gh-dark-mode-only"/>
 </p>
 
 <p align="middle">
   <img src="data/screenshots/searchpage-light.png#gh-light-mode-only"/>
-  <img src="data/screenshots/searchpage-dark.png#gh-dark-mode-only"/> 
-</p>
+  <img src="data/screenshots/searchpage-dark.png#gh-dark-mode-only"/>
+</p>-->
 
 ## Licenses
 
@@ -147,11 +145,4 @@ Some icons in [data/icons](data/icons/) contains assets from [GNOME Software](ht
 [GPLv3 badge]: https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge
 [GPLv3]: https://opensource.org/licenses/GPL-3.0
 [matrix badge]: https://img.shields.io/badge/matrix-join%20chat-0cbc8c?style=for-the-badge&logo=matrix&logoColor=white
-[matrix]: https://matrix.to/#/#snowflakeos:matrix.org
-[discord badge]: https://img.shields.io/discord/1021080090676842506?color=7289da&label=Discord&logo=discord&logoColor=ffffff&style=for-the-badge
-[discord]: https://discord.gg/6rWNMmdkgT
-
-## Translation
-
-To create a poedit file for translation run this command into the file where you want to save translations:
-`xgettext --directory=.. --files-from=POTFILES.in --from-code=UTF-8 -kgettext -o translations.pot`
+[matrix]: https://matrix.to/#/#xinux-distro:uchar.uz
