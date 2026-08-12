@@ -39,7 +39,6 @@ pkgs.mkShell {
       pandoc
       pango
       pkg-config
-      polkit
       sqlite
       wrapGAppsHook4
     ]
@@ -47,4 +46,5 @@ pkgs.mkShell {
   # Set Environment Variables
   RUST_BACKTRACE = "full";
   RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+  PKG_CONFIG_PATH = "${pkgs.polkit.dev}/lib/pkgconfig";
 }
