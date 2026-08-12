@@ -43,7 +43,7 @@ fn main() {
 
 fn setup_gettext() {
     // Prepare i18n
-    gettextrs::setlocale(LocaleCategory::LcAll, "");
+    // gettextrs::setlocale(LocaleCategory::LcAll, "");
     gettextrs::bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR).expect("Unable to bind the text domain");
     gettextrs::bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8")
         .expect("Unable to bind the text domain codeset to UTF-8");
