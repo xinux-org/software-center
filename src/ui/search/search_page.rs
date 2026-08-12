@@ -1,3 +1,4 @@
+use gettextrs::gettext;
 use log::*;
 use relm4::{
     adw::{self, prelude::*},
@@ -38,21 +39,28 @@ impl SimpleComponent for SearchPageModel {
             set_hscrollbar_policy: gtk::PolicyType::Never,
             #[track(model.changed(SearchPageModel::searchitemtracker()))]
             set_vadjustment: gtk::Adjustment::NONE,
-            adw::Clamp {
-                gtk::Stack {
-                    set_transition_type: gtk::StackTransitionType::Crossfade,
-                    set_margin_all: 20,
-                    #[local_ref]
-                    searchlist -> gtk::ListBox {
-                        set_valign: gtk::Align::Start,
-                        add_css_class: "boxed-list",
-                        set_selection_mode: gtk::SelectionMode::None,
-                        connect_row_activated[sender] => move |listbox, row| {
-                            if let Some(i) = listbox.index_of_child(row) {
-                                sender.input(SearchPageMsg::OpenRow(i as usize))
+            if !model.searchitems.is_empty() {
+                adw::Clamp {
+                    gtk::Stack {
+                        set_transition_type: gtk::StackTransitionType::Crossfade,
+                        set_margin_all: 20,
+                        #[local_ref]
+                        searchlist -> gtk::ListBox {
+                            set_valign: gtk::Align::Start,
+                            add_css_class: "boxed-list",
+                            set_selection_mode: gtk::SelectionMode::None,
+                            connect_row_activated[sender] => move |listbox, row| {
+                                if let Some(i) = listbox.index_of_child(row) {
+                                    sender.input(SearchPageMsg::OpenRow(i as usize))
+                                }
                             }
                         }
                     }
+                }
+            } else {
+                adw::StatusPage {
+                    set_icon_name: Some("edit-find-symbolic"),
+                    set_title: &gettext("No apps found"),
                 }
             }
         }

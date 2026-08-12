@@ -9,6 +9,7 @@ fn main() {
             "code",
             "copy",
             "cross-small",
+            "edit-find",
             "external-link",
             "globe",
             "heart-filled",
