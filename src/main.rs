@@ -18,7 +18,7 @@ fn main() {
     setup_gettext();
 
     relm4_icons::initialize_icons(icon_names::GRESOURCE_BYTES, icon_names::RESOURCE_PREFIX);
-
+    
     if let Ok(res) = gio::Resource::load(RESOURCES_FILE) {
         info!("Resource loaded: {}", RESOURCES_FILE);
         gio::resources_register(&res);

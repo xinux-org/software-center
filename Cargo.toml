@@ -55,3 +55,34 @@ relm4-icons-build = "0.11.0"
 [workspace]
 members = [".", "nsc-helper"]
 default-members = [".", "nsc-helper"]
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+# Lint groups
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+nursery = { level = "warn", priority = -2 }
+
+# Error handling
+unwrap_used = "deny"
+expect_used = "warn"
+map_err_ignore = "deny"
+result_large_err = "warn"
+option_if_let_else = "warn"
+# Panic-safety
+panic = "deny"
+todo = "warn"                     
+unimplemented = "warn"         
+unreachable = "warn"           
+indexing_slicing = "warn"       
+arithmetic_side_effects = "warn"  
+as_conversions = "warn"
+cast_possible_truncation = "warn"
+cast_sign_loss = "warn"
+cast_precision_loss = "warn"
+lossy_float_literal = "warn"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
