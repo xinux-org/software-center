@@ -46,7 +46,7 @@ impl SimpleComponent for InstalledPageModel {
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_valign: gtk::Align::Start,
-                        set_margin_all: 15,
+                        set_margin_vertical: 15,
                         set_spacing: 15,
                         gtk::Label {
                             #[watch]
@@ -68,10 +68,10 @@ impl SimpleComponent for InstalledPageModel {
                             set_orientation: gtk::Orientation::Horizontal,
                             set_selection_mode: gtk::SelectionMode::None,
                             set_homogeneous: true,
-                            set_max_children_per_line: 4,
+                            set_max_children_per_line: 3,
                             set_min_children_per_line: 1,
-                            set_column_spacing: 11,
-                            set_row_spacing: 11,
+                            set_column_spacing: 10,
+                            set_row_spacing: 10,
                             connect_child_activated[sender] => move |_, child| {
                                 sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::User))
                             }
@@ -83,7 +83,11 @@ impl SimpleComponent for InstalledPageModel {
                             add_css_class: "title-4",
                             set_lines: 1,
                             #[watch]
-                            set_label: &format!("{} — {}", gettext("System (configuration.nix)"), model.installedsystemlist.len()),
+                            set_label: &format!(
+                                "{} — {}",
+                                gettext("System (configuration.nix)"),
+                                model.installedsystemlist.len()
+                            ),
                         },
                         #[local_ref]
                         installedsystemlist -> gtk::FlowBox {
@@ -94,8 +98,8 @@ impl SimpleComponent for InstalledPageModel {
                             set_homogeneous: true,
                             set_max_children_per_line: 3,
                             set_min_children_per_line: 1,
-                            set_column_spacing: 11,
-                            set_row_spacing: 11,
+                            set_column_spacing: 10,
+                            set_row_spacing: 10,
                             connect_child_activated[sender] => move |_, child| {
                                 sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::System))
                             }

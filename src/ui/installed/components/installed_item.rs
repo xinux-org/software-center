@@ -1,5 +1,5 @@
 use adw::prelude::*;
-use relm4::{factory::*, gtk::pango, *};
+use relm4::{factory::*, *};
 use std::path::Path;
 
 use crate::{APPINFO, ui::package::package_page::InstallType};
@@ -40,18 +40,76 @@ impl FactoryComponent for InstalledItemModel {
     type ParentWidget = adw::gtk::FlowBox;
 
     view! {
-    gtk::FlowBoxChild {
-        set_width_request: 270,
-        adw::PreferencesRow {
-            set_activatable: self.item.pkg.is_some(),
-            set_can_focus: false,
-            add_css_class: "card",
-            #[wrap(Some)]
-            set_child = &gtk::Box {
+        gtk::FlowBoxChild {
+            set_width_request: 270,
+            adw::ActionRow {
+                add_css_class: "card",
+                set_title: &self.item.name,
+                set_subtitle: &self.item.version,
+                add_prefix = &adw::Bin {
+                    set_valign: gtk::Align::Center,
+                    #[wrap(Some)]
+                    set_child = if self.item.icon.is_some() {
+                        gtk::Image {
+                            add_css_class: "icon-dropshadow",
+                            set_halign: gtk::Align::Start,
+                            set_from_file: {
+                                if let Some(i) = &self.item.icon {
+                                    let iconpath = format!("{}/icons/nixos/128x128/{}", APPINFO, i);
+                                    let iconpath64 = format!("{}/icons/nixos/64x64/{}", APPINFO, i);
+                                    if Path::new(&iconpath).is_file() {
+                                        Some(iconpath)
+                                    } else if Path::new(&iconpath64).is_file() {
+                                        Some(iconpath64)
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            },
+                            set_pixel_size: 64,
+                        }
+                    } else {
+                        gtk::Image {
+                            add_css_class: "icon-dropshadow",
+                            set_halign: gtk::Align::Start,
+                            set_icon_name: Some("package-x-generic"),
+                            set_pixel_size: 64,
+                        }
+                    },
+                },
+                add_suffix = &gtk::Box {
+                    set_spacing: 8,
+                    if self.item.busy {
+                        gtk::Spinner {
+                            set_spinning: true,
+                        }
+                    } else {
+                        gtk::Button {
+                            add_css_class: "flat",
+                            set_valign: gtk::Align::Center,
+                            set_halign: gtk::Align::End,
+                            set_icon_name: "user-trash-symbolic",
+                            set_can_focus: false,
+                            connect_clicked[sender, item = self.item.clone()] => move |_| {
+                                sender.input(InstalledItemInputMsg::Busy(true));
+                                let _ = sender.output(InstalledItemMsg::Delete(item.clone()));
+                            }
+                        }
+                    },
+                    gtk::Image{
+                        add_css_class: "dimmed",
+                        set_icon_name: Some("right-symbolic"),
+                    }
+                },
+            },
+            /*
+            set_child = gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
                 set_hexpand: true,
                 set_spacing: 10,
-                set_margin_all: 10,
+                set_margin_all: 8,
                 adw::Bin {
                     set_valign: gtk::Align::Center,
                     #[wrap(Some)]
@@ -116,7 +174,7 @@ impl FactoryComponent for InstalledItemModel {
                     }
                 } else {
                     gtk::Button {
-                        add_css_class: "destructive-action",
+                        add_css_class: "flat",
                         set_valign: gtk::Align::Center,
                         set_halign: gtk::Align::End,
                         set_icon_name: "user-trash-symbolic",
@@ -126,10 +184,14 @@ impl FactoryComponent for InstalledItemModel {
                             let _ = sender.output(InstalledItemMsg::Delete(item.clone()));
                         }
                     }
+                },
+                gtk::Image{
+                    add_css_class: "dimmed",
+                    set_icon_name: Some("right-symbolic"),
                 }
             }
+             */
         }
-    }
     }
 
     fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {

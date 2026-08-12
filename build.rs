@@ -14,6 +14,7 @@ fn main() {
             "heart-filled",
             "issue",
             "keyboard-layout",
+            "library",
             "license",
             "mail-send",
             "people",
