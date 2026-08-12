@@ -6,6 +6,7 @@ use relm4::*;
 
 use nix_software_center::{
     config::{APP_ID, GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE},
+    icon_names,
     ui::window::AppModel,
 };
 
@@ -16,18 +17,20 @@ fn main() {
 
     setup_gettext();
 
+    relm4_icons::initialize_icons(icon_names::GRESOURCE_BYTES, icon_names::RESOURCE_PREFIX);
+
     if let Ok(res) = gio::Resource::load(RESOURCES_FILE) {
         info!("Resource loaded: {}", RESOURCES_FILE);
         gio::resources_register(&res);
 
         // This seem to not working...
-        // let data = res
-        //     .lookup_data(
-        //         "/uz/xinux/NixSoftwareCenter/style.css",
-        //         gio::ResourceLookupFlags::NONE,
-        //     )
-        //     .unwrap();
-        // relm4::set_global_css(&glib::GString::from_utf8_checked(data.to_vec()).unwrap());
+        let data = res
+            .lookup_data(
+                "/uz/xinux/NixSoftwareCenter/style.css",
+                gio::ResourceLookupFlags::NONE,
+            )
+            .unwrap();
+        relm4::set_global_css(&glib::GString::from_utf8_checked(data.to_vec()).unwrap());
     } else {
         error!("Failed to load resources");
     }

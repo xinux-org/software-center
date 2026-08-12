@@ -45,6 +45,12 @@ xdg = "3.0.0"
 toml = "1.1.2"
 clap = { version = "4.6.1", features = ["cargo", "derive"] }
 winnow = "1.0.3"
+relm4-icons = "0.11.0"
+chrono = { version = "0.4.45", features = ["serde"] }
+enum-assoc = "1.3.0"
+
+[build-dependencies]
+relm4-icons-build = "0.11.0"
 
 [workspace]
 members = [".", "nsc-helper"]

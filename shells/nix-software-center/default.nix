@@ -31,6 +31,7 @@ pkgs.mkShell {
       gtk4
       gtksourceview5
       libadwaita
+      librsvg
       libxml2
       meson
       ninja

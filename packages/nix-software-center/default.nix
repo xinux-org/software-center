@@ -10,6 +10,7 @@
   gtk4,
   gtksourceview5,
   libadwaita,
+  librsvg,
   meson,
   ninja,
   openssl,
@@ -30,7 +31,7 @@ stdenv.mkDerivation {
 
   cargoDeps = rustPlatform.fetchCargoVendor {
     src = ../..;
-    hash = "sha256-gjcBsl4N4CCsiSxtZBu8nrcTHhyJPepBF4lJytS4AtY=";
+    hash = "sha256-GoixuCJRLJofI2oQpwoPo2AO/AMuJ1r0bQfglLRonSE=";
   };
 
   nativeBuildInputs =
@@ -59,6 +60,7 @@ stdenv.mkDerivation {
     gtk4
     gtksourceview5
     libadwaita
+    librsvg
     libxml2
     openssl
     wayland

@@ -1,28 +1,29 @@
-use adw::gio;
-use adw::prelude::*;
 use anyhow::Result;
 use gettextrs::gettext;
 use html2pango;
 use image::{ImageFormat, imageops::FilterType};
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
-use relm4::actions::RelmAction;
-use relm4::actions::RelmActionGroup;
-use relm4::gtk::pango;
-use relm4::{factory::FactoryVecDeque, *};
+use relm4::{
+    WorkerController,
+    actions::{RelmAction, RelmActionGroup},
+    adw::{self, prelude::*},
+    component::Connector,
+    factory::FactoryVecDeque,
+    gtk::{self, pango},
+    prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use sha256::digest;
-use std::collections::HashSet;
-use std::convert::identity;
-use std::io::Cursor;
-use std::process::Command;
 use std::{
+    collections::HashSet,
+    convert::identity,
     env,
     error::Error,
-    fmt::Write,
     fs::{self, File},
-    io::BufReader,
+    io::{BufReader, Cursor},
     path::Path,
+    process::Command,
     time::Duration,
 };
 
@@ -31,11 +32,19 @@ use crate::{
         installed::install_worker::{
             InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
         },
-        package::components::screenshot::ScreenshotItem,
-        window::AppMsg,
-        window::SystemPkgs,
+        window::{AppMsg, SystemPkgs},
     },
-    utils::{online::checkonline, packages::PkgMaintainer, state},
+    utils::{
+        packages::{AppRelease, AppUrl, ReleaseType},
+        {online::checkonline, state},
+    },
+};
+
+use super::components::{
+    link_item::{LinkItem, LinkItemInit, LinkItemMsg, LinkType},
+    release_item::{ReleaseItem, ReleaseItemInit},
+    releases_dialog::{ReleasesDialog, ReleasesInit},
+    screenshot::ScreenshotItem,
 };
 
 #[tracker::track]
@@ -47,21 +56,35 @@ pub struct PkgModel {
     pname: String,
     summary: Option<String>,
     description: Option<String>,
-    icon: Option<String>,
     version: Option<String>,
 
-    homepage: Option<String>,
-    licenses: Vec<License>,
-    platforms: Vec<String>,
-    maintainers: Vec<PkgMaintainer>,
+    position: String,
+
+    broken: bool,
+    insecure: bool,
+    unsupported: bool,
+    unfree: bool,
+
     launchable: Option<Launch>,
 
     syspkgtype: SystemPkgs,
 
     #[tracker::no_eq]
+    icon: gtk::Image,
+    #[tracker::no_eq]
     screenshots: FactoryVecDeque<ScreenshotItem>,
     #[tracker::no_eq]
+    links: FactoryVecDeque<LinkItem>,
+    #[tracker::no_eq]
+    latest_release: FactoryVecDeque<ReleaseItem>,
+    #[tracker::no_eq]
     installworker: WorkerController<InstallAsyncHandler>,
+
+    #[tracker::no_eq]
+    releases_dialog: Option<Connector<ReleasesDialog>>,
+
+    toast_overlay: adw::ToastOverlay,
+
     carpage: CarouselPage,
     installtype: InstallType,
     installed_pkgs: HashSet<String>,
@@ -134,11 +157,14 @@ pub struct PkgInitModel {
     pub version: Option<String>,
     pub icon: Option<String>,
     pub screenshots: Vec<String>,
-    pub homepage: Option<String>,
-    pub licenses: Vec<License>,
-    pub platforms: Vec<String>,
-    pub maintainers: Vec<PkgMaintainer>,
     pub launchable: Option<String>,
+    pub url: Option<AppUrl>,
+    pub releases: Vec<AppRelease>,
+    pub position: String,
+    pub broken: bool,
+    pub insecure: bool,
+    pub unsupported: bool,
+    pub unfree: bool,
 }
 
 #[derive(Debug)]
@@ -149,7 +175,6 @@ pub enum PkgMsg {
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
     SetCarouselPage(CarouselPage),
-    OpenHomepage,
     Install,
     Remove,
     Cancel,
@@ -162,6 +187,8 @@ pub enum PkgMsg {
     SetInstallType(InstallType),
     AddToQueue(WorkPkg),
     UpdateOnline(bool),
+    ShowReleases,
+    ShowToast(String),
     Noop,
 }
 
@@ -193,124 +220,423 @@ impl Component for PkgModel {
             #[watch]
             set_title: &model.name,
 
-            gtk::Box {
-                set_orientation: gtk::Orientation::Vertical,
-                adw::HeaderBar {
-                    pack_end = &gtk::MenuButton {
-                        #[watch]
-                        set_visible: model.syspkgtype != SystemPkgs::None,
+            adw::BreakpointBin {
+                set_width_request: 346,
 
-                        #[watch]
-                        set_label: &match model.installtype {
-                            InstallType::User =>  gettext("User (nix profile)"),
-                            InstallType::System => gettext("System (configuration.nix)"),
-                        },
-
-                        #[wrap(Some)]
-                        set_popover = &gtk::PopoverMenu::from_model(Some(&installtype)) {}
-                    }
+                add_breakpoint = adw::Breakpoint::new(
+                    adw::BreakpointCondition::new_length(
+                        adw::BreakpointConditionLengthType::MaxWidth,
+                        500.0,
+                        adw::LengthUnit::Px,
+                    )
+                ) {
+                    add_setters: &[
+                        (&install_options_large, "visible", false),
+                    ],
+                    add_setters: &[
+                        (&install_options_small, "visible", true),
+                    ],
+                    add_setters: &[
+                        (package_icon, "pixel_size", 96)
+                    ]
                 },
-                gtk::ScrolledWindow {
-                    set_vexpand: true,
-                    set_hexpand: true,
-                    set_hscrollbar_policy: gtk::PolicyType::Never,
-                    set_vscrollbar_policy: gtk::PolicyType::Automatic,
-                    #[track(model.changed(PkgModel::visible()) && !self.visible)]
-                    set_vadjustment: gtk::Adjustment::NONE,
+
+                add_breakpoint = adw::Breakpoint::new(
+                    adw::BreakpointCondition::new_length(
+                        adw::BreakpointConditionLengthType::MinWidth,
+                        500.0,
+                        adw::LengthUnit::Px,
+                    )
+                ) {
+                    add_setters: &[
+                        (&install_options_large, "visible", true),
+                    ],
+                    add_setters: &[
+                        (&install_options_small, "visible", false),
+                    ],
+                    add_setters: &[
+                        (package_icon, "pixel_size", 128)
+                    ]
+                },
+
+                #[wrap(Some)]
+                #[local_ref]
+                set_child = toast_overlay -> adw::ToastOverlay {
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
-                        adw::Clamp {
-                            set_maximum_size: 1000,
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Start,
-                            // Details box
-                            gtk::Box {
-                                set_orientation: gtk::Orientation::Horizontal,
-                                set_spacing: 10,
-                                set_margin_all: 15,
-                                append = if model.icon.is_some() {
-                                    gtk::Image {
-                                        add_css_class: "icon-dropshadow",
-                                        set_halign: gtk::Align::Start,
-                                        #[watch]
-                                        set_from_file: model.icon.clone(),
-                                        set_pixel_size: 128,
-                                    }
-                                } else {
-                                    gtk::Image {
-                                        add_css_class: "icon-dropshadow",
-                                        set_halign: gtk::Align::Start,
-                                        set_icon_name: Some("package-x-generic"),
-                                        set_pixel_size: 128,
-                                    }
+                        adw::HeaderBar {
+                            pack_end = &gtk::MenuButton {
+                                #[watch]
+                                set_visible: model.syspkgtype != SystemPkgs::None,
+
+                                #[watch]
+                                set_label: &match model.installtype {
+                                    InstallType::User =>  gettext("User (nix profile)"),
+                                    InstallType::System => gettext("System (configuration.nix)"),
                                 },
-                                gtk::FlowBox {
+
+                                #[wrap(Some)]
+                                set_popover = &gtk::PopoverMenu::from_model(Some(&installtype)) {}
+                            }
+                        },
+                        gtk::ScrolledWindow {
+                            set_vexpand: true,
+                            set_hexpand: true,
+                            set_hscrollbar_policy: gtk::PolicyType::Never,
+                            set_vscrollbar_policy: gtk::PolicyType::Automatic,
+                            #[track(model.changed(PkgModel::visible()) && !self.visible)]
+                            set_vadjustment: gtk::Adjustment::NONE,
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                adw::Clamp {
+                                    set_maximum_size: 1000,
                                     set_halign: gtk::Align::Fill,
-                                    set_orientation: gtk::Orientation::Horizontal,
-                                    set_min_children_per_line: 1,
-                                    set_max_children_per_line: 2,
-                                    set_selection_mode: gtk::SelectionMode::None,
-                                    // Details
-                                    append = &gtk::FlowBoxChild {
-                                        set_can_target: false,
+                                    set_valign: gtk::Align::Start,
+
+                                    gtk::Box {
+                                        set_orientation: gtk::Orientation::Vertical,
+                                        set_margin_horizontal: 10,
+                                        set_margin_bottom: 20,
+                                        // Details box
                                         gtk::Box {
-                                            set_halign: gtk::Align::Fill,
-                                            set_valign: gtk::Align::Center,
-                                            set_hexpand: true,
-                                            set_orientation: gtk::Orientation::Vertical,
-                                            set_spacing: 6,
-                                            gtk::Label {
-                                                add_css_class: "title-1",
+                                            set_orientation: gtk::Orientation::Horizontal,
+                                            set_spacing: 10,
+                                            set_margin_all: 15,
+                                            #[local_ref]
+                                            append = package_icon -> gtk::Image {
+                                                add_css_class: "icon-dropshadow",
                                                 set_halign: gtk::Align::Start,
-                                                set_wrap: true,
-                                                set_wrap_mode: pango::WrapMode::WordChar,
-                                                set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
-                                                #[watch]
-                                                set_label: &model.name,
                                             },
-                                            gtk::Label {
-                                                add_css_class: "dim-label",
-                                                add_css_class: "heading",
-                                                set_halign: gtk::Align::Start,
-                                                set_wrap: true,
-                                                set_wrap_mode: pango::WrapMode::WordChar,
-                                                set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
-                                                #[watch]
-                                                set_label: &model.pkg,
-                                            },
-                                            gtk::Label {
-                                                add_css_class: "dim-label",
-                                                set_halign: gtk::Align::Start,
-                                                set_wrap: true,
-                                                set_wrap_mode: pango::WrapMode::WordChar,
-                                                set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
-                                                #[watch]
-                                                set_label: &model.version.clone().unwrap_or_else(||  gettext("Unknown").to_string()),
+                                            gtk::FlowBox {
+                                                set_halign: gtk::Align::Fill,
+                                                set_orientation: gtk::Orientation::Horizontal,
+                                                set_min_children_per_line: 1,
+                                                set_max_children_per_line: 2,
+                                                set_selection_mode: gtk::SelectionMode::None,
+                                                // Details
+                                                append = &gtk::FlowBoxChild {
+                                                    set_can_target: false,
+                                                    gtk::Box {
+                                                        set_halign: gtk::Align::Fill,
+                                                        set_valign: gtk::Align::Center,
+                                                        set_hexpand: true,
+                                                        set_orientation: gtk::Orientation::Vertical,
+                                                        set_spacing: 6,
+                                                        gtk::Label {
+                                                            add_css_class: "title-1",
+                                                            set_halign: gtk::Align::Start,
+                                                            set_lines: 2,
+                                                            set_ellipsize: pango::EllipsizeMode::End,
+                                                            set_wrap: true,
+                                                            set_wrap_mode: pango::WrapMode::WordChar,
+                                                            set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                            #[watch]
+                                                            set_label: &model.name,
+                                                        },
+                                                        gtk::Label {
+                                                            add_css_class: "dim-label",
+                                                            add_css_class: "heading",
+                                                            set_halign: gtk::Align::Start,
+                                                            set_lines: 2,
+                                                            set_ellipsize: pango::EllipsizeMode::End,
+                                                            set_wrap: true,
+                                                            set_wrap_mode: pango::WrapMode::WordChar,
+                                                            set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                            #[watch]
+                                                            set_label: &model.pkg,
+                                                        },
+                                                        gtk::Label {
+                                                            add_css_class: "dim-label",
+                                                            set_halign: gtk::Align::Start,
+                                                            set_ellipsize: pango::EllipsizeMode::End,
+                                                            set_wrap: true,
+                                                            set_wrap_mode: pango::WrapMode::WordChar,
+                                                            set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
+                                                            #[watch]
+                                                            set_label: &model.version.clone().unwrap_or_else(||  gettext("Unknown").to_string()),
+                                                        },
+                                                    },
+                                                },
+
+                                                // Install options
+                                                #[name(install_options_large)]
+                                                append = &gtk::FlowBoxChild {
+                                                    set_can_target: false,
+                                                    set_halign: gtk::Align::End,
+                                                    gtk::Box {
+                                                        set_halign: gtk::Align::End,
+                                                        set_spacing: 5,
+                                                        #[name(install_stack)]
+                                                        if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
+                                                            gtk::Box {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                set_spacing: 10,
+                                                                gtk::Button {
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Center,
+                                                                    add_css_class: "pill",
+                                                                    set_width_request: 105,
+                                                                    set_sensitive: false,
+                                                                    gtk::Box {
+                                                                        set_halign: gtk::Align::Center,
+                                                                        set_spacing: 10,
+                                                                        gtk::Spinner {
+                                                                            set_spinning: true,
+                                                                            set_size_request: (24, 24),
+                                                                            set_can_focus: false,
+                                                                        },
+                                                                        gtk::Label {
+                                                                            set_label: &gettext("Installing..."),
+                                                                        },
+                                                                    }
+                                                                },
+                                                                gtk::Button {
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Fill,
+                                                                    add_css_class: "destructive-action",
+                                                                    add_css_class: "circular",
+                                                                    set_icon_name: "process-stop-symbolic",
+                                                                    set_width_request: 44,
+                                                                    connect_clicked[sender] => move |_| {
+                                                                        sender.input(PkgMsg::Cancel)
+                                                                    },
+                                                                }
+                                                            }
+                                                        } else if model.installed_pkgs.contains(&model.pkg) {
+                                                            gtk::Box {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                set_spacing: 10,
+                                                                gtk::Button {
+                                                                    #[watch]
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Center,
+                                                                    add_css_class: "pill",
+                                                                    set_width_request: 105,
+                                                                    #[watch]
+                                                                    set_label: &if model.launchable.is_some() { gettext("Open") } else { gettext("Installed") },
+                                                                    #[watch]
+                                                                    set_sensitive: model.launchable.is_some(),
+                                                                    connect_clicked[sender] => move |_| {
+                                                                        sender.input(PkgMsg::Launch)
+                                                                    }
+                                                                },
+                                                                gtk::Button {
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Fill,
+                                                                    add_css_class: "destructive-action",
+                                                                    add_css_class: "circular",
+                                                                    set_icon_name: "user-trash-symbolic",
+                                                                    set_width_request: 44,
+                                                                    connect_clicked[sender] => move |_| {
+                                                                        sender.input(PkgMsg::Remove)
+                                                                    }
+                                                                }
+                                                            }
+                                                        } else if !model.online {
+                                                            gtk::Box {
+                                                                set_spacing: 10,
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                gtk::Button {
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Center,
+                                                                    add_css_class: "error",
+                                                                    add_css_class: "pill",
+                                                                    set_width_request: 105,
+                                                                    set_label: &gettext("Offline"),
+                                                                    set_can_target: false,
+                                                                    set_can_focus: false,
+                                                                },
+                                                                gtk::Button {
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Fill,
+                                                                    add_css_class: "circular",
+                                                                    set_icon_name: "nsc-refresh-symbolic",
+                                                                    set_width_request: 44,
+                                                                    connect_clicked[sender] => move |_| {
+                                                                        let _ = sender.output(AppMsg::CheckNetwork);
+                                                                    }
+                                                                }
+                                                            }
+                                                        } else {
+                                                            gtk::Box {
+                                                                set_halign: gtk::Align::End,
+                                                                set_valign: gtk::Align::Center,
+                                                                set_spacing: 10,
+                                                                gtk::Button {
+                                                                    #[watch]
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Center,
+                                                                    add_css_class: "suggested-action",
+                                                                    add_css_class: "pill",
+                                                                    set_width_request: 105,
+                                                                    set_label: &gettext("Install"),
+                                                                    connect_clicked[sender] => move |_| {
+                                                                        sender.input(PkgMsg::Install);
+                                                                    },
+                                                                },
+                                                                gtk::MenuButton {
+                                                                    set_halign: gtk::Align::End,
+                                                                    set_valign: gtk::Align::Fill,
+                                                                    add_css_class: "circular",
+                                                                    set_icon_name: "view-more-symbolic",
+                                                                    set_width_request: 44,
+                                                                    #[wrap(Some)]
+                                                                    set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {},
+                                                                },
+                                                            }
+                                                        },
+                                                    }
+                                                }
+                                            }
+                                        },
+
+                                        gtk::ScrolledWindow {
+                                            set_vscrollbar_policy: gtk::PolicyType::Never,
+                                            gtk::Box {
+                                                set_spacing: 12,
+                                                set_homogeneous: true,
+                                                gtk::Box {
+                                                    set_orientation: gtk::Orientation::Vertical,
+                                                    set_spacing: 8,
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::Center,
+                                                        add_css_class: "round",
+                                                        #[watch]
+                                                        set_class_active: ("warning", model.unfree),
+                                                        gtk::Box {
+                                                            set_spacing: 6,
+                                                            set_margin_horizontal: 2,
+                                                            set_halign: gtk::Align::Center,
+                                                            gtk::Image {
+                                                                set_icon_name: Some("people-symbolic"),
+                                                                #[watch]
+                                                                set_visible: !model.unfree,
+                                                            },
+                                                            gtk::Image {
+                                                                set_icon_name: Some("license-symbolic"),
+                                                            },
+                                                            gtk::Image {
+                                                                set_icon_name: Some("nsc-proprietary-code-symbolic"),
+                                                                #[watch]
+                                                                set_visible: model.unfree,
+                                                            },
+                                                        },
+                                                    },
+                                                    gtk::Label {
+                                                        #[watch]
+                                                        set_label: &if model.unfree {gettext("Proprietary")} else {gettext("Free Software")},
+                                                    },
+                                                },
+                                                gtk::Box {
+                                                    set_orientation: gtk::Orientation::Vertical,
+                                                    set_spacing: 8,
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::Center,
+                                                        add_css_class: "round",
+                                                        #[watch]
+                                                        set_class_active: ("error", model.broken),
+                                                        gtk::Box {
+                                                            set_spacing: 6,
+                                                            set_margin_horizontal: 2,
+                                                            set_halign: gtk::Align::Center,
+                                                            gtk::Image {
+                                                                set_icon_name: Some("issue-symbolic"),
+                                                                #[watch]
+                                                                set_visible: !model.broken,
+                                                            },
+                                                            gtk::Image {
+                                                                set_icon_name: Some("issue-symbolic"),
+                                                                #[watch]
+                                                                set_visible: model.broken,
+                                                            },
+                                                        },
+                                                    },
+                                                    gtk::Label {
+                                                        #[watch]
+                                                        set_label: &if model.broken {gettext("Broken")} else {gettext("Not Broken")},
+                                                    },
+                                                },
+                                                gtk::Box {
+                                                    set_orientation: gtk::Orientation::Vertical,
+                                                    set_spacing: 8,
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::Center,
+                                                        add_css_class: "round",
+                                                        #[watch]
+                                                        set_class_active: ("error", model.insecure),
+                                                        gtk::Box {
+                                                            set_spacing: 6,
+                                                            set_margin_horizontal: 2,
+                                                            set_halign: gtk::Align::Center,
+                                                            gtk::Image {
+                                                                set_icon_name: Some("shield-safe-symbolic"),
+                                                                #[watch]
+                                                                set_visible: !model.insecure,
+                                                            },
+                                                            gtk::Image {
+                                                                set_icon_name: Some("shield-danger-symbolic"),
+                                                                #[watch]
+                                                                set_visible: model.insecure,
+                                                            },
+                                                        },
+                                                    },
+                                                    gtk::Label {
+                                                        #[watch]
+                                                        set_label: &if model.insecure {gettext("Insecure")} else {gettext("Secure")},
+                                                    },
+                                                },
+                                                gtk::Box {
+                                                    set_orientation: gtk::Orientation::Vertical,
+                                                    set_spacing: 8,
+                                                    gtk::Button {
+                                                        set_halign: gtk::Align::Center,
+                                                        add_css_class: "round",
+                                                        #[watch]
+                                                        set_class_active: ("error", model.unsupported),
+                                                        gtk::Box {
+                                                            set_spacing: 6,
+                                                            set_margin_horizontal: 2,
+                                                            set_halign: gtk::Align::Center,
+                                                            gtk::Image {
+                                                                set_icon_name: Some("checkmark-small-symbolic"),
+                                                                #[watch]
+                                                                set_visible: !model.unsupported,
+                                                            },
+                                                            gtk::Image {
+                                                                set_icon_name: Some("cross-small-symbolic"),
+                                                                #[watch]
+                                                                set_visible: model.unsupported,
+                                                            },
+                                                        },
+                                                    },
+                                                    gtk::Label {
+                                                        #[watch]
+                                                        set_label: &if model.unsupported {gettext("Unsupported")} else {gettext("Supported")},
+                                                    },
+                                                },
                                             },
                                         },
-                                    },
 
-                                    // Install options
-                                    append = &gtk::FlowBoxChild {
-                                        set_halign: gtk::Align::End,
+                                        #[name(install_options_small)]
                                         gtk::Box {
-                                            set_halign: gtk::Align::End,
-                                            set_spacing: 5,
-                                            #[name(install_stack)]
+                                            set_margin_top: 20,
                                             if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
                                                 gtk::Box {
-                                                    gtk::Spinner {
-                                                        set_halign: gtk::Align::End,
-                                                        #[watch]
-                                                        set_spinning: true,
-                                                        set_size_request: (32, 32),
-                                                        set_can_focus: false,
+                                                    set_spacing: 8,
+                                                    set_homogeneous: true,
+                                                    gtk::Button {
+                                                        add_css_class: "pill",
+                                                        set_hexpand: true,
+                                                        set_sensitive: false,
+                                                        set_label: &gettext("Installing..."),
                                                     },
                                                     gtk::Button {
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
-                                                        set_can_focus: false,
-                                                        set_width_request: 105,
+                                                        add_css_class: "pill",
+                                                        add_css_class: "destructive-action",
+                                                        set_hexpand: true,
                                                         set_label: &gettext("Cancel"),
                                                         connect_clicked[sender] => move |_| {
                                                             sender.input(PkgMsg::Cancel)
@@ -319,16 +645,12 @@ impl Component for PkgModel {
                                                 }
                                             } else if model.installed_pkgs.contains(&model.pkg) {
                                                 gtk::Box {
-                                                    set_halign: gtk::Align::End,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 10,
+                                                    set_spacing: 8,
+                                                    set_homogeneous: true,
                                                     gtk::Button {
                                                         #[watch]
-                                                        set_css_classes: if model.launchable.is_some() { &["suggested-action"] } else { &[] },
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
-                                                        set_can_focus: false,
-                                                        set_width_request: 105,
+                                                        add_css_class: "pill",
+                                                        set_hexpand: true,
                                                         #[watch]
                                                         set_label: &if model.launchable.is_some() { gettext("Open") } else { gettext("Installed") },
                                                         #[watch]
@@ -338,30 +660,30 @@ impl Component for PkgModel {
                                                         }
                                                     },
                                                     gtk::Button {
-                                                        set_halign: gtk::Align::End,
+                                                        add_css_class: "pill",
                                                         add_css_class: "destructive-action",
-                                                        set_icon_name: "user-trash-symbolic",
-                                                        set_can_focus: false,
+                                                        set_hexpand: true,
+                                                        set_label: &gettext("Delete"),
                                                         connect_clicked[sender] => move |_| {
                                                             sender.input(PkgMsg::Remove)
                                                         }
-                                                    }
+                                                    },
                                                 }
                                             } else if !model.online {
                                                 gtk::Box {
-                                                    set_orientation: gtk::Orientation::Horizontal,
-                                                    set_spacing: 10,
-                                                    set_halign: gtk::Align::End,
+                                                    set_spacing: 8,
+                                                    set_homogeneous: true,
                                                     gtk::Button {
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
+                                                        add_css_class: "pill",
                                                         add_css_class: "error",
-                                                        set_label: &gettext("Offline"),
+                                                        set_hexpand: true,
                                                         set_can_target: false,
+                                                        set_can_focus: false,
+                                                        set_label: &gettext("Offline"),
                                                     },
                                                     gtk::Button {
-                                                        set_halign: gtk::Align::End,
-                                                        set_valign: gtk::Align::Center,
+                                                        add_css_class: "pill",
+                                                        set_hexpand: true,
                                                         set_icon_name: "nsc-refresh-symbolic",
                                                         connect_clicked[sender] => move |_| {
                                                             let _ = sender.output(AppMsg::CheckNetwork);
@@ -369,496 +691,231 @@ impl Component for PkgModel {
                                                     }
                                                 }
                                             } else {
-                                                adw::SplitButton {
-                                                    add_css_class: "suggested-action",
-                                                    set_halign: gtk::Align::End,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_can_focus: false,
-                                                    set_label: &gettext("Install"),
-                                                    set_width_request: 105,
-                                                    connect_clicked[sender] => move |_| {
-                                                        sender.input(PkgMsg::Install);
+                                                gtk::Box {
+                                                    set_spacing: 8,
+                                                    set_homogeneous: true,
+                                                    gtk::Button {
+                                                        #[watch]
+                                                        add_css_class: "pill",
+                                                        add_css_class: "suggested-action",
+                                                        set_hexpand: true,
+                                                        set_label: &gettext("Install"),
+                                                        connect_clicked[sender] => move |_| {
+                                                            sender.input(PkgMsg::Install);
+                                                        },
                                                     },
-                                                    #[wrap(Some)]
-                                                    set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {}
+                                                    gtk::MenuButton {
+                                                        add_css_class: "pill",
+                                                        set_hexpand: true,
+                                                        set_label: &gettext("More"),
+                                                        #[wrap(Some)]
+                                                        set_popover = &gtk::PopoverMenu::from_model(Some(&runaction)) {},
+                                                    },
                                                 }
                                             },
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        gtk::Box {
-                            set_orientation: gtk::Orientation::Vertical,
-                            set_valign: gtk::Align::Start,
-                            add_css_class: "view",
-                            add_css_class: "frame",
-                            add_css_class: "scrnbox",
-                            #[watch]
-                            set_visible: !model.screenshots.is_empty(),
-                            gtk::Overlay {
-                                set_valign: gtk::Align::Start,
-                                #[local_ref]
-                                scrnfactory -> adw::Carousel {
-                                    set_valign: gtk::Align::Fill,
-                                    set_hexpand: true,
-                                    set_vexpand: true,
-                                    set_height_request: 400,
-                                    set_allow_scroll_wheel: false,
-                                    connect_page_changed[sender] => move |x, _| {
-                                        let n = adw::Carousel::n_pages(x);
-                                        let i = adw::Carousel::position(x) as u32;
-                                        if i == 0 && n == 1 {
-                                            sender.input(PkgMsg::SetCarouselPage(CarouselPage::Single));
-                                        } else if i == 0 {
-                                            sender.input(PkgMsg::SetCarouselPage(CarouselPage::First));
-                                        } else if i == n - 1 {
-                                            sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
-                                        } else {
-                                            sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
-                                        }
+                                        },
                                     },
+
                                 },
-                                add_overlay = &gtk::Revealer {
-                                    set_transition_type: gtk::RevealerTransitionType::Crossfade,
-                                    #[watch]
-                                    set_reveal_child: model.carpage != CarouselPage::First && model.carpage != CarouselPage::Single,
-                                    set_halign: gtk::Align::Start,
-                                    set_valign: gtk::Align::Fill,
-                                    gtk::Button {
-                                        set_can_focus: false,
-                                        set_margin_all: 15,
-                                        set_height_request: 40,
-                                        set_width_request: 40,
-                                        add_css_class: "circular",
-                                        add_css_class: "osd",
-                                        set_halign: gtk::Align::Start,
-                                        set_valign: gtk::Align::Center,
-                                        set_icon_name: "go-previous-symbolic",
-                                        connect_clicked[sender, scrnfactory] => move |_| {
-                                            let i = adw::Carousel::position(&scrnfactory) as u32;
-                                            if i > 0 {
-                                                let w = scrnfactory.nth_page(i-1);
-                                                scrnfactory.scroll_to(&w, true);
-                                            }
-                                            if i == 1 {
-                                                sender.input(PkgMsg::SetCarouselPage(CarouselPage::First));
-                                            } else if i > 0 {
-                                                sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
-                                            }
-                                        }
-                                    }
-                                },
-                                add_overlay = &gtk::Revealer {
-                                    set_transition_type: gtk::RevealerTransitionType::Crossfade,
-                                    #[watch]
-                                    set_reveal_child: model.carpage != CarouselPage::Last && model.carpage != CarouselPage::Single,
-                                    set_halign: gtk::Align::End,
-                                    set_valign: gtk::Align::Fill,
-                                    gtk::Button {
-                                        set_can_focus: false,
-                                        set_margin_all: 15,
-                                        set_height_request: 40,
-                                        set_width_request: 40,
-                                        add_css_class: "circular",
-                                        add_css_class: "osd",
-                                        set_halign: gtk::Align::End,
-                                        set_valign: gtk::Align::Center,
-                                        set_icon_name: "go-next-symbolic",
-                                        connect_clicked[sender, scrnfactory] => move |_| {
-                                            let i = adw::Carousel::position(&scrnfactory) as u32;
-                                            if i < scrnfactory.n_pages() -1 {
-                                                let w = scrnfactory.nth_page(i+1);
-                                                scrnfactory.scroll_to(&w, true);
-                                            }
-                                            let n = scrnfactory.n_pages();
-                                            if i == n - 2 {
-                                                sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
-                                            } else if i <= n - 2 {
-                                                sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
-                                            } else {
-                                                sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            adw::CarouselIndicatorDots {
-                                set_halign: gtk::Align::Fill,
-                                set_valign: gtk::Align::End,
-                                set_carousel: Some(scrnfactory)
-                            }
-                        },
-                        adw::Clamp {
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Start,
-                            set_vexpand_set: true,
-                            set_maximum_size: 1000,
-                            #[watch]
-                            set_visible: !(model.summary.is_none() && model.description.is_none()),
-                            gtk::Box {
-                                set_vexpand: true,
-                                set_valign: gtk::Align::Start,
-                                set_orientation: gtk::Orientation::Vertical,
-                                set_margin_all: 15,
-                                set_spacing: 10,
-                                gtk::Label {
-                                    add_css_class: "title-2",
+                                gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
                                     set_valign: gtk::Align::Start,
-                                    set_halign: gtk::Align::Start,
+                                    add_css_class: "view",
+                                    add_css_class: "frame",
+                                    add_css_class: "scrnbox",
                                     #[watch]
-                                    set_label: if let Some(s) = model.summary.as_ref() { s } else { "" },
-                                    #[watch]
-                                    set_visible: model.summary.is_some(),
-                                    set_wrap: true,
-                                    set_xalign: 0.0,
-                                },
-                                gtk::Label {
-                                    set_valign: gtk::Align::Start,
-                                    set_halign: gtk::Align::Start,
-                                    #[watch]
-                                    set_markup: {
-                                        if let Some(d) = model.description.as_ref() {
-                                            d
-                                        } else { "" }
-                                    },
-                                    #[watch]
-                                    set_visible: model.description.is_some(),
-                                    set_wrap: true,
-                                    set_xalign: 0.0,
-                                },
-                            },
-                        },
-                        adw::Clamp {
-                            set_vexpand: true,
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Start,
-                            set_maximum_size: 1000,
-                            #[name(btnbox)]
-                            gtk::FlowBox {
-                                add_css_class: "linked",
-                                set_halign: gtk::Align::Fill,
-                                set_hexpand: true,
-                                set_margin_bottom: 10,
-                                set_homogeneous: true,
-                                set_row_spacing: 5,
-                                set_column_spacing: 4,
-                                set_selection_mode: gtk::SelectionMode::None,
-                                set_max_children_per_line: 4,
-                                append = &gtk::FlowBoxChild {
-                                    // set_can_target: false,
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-                                        gtk::Button {
+                                    set_visible: !model.screenshots.is_empty(),
+                                    gtk::Overlay {
+                                        set_valign: gtk::Align::Start,
+                                        #[local_ref]
+                                        scrnfactory -> adw::Carousel {
+                                            set_valign: gtk::Align::Fill,
                                             set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
+                                            set_vexpand: true,
+                                            set_height_request: 400,
+                                            set_allow_scroll_wheel: false,
+                                            connect_page_changed[sender] => move |x, _| {
+                                                let n = adw::Carousel::n_pages(x);
+                                                let i = adw::Carousel::position(x) as u32;
+                                                if i == 0 && n == 1 {
+                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::Single));
+                                                } else if i == 0 {
+                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::First));
+                                                } else if i == n - 1 {
+                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
+                                                } else {
+                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
+                                                }
+                                            },
+                                        },
+                                        add_overlay = &gtk::Revealer {
+                                            set_transition_type: gtk::RevealerTransitionType::Crossfade,
+                                            #[watch]
+                                            set_reveal_child: model.carpage != CarouselPage::First && model.carpage != CarouselPage::Single,
+                                            set_halign: gtk::Align::Start,
+                                            set_valign: gtk::Align::Fill,
+                                            gtk::Button {
+                                                set_can_focus: false,
                                                 set_margin_all: 15,
-                                                gtk::Image {
-                                                    #[watch]
-                                                    set_css_classes: &[ if model.licenses.iter().any(|x| x.free == Some(false)) { "error" } else if model.licenses.iter().all(|x| x.free == Some(true)) { "success" } else { "warning" } ],
-                                                    set_halign: gtk::Align::Center,
-                                                    #[watch]
-                                                    set_icon_name: if model.licenses.iter().any(|x| x.free == Some(false)) { Some("dialog-warning-symbolic") } else if model.licenses.iter().all(|x| x.free == Some(true)) { Some("emblem-default-symbolic") } else { Some("dialog-question-symbolic") },
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_halign: gtk::Align::Fill,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        #[watch]
-                                                        set_label: &if model.licenses.len() > 1 { gettext("Licenses") } else { gettext("License") }
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_hexpand: true,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: &{
-                                                            let mut s = String::new();
-                                                            for license in model.licenses.iter() {
-                                                                if model.licenses.iter().len() == 1 {
-                                                                    if let Some(id) = &license.spdxid {
-                                                                        s.push_str(id)
-                                                                    } else {
-                                                                        s.push_str(&license.fullname)
-                                                                    }
-                                                                } else if model.licenses.iter().len() == 2 && model.licenses.first() == Some(license) {
-                                                                    if let Some(id) = &license.spdxid {
-                                                                        let _ = write!(s, "{} ", id);
-                                                                    } else {
-                                                                        let _ = write!(s, "{} ", license.fullname);
-                                                                    }
-                                                                } else if Some(license) == model.licenses.iter().last() {
-                                                                    if let Some(id) = &license.spdxid {
-                                                                        let _ = write!(s, "and {}", id);
-                                                                    } else {
-                                                                        let _ = write!(s, "and {}", license.fullname);
-                                                                    }
-                                                                } else if let Some(id) = &license.spdxid {
-                                                                    let _ = write!(s, "{}, ", id);
-                                                                } else {
-                                                                    let _ = write!(s, "{}, ", license.fullname);
-                                                                }
-                                                            }
-                                                            if model.licenses.is_empty() {
-                                                                s.push_str(&gettext("Unknown"));
-                                                            }
-                                                            s.to_string()
-                                                        },
-                                                        #[watch]
-                                                        set_visible: !model.licenses.is_empty()
+                                                set_height_request: 40,
+                                                set_width_request: 40,
+                                                add_css_class: "circular",
+                                                add_css_class: "osd",
+                                                set_halign: gtk::Align::Start,
+                                                set_valign: gtk::Align::Center,
+                                                set_icon_name: "go-previous-symbolic",
+                                                connect_clicked[sender, scrnfactory] => move |_| {
+                                                    let i = adw::Carousel::position(&scrnfactory) as u32;
+                                                    if i > 0 {
+                                                        let w = scrnfactory.nth_page(i-1);
+                                                        scrnfactory.scroll_to(&w, true);
+                                                    }
+                                                    if i == 1 {
+                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::First));
+                                                    } else if i > 0 {
+                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
                                                     }
                                                 }
                                             }
                                         },
+                                        add_overlay = &gtk::Revealer {
+                                            set_transition_type: gtk::RevealerTransitionType::Crossfade,
+                                            #[watch]
+                                            set_reveal_child: model.carpage != CarouselPage::Last && model.carpage != CarouselPage::Single,
+                                            set_halign: gtk::Align::End,
+                                            set_valign: gtk::Align::Fill,
+                                            gtk::Button {
+                                                set_can_focus: false,
+                                                set_margin_all: 15,
+                                                set_height_request: 40,
+                                                set_width_request: 40,
+                                                add_css_class: "circular",
+                                                add_css_class: "osd",
+                                                set_halign: gtk::Align::End,
+                                                set_valign: gtk::Align::Center,
+                                                set_icon_name: "go-next-symbolic",
+                                                connect_clicked[sender, scrnfactory] => move |_| {
+                                                    let i = adw::Carousel::position(&scrnfactory) as u32;
+                                                    if i < scrnfactory.n_pages() -1 {
+                                                        let w = scrnfactory.nth_page(i+1);
+                                                        scrnfactory.scroll_to(&w, true);
+                                                    }
+                                                    let n = scrnfactory.n_pages();
+                                                    if i == n - 2 {
+                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
+                                                    } else if i <= n - 2 {
+                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
+                                                    } else {
+                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    adw::CarouselIndicatorDots {
+                                        set_halign: gtk::Align::Fill,
+                                        set_valign: gtk::Align::End,
+                                        set_carousel: Some(scrnfactory)
                                     }
                                 },
-                                append = &gtk::FlowBoxChild {
-                                    set_hexpand: true,
+
+                                adw::Clamp {
+                                    set_halign: gtk::Align::Fill,
+                                    set_valign: gtk::Align::Start,
+                                    set_vexpand_set: true,
+                                    set_maximum_size: 1000,
                                     gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            connect_clicked[sender] => move |_| {
-                                                sender.input(PkgMsg::OpenHomepage)
+                                        set_orientation: gtk::Orientation::Vertical,
+                                        set_spacing: 15,
+                                        set_margin_horizontal: 10,
+                                        set_margin_vertical: 30,
+
+                                        #[watch]
+                                        set_visible: !(model.summary.is_none() && model.description.is_none()),
+                                        gtk::Box {
+                                            set_vexpand: true,
+                                            set_valign: gtk::Align::Start,
+                                            set_orientation: gtk::Orientation::Vertical,
+                                            set_spacing: 10,
+                                            gtk::Label {
+                                                add_css_class: "title-2",
+                                                set_valign: gtk::Align::Start,
+                                                set_halign: gtk::Align::Start,
+                                                set_selectable: true,
+                                                #[watch]
+                                                set_label: if let Some(s) = model.summary.as_ref() { s } else { "" },
+                                                #[watch]
+                                                set_visible: model.summary.is_some(),
+                                                set_wrap: true,
+                                                set_xalign: 0.0,
+                                            },
+                                            gtk::Label {
+                                                set_valign: gtk::Align::Start,
+                                                set_halign: gtk::Align::Start,
+                                                set_selectable: true,
+                                                #[watch]
+                                                set_markup: {
+                                                    if let Some(d) = model.description.as_ref() {
+                                                        d
+                                                    } else { "" }
+                                                },
+                                                #[watch]
+                                                set_visible: model.description.is_some(),
+                                                set_wrap: true,
+                                                set_xalign: 0.0,
+                                            },
+                                        },
+
+                                        gtk::Box {
+                                            set_orientation: gtk::Orientation::Vertical,
+                                            set_spacing: 12,
+                                            #[watch]
+                                            set_visible: model.releases_dialog.is_some(),
+                                            #[local_ref]
+                                            latest_release_factory -> adw::PreferencesGroup {},
+                                            adw::PreferencesGroup {
+                                                adw::ButtonRow {
+                                                    set_title: &gettext("Version History"),
+                                                    set_end_icon_name: Some("right-symbolic"),
+                                                    connect_activated[sender] => move |_| {
+                                                        sender.input(PkgMsg::ShowReleases);
+                                                    }
+                                                }
+                                            }
+                                        },
+
+                                        gtk::Box {
+                                            set_vexpand: true,
+                                            set_valign: gtk::Align::Start,
+                                            set_orientation: gtk::Orientation::Vertical,
+                                            set_spacing: 10,
+                                            #[watch]
+                                            set_visible: !model.links.is_empty(),
+                                            gtk::Label {
+                                                set_halign: gtk::Align::Start,
+                                                add_css_class: "title-2",
+                                                set_label: &gettext("Links"),
                                             },
                                             gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    add_css_class: "accent",
-                                                    set_halign: gtk::Align::Center,
-                                                    set_icon_name: Some("user-home-symbolic"),
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_halign: gtk::Align::Fill,
-                                                    set_valign: gtk::Align::Center,
+                                                set_spacing: 12,
+                                                #[local_ref]
+                                                link_factory -> adw::PreferencesGroup {
                                                     set_hexpand: true,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        set_valign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        set_label: &gettext("Homepage")
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_valign: gtk::Align::Center,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: if let Some(u) = &model.homepage {
-                                                            u
-                                                        } else {
-                                                            ""
-                                                        },
-                                                        #[watch]
-                                                        set_visible: model.homepage.is_some(),
-                                                    }
-                                                }
-
-                                            }
-                                        },
-                                    }
-                                },
-                                append = &gtk::FlowBoxChild {
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    add_css_class: "success",
-                                                    set_icon_name: Some("video-display-symbolic"),
-                                                    set_pixel_size: 24,
                                                 },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        set_label: &gettext("Platforms")
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_hexpand: true,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: &{
-                                                            let mut s = String::new();
-                                                            for p in model.platforms.iter() {
-                                                                if model.platforms.iter().len() == 1 {
-                                                                    s.push_str(p);
-                                                                } else if model.platforms.iter().len() == 2 && model.platforms.first() == Some(p) {
-                                                                    let _ = write!(s, "{} ", p);
-                                                                } else if Some(p) == model.platforms.iter().last() {
-                                                                    let _ = write!(s, "and {}", p);
-                                                                } else {
-                                                                    let _ = write!(s, "{}, ", p);
-                                                                }
-                                                            }
-                                                            if model.platforms.is_empty() {
-                                                                s.push_str(&gettext("Unknown"));
-                                                            }
-                                                            s.to_string()
-                                                        },
-                                                        #[watch]
-                                                        set_visible: !model.platforms.is_empty()
-                                                    }
-                                                }
-                                            }
+                                            },
                                         },
-                                    }
+                                    },
                                 },
-                                append = &gtk::FlowBoxChild {
-                                    set_hexpand: true,
-                                    gtk::Box {
-                                        set_spacing: 10,
-                                        set_hexpand: true,
-                                        set_homogeneous: true,
-
-                                        gtk::Button {
-                                            set_hexpand: true,
-                                            add_css_class: "card",
-                                            set_height_request: 100,
-                                            set_width_request: 100,
-                                            gtk::Box {
-                                                set_orientation: gtk::Orientation::Vertical,
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Center,
-                                                set_spacing: 10,
-                                                set_margin_all: 15,
-                                                gtk::Image {
-                                                    add_css_class: "circular",
-                                                    #[watch]
-                                                    set_css_classes: &[ if model.maintainers.is_empty() { "error" } else { "accent" } ],
-                                                    set_halign: gtk::Align::Center,
-                                                    set_icon_name: Some("system-users-symbolic"),
-                                                    set_pixel_size: 24,
-                                                },
-                                                gtk::Box {
-                                                    set_orientation: gtk::Orientation::Vertical,
-                                                    set_valign: gtk::Align::Center,
-                                                    set_spacing: 5,
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Center,
-                                                        add_css_class: "heading",
-                                                        #[watch]
-                                                        set_label: &if model.maintainers.len() > 1 { gettext("Maintainers") } else { gettext("Maintainer") }
-                                                    },
-                                                    gtk::Label {
-                                                        set_halign: gtk::Align::Fill,
-                                                        set_hexpand: true,
-                                                        add_css_class: "caption",
-                                                        add_css_class: "dim-label",
-                                                        set_ellipsize: pango::EllipsizeMode::End,
-                                                        set_lines: 2,
-                                                        set_wrap: true,
-                                                        set_max_width_chars: 0,
-                                                        set_justify: gtk::Justification::Center,
-                                                        #[watch]
-                                                        set_label: &{
-                                                            let mut s = String::new();
-                                                            let maintainerlist = model.maintainers.iter().filter(|m| m.name.is_some() || m.github.is_some()).collect::<Vec<_>>();
-                                                            for p in &maintainerlist {
-                                                                if maintainerlist.len() == 1 {
-                                                                    if let Some(n) = &p.name {
-                                                                        s.push_str(n);
-                                                                    } else if let Some(g) = &p.github {
-                                                                        s.push_str(g);
-                                                                    }
-                                                                } else if maintainerlist.len() == 2 && model.maintainers.first() == Some(p) {
-                                                                    if let Some(n) = &p.name {
-                                                                        let _ = write!(s, "{} ", n.as_str());
-                                                                    } else if let Some(g) = &p.github {
-                                                                        s.push_str(g);
-                                                                    }
-                                                                } else if Some(p) == maintainerlist.last() {
-                                                                    if let Some(n) = &p.name {
-                                                                        let _ = write!(s, "and {}", n.as_str());
-                                                                    } else if let Some(g) = &p.github {
-                                                                        let _ = write!(s, "and {}", g.as_str());
-                                                                    }
-                                                                } else if let Some(n) = &p.name {
-                                                                    let _ = write!(s, "{}, ", n.as_str());
-                                                                } else if let Some(g) = &p.github {
-                                                                    let _ = write!(s, "{}, ", g.as_str());
-                                                                }
-                                                            }
-                                                            if model.maintainers.is_empty() {
-                                                                s.push_str(&gettext("Unknown"));
-                                                            }
-                                                            s.to_string()
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    }
-                                },
+                                gtk::Separator {
+                                    set_vexpand: true,
+                                    add_css_class: "spacer"
+                                }
                             }
-                        },
-                        gtk::Separator {
-                            set_vexpand: true,
-                            add_css_class: "spacer"
                         }
-                    }
-                }
-            }
-        }
+                    },
+                    },
+                },
+            },
     }
 
     menu! {
@@ -884,6 +941,7 @@ impl Component for PkgModel {
             .forward(sender.input_sender(), identity);
         let config = initparams.config;
         installworker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
+
         let model = PkgModel {
             config,
             name: String::default(),
@@ -892,17 +950,34 @@ impl Component for PkgModel {
             summary: None,
             description: None,
             version: None,
-            icon: None,
-            homepage: None,
-            licenses: vec![],
+
+            position: String::default(),
+
+            broken: false,
+            insecure: false,
+            unsupported: false,
+            unfree: false,
+
+            icon: gtk::Image::new(),
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
                 .forward(sender.input_sender(), |_| PkgMsg::Noop),
+            links: FactoryVecDeque::builder()
+                .launch(adw::PreferencesGroup::new())
+                .forward(sender.input_sender(), |msg| match msg {
+                    LinkItemMsg::ShowToast(msg) => PkgMsg::ShowToast(msg),
+                }),
+            latest_release: FactoryVecDeque::builder()
+                .launch(adw::PreferencesGroup::new())
+                .forward(sender.input_sender(), |_| PkgMsg::Noop),
             installworker,
-            platforms: vec![],
+
+            releases_dialog: None,
+
+            toast_overlay: adw::ToastOverlay::new(),
+
             carpage: CarouselPage::Single,
             installtype: InstallType::User,
-            maintainers: vec![],
             installed_pkgs: HashSet::new(),
             installeduserpkgs: HashSet::new(),
             installedsystempkgs: HashSet::new(),
@@ -913,6 +988,14 @@ impl Component for PkgModel {
             online: initparams.online,
             tracker: 0,
         };
+
+        let toast_overlay = &model.toast_overlay;
+
+        let package_icon = &model.icon;
+
+        let link_factory = model.links.widget();
+
+        let latest_release_factory = model.latest_release.widget();
 
         let scrnfactory = model.screenshots.widget();
         relm4::set_global_css(
@@ -974,7 +1057,7 @@ impl Component for PkgModel {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         self.reset();
         match msg {
             PkgMsg::UpdateConfig(config) => {
@@ -991,7 +1074,6 @@ impl Component for PkgModel {
                 // First clean up from previous package
                 self.summary = None;
                 self.description = None;
-                self.icon = None;
                 let mut scrn_guard = self.screenshots.guard();
                 scrn_guard.clear();
                 scrn_guard.drop();
@@ -999,12 +1081,23 @@ impl Component for PkgModel {
                 self.set_visible(true);
                 self.set_pkg(pkgmodel.pkg);
                 self.set_name(pkgmodel.name);
-                self.set_icon(pkgmodel.icon);
+
+                if pkgmodel.icon.is_some() {
+                    self.update_icon(|image| image.set_from_file(pkgmodel.icon.clone()));
+                } else {
+                    self.update_icon(|image| image.set_icon_name(Some("package-x-generic")));
+                }
+
                 self.set_version(pkgmodel.version);
-                self.set_platforms(pkgmodel.platforms);
-                self.set_maintainers(pkgmodel.maintainers);
-                self.set_licenses(pkgmodel.licenses);
                 self.set_pname(pkgmodel.pname);
+
+                self.set_position(pkgmodel.position);
+
+                self.set_broken(pkgmodel.broken);
+                self.set_insecure(pkgmodel.insecure);
+                self.set_unsupported(pkgmodel.unsupported);
+                self.set_unfree(pkgmodel.unfree);
+
                 self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
                 self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
 
@@ -1082,8 +1175,6 @@ impl Component for PkgModel {
                     self.description = Some(pango.strip_prefix('\n').unwrap_or(&pango).to_string());
                 }
 
-                self.homepage = pkgmodel.homepage;
-
                 if pkgmodel.screenshots.len() <= 1 {
                     self.carpage = CarouselPage::Single;
                 } else {
@@ -1095,6 +1186,140 @@ impl Component for PkgModel {
                     scrn_guard.clear();
                     for _i in 0..pkgmodel.screenshots.len() {
                         scrn_guard.push_back(());
+                    }
+                }
+
+                {
+                    let mut links_guard = self.links.guard();
+                    links_guard.clear();
+
+                    if let Some(url) = pkgmodel.url {
+                        url.homepage.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Website,
+                                link: link,
+                            });
+                        });
+                        url.bugtracker.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::IssueTracker,
+                                link: link,
+                            });
+                        });
+                        url.faq.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::FAQ,
+                                link: link,
+                            });
+                        });
+                        url.help.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Help,
+                                link: link,
+                            });
+                        });
+                        url.donation.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Donate,
+                                link: link,
+                            });
+                        });
+                        url.translate.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Translate,
+                                link: link,
+                            });
+                        });
+                        url.contact.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Contact,
+                                link: link,
+                            });
+                        });
+                        url.vcs_browser.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Source,
+                                link: link,
+                            });
+                        });
+                        url.contribute.map(|link| {
+                            links_guard.push_back(LinkItemInit {
+                                link_type: LinkType::Contribute,
+                                link: link,
+                            });
+                        });
+                    }
+
+                    links_guard.push_back(LinkItemInit {
+                        link_type: LinkType::NixSource,
+                        link: "https://github.com/NixOS/nixpkgs/blob/nixos-unstable/".to_string()
+                            + &self.position.replace(':', "#L"),
+                    });
+                }
+
+                {
+                    let releases = pkgmodel
+                        .releases
+                        .iter()
+                        .filter(|release| release.release_type == ReleaseType::Stable)
+                        .map(|release| {
+                            let description = release
+                                .description
+                                .as_ref()
+                                .and_then(|description| description.get("C"))
+                                .map(|description| {
+                                    let mut input = description.to_string();
+                                    // Fix formatting
+                                    while input.contains('\n') {
+                                        input = input.replace('\n', " ");
+                                    }
+                                    while input.contains('\t') {
+                                        input = input.replace('\t', " ");
+                                    }
+                                    while input.contains("  ") {
+                                        input = input.replace("  ", " ");
+                                    }
+                                    let mut pango = html2pango::markup_html(&input)
+                                        .unwrap_or_else(|_| {
+                                            warn!("Pango failed to parse description");
+                                            input.to_string()
+                                        })
+                                        .trim()
+                                        .to_string();
+                                    while pango.contains("\n ") {
+                                        pango = pango.replace("\n ", "\n");
+                                    }
+                                    while pango.ends_with('\n') {
+                                        pango.pop();
+                                    }
+
+                                    pango.strip_prefix('\n').unwrap_or(&pango).to_string()
+                                });
+
+                            ReleaseItemInit {
+                                version: release.version.as_ref().map(|v| v.to_string()),
+                                date: release.timestamp.or(release.date),
+                                description,
+                                url: release.url.as_ref().and_then(|url| url.details.clone()),
+                                installed: release.version == self.version,
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    {
+                        let mut latest_release_guard = self.latest_release.guard();
+                        latest_release_guard.clear();
+                        if let Some(release) = releases.get(0) {
+                            latest_release_guard.push_back(release.clone());
+                        }
+                    }
+
+                    if releases.is_empty() {
+                        self.set_releases_dialog(None);
+                    } else {
+                        self.set_releases_dialog(Some(
+                            ReleasesDialog::builder().launch(ReleasesInit { releases: releases }),
+                        ));
                     }
                 }
 
@@ -1233,14 +1458,6 @@ impl Component for PkgModel {
             }
             PkgMsg::SetCarouselPage(page) => {
                 self.carpage = page;
-            }
-            PkgMsg::OpenHomepage => {
-                if let Some(u) = &self.homepage
-                    && let Err(e) =
-                        gio::AppInfo::launch_default_for_uri(u, gio::AppLaunchContext::NONE)
-                {
-                    warn!("error: {}", e);
-                }
             }
             PkgMsg::Install => {
                 let online = checkonline();
@@ -1433,6 +1650,16 @@ impl Component for PkgModel {
             }
             PkgMsg::UpdateOnline(online) => {
                 self.set_online(online);
+            }
+            PkgMsg::ShowReleases => {
+                self.releases_dialog
+                    .as_ref()
+                    .map(|dialog| dialog.widget().present(Some(root)));
+            }
+            PkgMsg::ShowToast(msg) => {
+                let toast = adw::Toast::new(&msg);
+                toast.set_timeout(2);
+                self.toast_overlay.add_toast(toast);
             }
             PkgMsg::Noop => (),
         }

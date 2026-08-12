@@ -1105,11 +1105,15 @@ impl AsyncComponent for AppModel {
                             String,
                             String,
                             String,
+                            bool,
+                            bool,
+                            bool,
+                            bool,
                         ),
                         _,
                     > = sqlx::query_as(
                         r#"
-SELECT pname, version, system, description, longdescription, homepage, license, platforms, maintainers
+SELECT pname, version, system, description, longdescription, license, platforms, maintainers, position, broken, insecure, unsupported, unfree
 FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1
                     "#,
                     )
@@ -1123,10 +1127,14 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         system,
                         description,
                         longdescription,
-                        homepage,
                         licensejson,
                         platformsjson,
                         maintainersjson,
+                        position,
+                        broken,
+                        insecure,
+                        unsupported,
+                        unfree,
                     )) = pkgdata
                     {
                         let mut name = pname.to_string();
@@ -1146,8 +1154,11 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         let mut platforms = vec![];
                         let mut maintainers = vec![];
                         let mut launchable = None;
+                        let mut url = None;
 
-                        if let Some(data) = self.appdata.get(&pkg) {
+                        let app_data = self.appdata.get(&pkg);
+
+                        if let Some(data) = app_data {
                             if let Some(n) = &data.name
                                 && let Some(n) = n.get("C")
                             {
@@ -1198,6 +1209,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             {
                                 launchable = Some(d.to_string());
                             }
+                            url = data.url.clone();
                         }
 
                         fn addlicense(pkglicense: &LicenseEnum, licenses: &mut Vec<License>) {
@@ -1352,6 +1364,10 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             }
                         }
 
+                        let releases = app_data
+                            .and_then(|ad| ad.releases.clone())
+                            .unwrap_or_else(|| Vec::new());
+
                         let out = PkgInitModel {
                             name,
                             version: if version.is_empty() {
@@ -1365,17 +1381,16 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             icon,
                             pkg,
                             screenshots,
-                            homepage: if homepage.is_empty() {
-                                None
-                            } else {
-                                Some(homepage)
-                            },
-                            platforms,
-                            licenses,
-                            maintainers,
                             installeduserpkgs: self.installeduserpkgs.keys().cloned().collect(),
                             installedsystempkgs: self.installedsystempkgs.clone(),
                             launchable,
+                            url,
+                            releases,
+                            position,
+                            broken,
+                            insecure,
+                            unsupported,
+                            unfree,
                         };
                         if self.viewstack.visible_child_name()
                             != Some(gtk::glib::GString::from("search"))
