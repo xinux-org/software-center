@@ -361,7 +361,6 @@ impl Component for PkgModel {
                                                 // Install options
                                                 #[name(install_options_large)]
                                                 append = &gtk::FlowBoxChild {
-                                                    set_can_target: false,
                                                     set_halign: gtk::Align::End,
                                                     gtk::Box {
                                                         set_halign: gtk::Align::End,
