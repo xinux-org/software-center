@@ -8,21 +8,22 @@ let
     inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
 in
 pkgs.mkShell {
-  nativeBuildInputs = with pkgs; [
-    nixd
-    cargo
-    clippy
-    rust-analyzer
-    rustc
-    rustfmt
-    rustPlatform.bindgenHook
-    nixfmt
-    just
-    just-lsp
-  ];
-  buildInputs =
+  packages =
     with pkgs;
     [
+      nixd
+      cargo
+      clippy
+      rust-analyzer
+      rustc
+      rustfmt
+      rustPlatform.bindgenHook
+      nixfmt
+      just
+      just-lsp
+      polkit
+
+      appstreamcli
       desktop-file-utils
       cairo
       gdk-pixbuf
@@ -43,6 +44,7 @@ pkgs.mkShell {
       wrapGAppsHook4
     ]
     ++ [ nixos-appstream-data ];
+
   # Set Environment Variables
   RUST_BACKTRACE = "full";
   RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
