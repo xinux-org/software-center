@@ -48,6 +48,7 @@ impl FactoryComponent for InstalledItemModel {
                 set_subtitle: &self.item.version,
                 add_prefix = &adw::Bin {
                     set_valign: gtk::Align::Center,
+                    set_margin_vertical: 8,
                     #[wrap(Some)]
                     set_child = if self.item.icon.is_some() {
                         gtk::Image {
@@ -81,6 +82,7 @@ impl FactoryComponent for InstalledItemModel {
                 },
                 add_suffix = &gtk::Box {
                     set_spacing: 8,
+                    set_margin_vertical: 8,
                     if self.item.busy {
                         gtk::Spinner {
                             set_spinning: true,
