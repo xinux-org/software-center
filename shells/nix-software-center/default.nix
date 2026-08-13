@@ -23,7 +23,7 @@ pkgs.mkShell {
       just-lsp
       polkit
 
-      appstreamcli
+      appstream
       desktop-file-utils
       cairo
       gdk-pixbuf
