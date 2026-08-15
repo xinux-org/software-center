@@ -21,8 +21,6 @@ pkgs.mkShell {
       nixfmt
       just
       just-lsp
-      polkit
-
       appstream
       desktop-file-utils
       cairo
