@@ -54,3 +54,8 @@ fix:
 
 # Clean and reconfigure from scratch
 rebuild: clean setup build
+
+# generate new .pot file & update existing languages from LINGUAS
+trans:
+  xgettext --directory=. --files-from=./po/POTFILES.in --from-code=UTF-8 -kgettext -o ./po/translations.pot --language=Rust
+  grep -v '^#' ./po/LINGUAS | xargs -I {} sh -c "msgmerge --update --previous ./po/{}.po ./po/translations.pot"
