@@ -4,7 +4,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-08-17 14:18+0500\n"
 "PO-Revision-Date: \n"
-"Last-Translator: bahrom04\n"
+"Last-Translator: Baxrom Raxmatov\n"
 "Language-Team: \n"
 "Language: uz\n"
 "MIME-Version: 1.0\n"
@@ -338,45 +338,43 @@ msgstr "Nusxalandi!"
 
 #: src/ui/package/components/link_item.rs:107
 msgid "Project Website"
-msgstr ""
+msgstr "Loyiha sayti"
 
 #: src/ui/package/components/link_item.rs:108
 msgid "Issue Tracker"
-msgstr ""
+msgstr "Muammo haqida xabar"
 
 #: src/ui/package/components/link_item.rs:109
 msgid "FAQ"
-msgstr ""
+msgstr "KBS"
 
 #: src/ui/package/components/link_item.rs:110
 msgid "Help"
-msgstr ""
+msgstr "Yordam"
 
 #: src/ui/package/components/link_item.rs:111
 msgid "Donate"
-msgstr ""
+msgstr "Hayriya"
 
 #: src/ui/package/components/link_item.rs:112
 msgid "Translate"
-msgstr ""
+msgstr "Tarjima"
 
 #: src/ui/package/components/link_item.rs:113
 msgid "Contact"
-msgstr ""
+msgstr "Aloqa"
 
 #: src/ui/package/components/link_item.rs:114
 msgid "Source Code"
-msgstr ""
+msgstr "Dastur kodi"
 
 #: src/ui/package/components/link_item.rs:115
-#, fuzzy
-#| msgid "Continue"
 msgid "Contribute"
-msgstr "Davom etish"
+msgstr "Hissa qoʻshish"
 
 #: src/ui/package/components/link_item.rs:116
 msgid "Nix Source"
-msgstr ""
+msgstr "Nix kodi"
 
 #: src/ui/package/components/release_item.rs:51
 msgid "Version"
