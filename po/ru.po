@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: unnamed project\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-14 16:48+0500\n"
+"POT-Creation-Date: 2026-08-17 14:18+0500\n"
 "PO-Revision-Date: 2026-08-16 12:59+0500\n"
 "Last-Translator: bahrom04\n"
 "Language-Team: Russian\n"
@@ -334,9 +334,51 @@ msgstr "Запустить без установки"
 msgid "Open interactive shell"
 msgstr "Открытая интерактивная оболочка"
 
-#: src/ui/package/components/link_item.rs:78
+#: src/ui/package/components/link_item.rs:77
 msgid "Copied!"
 msgstr "Скопировано!"
+
+#: src/ui/package/components/link_item.rs:107
+msgid "Project Website"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:108
+msgid "Issue Tracker"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:109
+msgid "FAQ"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:110
+msgid "Help"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:111
+msgid "Donate"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:112
+msgid "Translate"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:113
+msgid "Contact"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:114
+msgid "Source Code"
+msgstr ""
+
+#: src/ui/package/components/link_item.rs:115
+#, fuzzy
+#| msgid "Continue"
+msgid "Contribute"
+msgstr "Продолжить"
+
+#: src/ui/package/components/link_item.rs:116
+msgid "Nix Source"
+msgstr ""
 
 #: src/ui/package/components/release_item.rs:51
 msgid "Version"
