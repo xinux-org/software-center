@@ -1300,7 +1300,8 @@ impl Component for PkgModel {
                                 date: release.timestamp.or(release.date),
                                 description,
                                 url: release.url.as_ref().and_then(|url| url.details.clone()),
-                                installed: release.version == self.version,
+                                installed: self.installed_pkgs.contains(&self.pkg)
+                                    && release.version == self.version,
                             }
                         })
                         .collect::<Vec<_>>();
