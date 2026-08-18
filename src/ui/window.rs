@@ -6,7 +6,6 @@ use relm4::{
     WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
-    factory::FactoryVecDeque,
     gtk::{self},
     prelude::{AsyncComponent, AsyncComponentParts},
 };
@@ -26,17 +25,15 @@ use crate::{
         about::about_page::AboutPageModel,
         category::{
             category_page::{CategoryPageModel, CategoryPageMsg},
-            components::{
-                categories::{PkgCategory, PkgCategoryMsg, PkgGroup},
-                category_tile::CategoryTile,
-            },
+            components::{categories::PkgCategory, category_tile::CategoryTile},
         },
+        explore::explore_page::{ExplorePageModel, ExplorePageMsg},
         installed::{
             components::installed_item::InstalledItem,
             installed_page::{InstalledPageModel, InstalledPageMsg},
         },
         package::{
-            components::package_tile::{PkgTile, PkgTileMsg},
+            components::package_tile::PkgTile,
             package_page::{
                 InstallType, License, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg,
             },
@@ -101,20 +98,6 @@ pub struct AppModel {
     categoryrec: HashMap<PkgCategory, Vec<String>>,
     categoryall: HashMap<PkgCategory, Vec<String>>,
     #[tracker::no_eq]
-    recommendedapps: FactoryVecDeque<PkgTile>,
-    #[tracker::no_eq]
-    devapps: FactoryVecDeque<PkgTile>,
-    #[tracker::no_eq]
-    gameapps: FactoryVecDeque<PkgTile>,
-    #[tracker::no_eq]
-    graphicapps: FactoryVecDeque<PkgTile>,
-    #[tracker::no_eq]
-    webapps: FactoryVecDeque<PkgTile>,
-    #[tracker::no_eq]
-    videoapps: FactoryVecDeque<PkgTile>,
-    #[tracker::no_eq]
-    categories: FactoryVecDeque<PkgGroup>,
-    #[tracker::no_eq]
     pkgpage: Controller<PkgModel>,
     #[tracker::no_eq]
     searchpage: Controller<SearchPageModel>,
@@ -126,6 +109,8 @@ pub struct AppModel {
     showvsbar: bool,
     #[tracker::no_eq]
     preferencespage: Controller<PreferencesPageModel>,
+    #[tracker::no_eq]
+    explore_page: Controller<ExplorePageModel>,
     #[tracker::no_eq]
     installedpage: Controller<InstalledPageModel>,
     #[tracker::no_eq]
@@ -348,171 +333,7 @@ impl AsyncComponent for AppModel {
                             },
                             #[local_ref]
                             viewstack -> adw::ViewStack {
-
-                                #[name(frontpage)]
-                                add = &gtk::ScrolledWindow {
-                                    set_vexpand: true,
-                                    set_hexpand: true,
-                                    set_hscrollbar_policy: gtk::PolicyType::Never,
-                                    adw::Clamp {
-                                        set_maximum_size: 1450,
-                                        set_tightening_threshold: 950,
-                                        gtk::Box {
-                                            set_orientation: gtk::Orientation::Vertical,
-                                            set_valign: gtk::Align::Start,
-                                            set_margin_top: 15,
-                                            set_spacing: 4,
-                                            gtk::Label {
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Categories"),
-                                                set_halign: gtk::Align::Start,
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            categorybox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_hexpand: true,
-                                                set_valign: gtk::Align::Center,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                            gtk::Label {
-                                                set_halign: gtk::Align::Start,
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Recommended"),
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            recbox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Fill,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                            gtk::Label {
-                                                set_halign: gtk::Align::Start,
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Development"),
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            devbox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Fill,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                            gtk::Label {
-                                                set_halign: gtk::Align::Start,
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Game"),
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            gamebox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Fill,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                            gtk::Label {
-                                                set_halign: gtk::Align::Start,
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Graphic"),
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            graphicbox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Fill,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                            gtk::Label {
-                                                set_halign: gtk::Align::Start,
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Web"),
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            webbox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Fill,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                            gtk::Label {
-                                                set_halign: gtk::Align::Start,
-                                                add_css_class: "title-1",
-                                                set_label: &gettext("Video"),
-                                                set_margin_bottom: 6,
-                                                set_margin_end: 3,
-                                                set_margin_start: 3,
-                                                set_margin_top: 0
-                                            },
-                                            #[local_ref]
-                                            videobox -> gtk::FlowBox {
-                                                set_halign: gtk::Align::Fill,
-                                                set_valign: gtk::Align::Fill,
-                                                set_orientation: gtk::Orientation::Horizontal,
-                                                set_selection_mode: gtk::SelectionMode::None,
-                                                set_homogeneous: true,
-                                                set_max_children_per_line: 4,
-                                                set_min_children_per_line: 1,
-                                                set_column_spacing: 11,
-                                                set_row_spacing: 11,
-                                            },
-                                        }
-                                    }
-                                },
+                                add: model.explore_page.widget(),
                                 add: model.installedpage.widget(),
                                 add: model.searchpage.widget(),
                                 add: model.updatepage.widget(),
@@ -620,6 +441,9 @@ impl AsyncComponent for AppModel {
         let categorypage = CategoryPageModel::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
+        let explore_page = ExplorePageModel::builder()
+            .launch(syspkgtype.clone())
+            .forward(sender.input_sender(), identity);
         let installedpage = InstalledPageModel::builder()
             .launch(syspkgtype.clone())
             .forward(sender.input_sender(), identity);
@@ -654,45 +478,6 @@ impl AsyncComponent for AppModel {
             syspkgtype,
             categoryrec: HashMap::new(),
             categoryall: HashMap::new(),
-            recommendedapps: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
-                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                }),
-            devapps: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
-                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                }),
-            gameapps: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
-                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                }),
-            graphicapps: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
-                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                }),
-            webapps: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
-                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                }),
-            videoapps: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(sender.input_sender(), |pkg_tile_msg| match pkg_tile_msg {
-                    PkgTileMsg::Open(x) => AppMsg::OpenPkg(x),
-                }),
-
-            categories: FactoryVecDeque::builder()
-                .launch(gtk::FlowBox::new())
-                .forward(
-                    sender.input_sender(),
-                    |pkg_category_msg| match pkg_category_msg {
-                        PkgCategoryMsg::Open(category) => AppMsg::OpenCategoryPage(category),
-                    },
-                ),
             pkgpage,
             searchpage,
             categorypage,
@@ -700,6 +485,7 @@ impl AsyncComponent for AppModel {
             searchquery: String::default(),
             vschild: String::default(),
             showvsbar: false,
+            explore_page,
             installedpage,
             updatepage,
             viewstack: adw::ViewStack::new(),
@@ -728,13 +514,6 @@ impl AsyncComponent for AppModel {
                 model.config.clone(),
             ));
         }
-        let recbox = model.recommendedapps.widget();
-        let devbox = model.devapps.widget();
-        let gamebox = model.gameapps.widget();
-        let graphicbox = model.graphicapps.widget();
-        let webbox = model.webapps.widget();
-        let videobox = model.videoapps.widget();
-        let categorybox = model.categories.widget();
         let viewstack = &model.viewstack;
 
         let widgets = view_output!();
@@ -765,7 +544,7 @@ impl AsyncComponent for AppModel {
         widgets.main_stack.set_vhomogeneous(false);
         widgets.main_stack.set_hhomogeneous(false);
         widgets.load_window_size();
-        let frontvs = widgets.viewstack.page(&widgets.frontpage);
+        let frontvs = widgets.viewstack.page(model.explore_page.widget());
         let installedvs = widgets.viewstack.page(model.installedpage.widget());
         let updatesvs = widgets.viewstack.page(model.updatepage.widget());
         let searchvs = widgets.viewstack.page(model.searchpage.widget());
@@ -999,25 +778,6 @@ impl AsyncComponent for AppModel {
                 sender.input(AppMsg::UpdateRecPkgs(webapps, Some(PkgCategory::Web)));
                 sender.input(AppMsg::UpdateRecPkgs(videoapps, Some(PkgCategory::Video)));
 
-                let mut cat_guard = self.categories.guard();
-                cat_guard.clear();
-                for c in [
-                    PkgCategory::Audio,
-                    PkgCategory::Development,
-                    PkgCategory::Games,
-                    PkgCategory::Graphics,
-                    PkgCategory::Web,
-                    PkgCategory::Video,
-                    PkgCategory::Education,
-                    PkgCategory::Science,
-                    PkgCategory::Office,
-                    PkgCategory::Network,
-                    PkgCategory::System,
-                    PkgCategory::Utility,
-                ] {
-                    cat_guard.push_back(c);
-                }
-                cat_guard.drop();
                 self.busy = false;
             }
             AppMsg::UpdateRecPkgs(pkgs, pkgs_category) => {
@@ -2100,31 +1860,11 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 }
             }
             AppAsyncMsg::UpdateRecPkgs(pkgtiles, pkg_category) => {
-                info!("AppAsyncMsg::UpdateRecPkgs");
-                let mut recapps_guard = match pkg_category {
-                    Some(PkgCategory::Audio) => todo!(),
-                    Some(PkgCategory::Development) => self.devapps.guard(),
-                    Some(PkgCategory::Games) => self.gameapps.guard(),
-                    Some(PkgCategory::Graphics) => self.graphicapps.guard(),
-                    Some(PkgCategory::Web) => self.webapps.guard(),
-                    Some(PkgCategory::Video) => self.videoapps.guard(),
-                    Some(PkgCategory::Education) => todo!(),
-                    Some(PkgCategory::Science) => todo!(),
-                    Some(PkgCategory::Office) => todo!(),
-                    Some(PkgCategory::Network) => todo!(),
-                    Some(PkgCategory::System) => todo!(),
-                    Some(PkgCategory::Utility) => todo!(),
-                    None => self.recommendedapps.guard(),
-                };
-                recapps_guard.clear();
-
-                for tile in pkgtiles {
-                    recapps_guard.push_back(tile.clone());
-                }
-                recapps_guard.drop();
-
-                sender.input(AppMsg::UpdateInstalledPkgs);
-                info!("DONE AppAsyncMsg::UpdateRecPkgs");
+                self.explore_page
+                    .emit(ExplorePageMsg::UpdateRecommendedPackages(
+                        pkgtiles,
+                        pkg_category,
+                    ));
             }
             AppAsyncMsg::UpdateInstalledPkgs(installedsystempkgs, installeduserpkgs) => {
                 // TODO: maybe create macro to update installed pkgs
@@ -2133,28 +1873,14 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     || installeduserpkgs != self.installeduserpkgs
                 {
                     warn!("Changes needed!");
-                    self.installedsystempkgs = installedsystempkgs;
-                    self.installeduserpkgs = installeduserpkgs;
-                    debug!("Getting recommended apps guard");
-                    let mut recommendedapps_guard = self.recommendedapps.guard();
-                    debug!("Got recommended apps guard");
-                    for item in recommendedapps_guard.iter_mut() {
-                        debug!("Got item {}", item.pkg);
-                        item.installeduser = self.installeduserpkgs.contains_key(&item.pkg);
-                        item.installedsystem = self.installedsystempkgs.contains(&item.pkg);
-                    }
+                    self.installedsystempkgs = installedsystempkgs.clone();
+                    self.installeduserpkgs = installeduserpkgs.clone();
 
-                    // let mut audioapps_guard = self.audioapps.guard();
-                    // debug!("Got recommended apps guard");
-                    // for item in audioapps_guard.iter_mut() {
-                    //     debug!("Got item {}", item.pkg);
-                    //     item.installeduser =
-                    //         self.installeduserpkgs.contains_key(match self.userpkgtype {
-                    //             UserPkgs::Env => &item.pname,
-                    //             UserPkgs::Profile => &item.pkg,
-                    //         });
-                    //     item.installedsystem = self.installedsystempkgs.contains(&item.pkg);
-                    // }
+                    self.explore_page
+                        .emit(ExplorePageMsg::UpdateInstalledPackages(
+                            installedsystempkgs,
+                            installeduserpkgs,
+                        ));
 
                     if self.searching {
                         self.searchpage.emit(SearchPageMsg::UpdateInstalled(

@@ -1,5 +1,6 @@
 mod about;
 mod category;
+mod explore;
 mod installed;
 pub mod package;
 mod preferences;
