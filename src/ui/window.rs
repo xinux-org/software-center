@@ -762,6 +762,8 @@ impl AsyncComponent for AppModel {
                 self.updatepage
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
 
+                sender.input(AppMsg::UpdateInstalledPkgs);
+
                 // TODO: Refactor this in the future
                 println!("recommendedapps\n\n\n\n\n\n\n: {:?}", &recommendedapps);
                 sender.input(AppMsg::UpdateRecPkgs(recommendedapps, None));
