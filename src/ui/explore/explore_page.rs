@@ -2,20 +2,18 @@ use adw::prelude::*;
 use gettextrs::gettext;
 use log::debug;
 use relm4::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::ui::{
     category::components::categories::{PkgCategory, PkgCategoryMsg, PkgGroup},
+    installed::components::installed_item::InstalledItem,
     package::components::package_tile::{PkgTile, PkgTileMsg},
-    window::{AppMsg, SystemPkgs},
+    window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
 };
 
 #[tracker::track]
 #[derive(Debug)]
 pub struct ExplorePageModel {
-    installed_system_packages: HashSet<String>,
-    installed_user_packages: HashMap<String, String>,
-
     system_pkg_type: SystemPkgs,
 
     #[tracker::no_eq]
@@ -38,7 +36,10 @@ pub struct ExplorePageModel {
 pub enum ExplorePageMsg {
     OpenPackage(String),
     OpenCategory(PkgCategory),
-    UpdateInstalledPackages(HashSet<String>, HashMap<String, String>),
+    UpdateInstalledPackages {
+        system_packages: Vec<InstalledItem>,
+        user_packages: Vec<InstalledItem>,
+    },
     UpdateRecommendedPackages(Vec<PkgTile>, Option<PkgCategory>),
 }
 
@@ -220,6 +221,13 @@ impl SimpleComponent for ExplorePageModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        INSTALLED_PACKAGES_STATE.subscribe(sender.input_sender(), |state| {
+            ExplorePageMsg::UpdateInstalledPackages {
+                system_packages: state.installed_system_packages.clone(),
+                user_packages: state.installed_user_packages.clone(),
+            }
+        });
+
         let categories = [
             PkgCategory::Audio,
             PkgCategory::Development,
@@ -248,9 +256,6 @@ impl SimpleComponent for ExplorePageModel {
         }
 
         let model = ExplorePageModel {
-            installed_system_packages: HashSet::new(),
-            installed_user_packages: HashMap::new(),
-
             system_pkg_type,
 
             recommended_apps: FactoryVecDeque::builder()
@@ -312,17 +317,26 @@ impl SimpleComponent for ExplorePageModel {
                 sender.output(AppMsg::OpenCategoryPage(category));
             }
 
-            ExplorePageMsg::UpdateInstalledPackages(system_packages, user_packages) => {
-                self.installed_system_packages = system_packages.clone();
-                self.installed_user_packages = user_packages.clone();
+            ExplorePageMsg::UpdateInstalledPackages {
+                system_packages,
+                user_packages,
+            } => {
+                let system_packages = system_packages
+                    .iter()
+                    .map(|item| &item.pkg)
+                    .collect::<HashSet<_>>();
+                let user_packages = user_packages
+                    .iter()
+                    .map(|item| &item.pkg)
+                    .collect::<HashSet<_>>();
 
                 debug!("Getting recommended apps guard");
                 let mut recommended_apps_guard = self.recommended_apps.guard();
                 debug!("Got recommended apps guard");
                 for item in recommended_apps_guard.iter_mut() {
                     debug!("Got item {}", item.pkg);
-                    item.installedsystem = self.installed_system_packages.contains(&item.pkg);
-                    item.installeduser = self.installed_user_packages.contains_key(&item.pkg);
+                    item.installedsystem = system_packages.contains(&item.pkg);
+                    item.installeduser = user_packages.contains(&item.pkg);
                 }
             }
 

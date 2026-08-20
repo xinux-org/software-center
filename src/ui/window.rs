@@ -3,7 +3,7 @@ use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
     self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker, Sender,
-    WorkerController,
+    SharedState, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     gtk::{self},
@@ -69,6 +69,14 @@ pub enum SystemPkgs {
     Flake,
     None,
 }
+
+#[derive(Default)]
+pub struct InstalledPackagesState {
+    pub installed_system_packages: Vec<InstalledItem>,
+    pub installed_user_packages: Vec<InstalledItem>,
+}
+
+pub static INSTALLED_PACKAGES_STATE: SharedState<InstalledPackagesState> = SharedState::new();
 
 #[tracker::track]
 pub struct AppModel {
@@ -1143,8 +1151,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                             icon,
                             pkg,
                             screenshots,
-                            installeduserpkgs: self.installeduserpkgs.keys().cloned().collect(),
-                            installedsystempkgs: self.installedsystempkgs.clone(),
                             launchable,
                             url,
                             releases,
@@ -1257,7 +1263,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         installeduseritems.push(InstalledItem {
                             name: name.to_string(),
                             pname: pname.to_string(),
-                            pkg: Some(installedpkg.clone()),
+                            pkg: installedpkg.clone(),
                             summary: summary.clone(),
                             icon: icon.clone(),
                             pkgtype: InstallType::User,
@@ -1336,7 +1342,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 installedsystemitems.push(InstalledItem {
                                     name: name.to_string(),
                                     pname: pname.to_string(),
-                                    pkg: Some(installedpkg.clone()),
+                                    pkg: installedpkg.clone(),
                                     summary: summary.clone(),
                                     icon: icon.clone(),
                                     pkgtype: InstallType::System,
@@ -1419,10 +1425,11 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         }
                     }
 
-                    self.installedpage.emit(InstalledPageMsg::Update(
-                        installeduseritems,
-                        installedsystemitems,
-                    ));
+                    *INSTALLED_PACKAGES_STATE.write() = InstalledPackagesState {
+                        installed_system_packages: installedsystemitems,
+                        installed_user_packages: installeduseritems,
+                    };
+
                     self.updatepage
                         .emit(UpdatePageMsg::Update(updateuseritems, updatesystemitems));
                 } else {
@@ -1877,19 +1884,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                     warn!("Changes needed!");
                     self.installedsystempkgs = installedsystempkgs.clone();
                     self.installeduserpkgs = installeduserpkgs.clone();
-
-                    self.explore_page
-                        .emit(ExplorePageMsg::UpdateInstalledPackages(
-                            installedsystempkgs,
-                            installeduserpkgs,
-                        ));
-
-                    if self.searching {
-                        self.searchpage.emit(SearchPageMsg::UpdateInstalled(
-                            self.installeduserpkgs.keys().cloned().collect(),
-                            self.installedsystempkgs.clone(),
-                        ));
-                    }
                 }
                 // Always refresh the update page
                 sender.input(AppMsg::UpdateInstalledPage);

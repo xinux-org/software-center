@@ -5,7 +5,7 @@ use relm4::{factory::*, *};
 use super::components::installed_item::{InstalledItem, InstalledItemModel, InstalledItemMsg};
 use crate::ui::{
     package::package_page::{InstallType, NotifyPage, PkgAction, WorkPkg},
-    window::{AppMsg, SystemPkgs},
+    window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
 };
 
 #[tracker::track]
@@ -21,7 +21,10 @@ pub struct InstalledPageModel {
 
 #[derive(Debug)]
 pub enum InstalledPageMsg {
-    Update(Vec<InstalledItem>, Vec<InstalledItem>),
+    UpdateInstalledPackages {
+        system_packages: Vec<InstalledItem>,
+        user_packages: Vec<InstalledItem>,
+    },
     UpdatePkgTypes(SystemPkgs),
     OpenRow(usize, InstallType),
     Remove(InstalledItem),
@@ -120,6 +123,13 @@ impl SimpleComponent for InstalledPageModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        INSTALLED_PACKAGES_STATE.subscribe(sender.input_sender(), |state| {
+            InstalledPageMsg::UpdateInstalledPackages {
+                system_packages: state.installed_system_packages.clone(),
+                user_packages: state.installed_user_packages.clone(),
+            }
+        });
+
         let model = InstalledPageModel {
             installeduserlist: FactoryVecDeque::builder()
                 .launch(gtk::FlowBox::new())
@@ -153,41 +163,42 @@ impl SimpleComponent for InstalledPageModel {
     fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
         self.reset();
         match msg {
-            InstalledPageMsg::Update(installeduserlist, installedsystemlist) => {
+            InstalledPageMsg::UpdateInstalledPackages {
+                system_packages,
+                user_packages,
+            } => {
                 self.update_updatetracker(|_| ());
+
                 let mut installeduserlist_guard = self.installeduserlist.guard();
                 installeduserlist_guard.clear();
-                for installeduser in installeduserlist {
-                    installeduserlist_guard.push_back(installeduser);
+                for item in user_packages {
+                    installeduserlist_guard.push_back(item);
                 }
+
                 let mut installedsystemlist_guard = self.installedsystemlist.guard();
                 installedsystemlist_guard.clear();
-                for installedsystem in installedsystemlist {
-                    installedsystemlist_guard.push_back(installedsystem);
+                for item in system_packages {
+                    installedsystemlist_guard.push_back(item);
                 }
             }
             InstalledPageMsg::UpdatePkgTypes(systempkgtype) => self.systempkgtype = systempkgtype,
             InstalledPageMsg::OpenRow(row, pkgtype) => match pkgtype {
                 InstallType::User => {
                     let installeduserlist_guard = self.installeduserlist.guard();
-                    if let Some(item) = installeduserlist_guard.get(row)
-                        && let Some(pkg) = &item.item.pkg
-                    {
-                        let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                    if let Some(item) = installeduserlist_guard.get(row) {
+                        let _ = sender.output(AppMsg::OpenPkg(item.item.pkg.to_string()));
                     }
                 }
                 InstallType::System => {
                     let installedsystemlist_guard = self.installedsystemlist.guard();
-                    if let Some(item) = installedsystemlist_guard.get(row)
-                        && let Some(pkg) = &item.item.pkg
-                    {
-                        let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                    if let Some(item) = installedsystemlist_guard.get(row) {
+                        let _ = sender.output(AppMsg::OpenPkg(item.item.pkg.to_string()));
                     }
                 }
             },
             InstalledPageMsg::Remove(item) => {
                 let work = WorkPkg {
-                    pkg: item.pkg.unwrap_or_default(),
+                    pkg: item.pkg,
                     pname: item.pname,
                     pkgtype: item.pkgtype,
                     action: PkgAction::Remove,
@@ -212,7 +223,7 @@ impl SimpleComponent for InstalledPageModel {
                     let mut installedsystemlist_guard = self.installedsystemlist.guard();
                     for i in 0..installedsystemlist_guard.len() {
                         if let Some(item) = installedsystemlist_guard.get_mut(i)
-                            && item.item.pkg == Some(work.pkg.clone())
+                            && item.item.pkg == work.pkg
                             && item.item.pkgtype == work.pkgtype
                         {
                             item.item.busy = false;

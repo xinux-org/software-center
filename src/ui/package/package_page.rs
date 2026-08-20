@@ -29,14 +29,18 @@ use std::{
 
 use crate::{
     ui::{
-        installed::install_worker::{
-            InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
+        installed::{
+            components::installed_item::InstalledItem,
+            install_worker::{
+                InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
+            },
         },
-        window::{AppMsg, SystemPkgs},
+        window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
     },
     utils::{
+        online::checkonline,
         packages::{AppRelease, AppUrl, ReleaseType},
-        {online::checkonline, state},
+        state,
     },
 };
 
@@ -149,8 +153,6 @@ pub struct License {
 pub struct PkgInitModel {
     pub name: String,
     pub pkg: String,
-    pub installeduserpkgs: HashSet<String>,
-    pub installedsystempkgs: HashSet<String>,
     pub pname: String,
     pub summary: Option<String>,
     pub description: Option<String>,
@@ -171,6 +173,10 @@ pub struct PkgInitModel {
 pub enum PkgMsg {
     UpdateConfig(NixDataConfig),
     UpdatePkgTypes(SystemPkgs),
+    UpdateInstalledPackages {
+        system_packages: Vec<InstalledItem>,
+        user_packages: Vec<InstalledItem>,
+    },
     Open(Box<PkgInitModel>),
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
@@ -933,6 +939,13 @@ impl Component for PkgModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        INSTALLED_PACKAGES_STATE.subscribe(sender.input_sender(), |state| {
+            PkgMsg::UpdateInstalledPackages {
+                system_packages: state.installed_system_packages.clone(),
+                user_packages: state.installed_user_packages.clone(),
+            }
+        });
+
         let installworker = InstallAsyncHandler::builder()
             .detach_worker(InstallAsyncHandlerInit {
                 syspkgs: initparams.syspkgs.clone(),
@@ -1069,6 +1082,26 @@ impl Component for PkgModel {
                 self.installworker
                     .emit(InstallAsyncHandlerMsg::SetPkgTypes(syspkgs));
             }
+            PkgMsg::UpdateInstalledPackages {
+                system_packages,
+                user_packages,
+            } => {
+                let system_packages = system_packages
+                    .iter()
+                    .map(|item| item.pkg.to_string())
+                    .collect::<HashSet<_>>();
+                let user_packages = user_packages
+                    .iter()
+                    .map(|item| item.pkg.to_string())
+                    .collect::<HashSet<_>>();
+
+                self.set_installedsystempkgs(system_packages);
+                self.set_installeduserpkgs(user_packages);
+                self.set_installed_pkgs(match self.installtype {
+                    InstallType::System => self.installedsystempkgs.clone(),
+                    InstallType::User => self.installeduserpkgs.clone(),
+                });
+            }
             PkgMsg::Open(pkgmodel) => {
                 // First clean up from previous package
                 self.summary = None;
@@ -1097,8 +1130,22 @@ impl Component for PkgModel {
                 self.set_unsupported(pkgmodel.unsupported);
                 self.set_unfree(pkgmodel.unfree);
 
-                self.set_installeduserpkgs(pkgmodel.installeduserpkgs);
-                self.set_installedsystempkgs(pkgmodel.installedsystempkgs);
+                let installed_packages_state = INSTALLED_PACKAGES_STATE.read();
+
+                self.set_installeduserpkgs(
+                    installed_packages_state
+                        .installed_user_packages
+                        .iter()
+                        .map(|item| item.pkg.to_string())
+                        .collect::<HashSet<_>>(),
+                );
+                self.set_installedsystempkgs(
+                    installed_packages_state
+                        .installed_system_packages
+                        .iter()
+                        .map(|item| item.pkg.to_string())
+                        .collect::<HashSet<_>>(),
+                );
 
                 let is_system_pkg = self.get_installedsystempkgs().contains(&self.pkg);
                 let is_user_pkg = self.get_installeduserpkgs().contains(&self.pkg);

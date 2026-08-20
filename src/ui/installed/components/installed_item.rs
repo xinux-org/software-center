@@ -7,7 +7,7 @@ use crate::{APPINFO, ui::package::package_page::InstallType};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct InstalledItem {
     pub name: String,
-    pub pkg: Option<String>,
+    pub pkg: String,
     pub pname: String,
     pub summary: Option<String>,
     pub icon: Option<String>,

@@ -8,6 +8,7 @@ use relm4::{
 use std::collections::HashSet;
 
 use crate::ui::{
+    installed::components::installed_item::InstalledItem,
     search::components::search_item::{SearchItem, SearchItemModel},
     window::*,
 };
@@ -23,7 +24,10 @@ pub struct SearchPageModel {
 #[derive(Debug)]
 pub enum SearchPageMsg {
     Search(Vec<SearchItem>),
-    UpdateInstalled(HashSet<String>, HashSet<String>),
+    UpdateInstalledPackages {
+        system_packages: Vec<InstalledItem>,
+        user_packages: Vec<InstalledItem>,
+    },
     OpenRow(usize),
     Noop,
 }
@@ -71,6 +75,13 @@ impl SimpleComponent for SearchPageModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        INSTALLED_PACKAGES_STATE.subscribe(sender.input_sender(), |state| {
+            SearchPageMsg::UpdateInstalledPackages {
+                system_packages: state.installed_user_packages.clone(),
+                user_packages: state.installed_system_packages.clone(),
+            }
+        });
+
         let model = SearchPageModel {
             searchitems: FactoryVecDeque::builder()
                 .launch(gtk::ListBox::new())
@@ -105,16 +116,25 @@ impl SimpleComponent for SearchPageModel {
                     let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
                 }
             }
-            SearchPageMsg::UpdateInstalled(installeduserpkgs, installedsystempkgs) => {
-                let mut searchitem_guard = self.searchitems.guard();
-                for i in 0..searchitem_guard.len() {
-                    if let Some(item) = searchitem_guard.get_mut(i) {
-                        let pkgitem = item.get_mut_item();
-                        pkgitem.installeduser =
-                            installeduserpkgs.contains(&pkgitem.pname.to_string());
-                        pkgitem.installedsystem =
-                            installedsystempkgs.contains(&pkgitem.pkg.to_string());
-                    }
+            SearchPageMsg::UpdateInstalledPackages {
+                system_packages,
+                user_packages,
+            } => {
+                let system_packages = system_packages
+                    .iter()
+                    .map(|item| &item.pkg)
+                    .collect::<HashSet<_>>();
+                let user_packages = user_packages
+                    .iter()
+                    .map(|item| &item.pkg)
+                    .collect::<HashSet<_>>();
+
+                let mut guard = self.searchitems.guard();
+
+                for item in guard.iter_mut() {
+                    let item = item.get_mut_item();
+                    item.installedsystem = system_packages.contains(&item.pkg);
+                    item.installeduser = user_packages.contains(&item.pkg);
                 }
             }
             SearchPageMsg::Noop => {}
