@@ -6,4 +6,5 @@
 /target
 *.mo
 result*
-*po~
+*po~.pre-commit-config.yaml
+.pre-commit-config.yaml
