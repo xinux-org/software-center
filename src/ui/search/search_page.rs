@@ -29,7 +29,6 @@ pub enum SearchPageMsg {
         user_packages: Vec<InstalledItem>,
     },
     OpenRow(usize),
-    Noop,
 }
 
 #[relm4::component(pub)]
@@ -85,13 +84,12 @@ impl SimpleComponent for SearchPageModel {
         let model = SearchPageModel {
             searchitems: FactoryVecDeque::builder()
                 .launch(gtk::ListBox::new())
-                .forward(sender.input_sender(), |_| SearchPageMsg::Noop),
+                .detach(),
             searchitemtracker: 0,
             tracker: 0,
         };
 
         let searchlist = model.searchitems.widget();
-
         let widgets = view_output!();
 
         ComponentParts { model, widgets }
@@ -131,13 +129,12 @@ impl SimpleComponent for SearchPageModel {
 
                 let mut guard = self.searchitems.guard();
 
-                for item in guard.iter_mut() {
-                    let item = item.get_mut_item();
+                for item_model in guard.iter_mut() {
+                    let item = item_model.get_mut_item();
                     item.installedsystem = system_packages.contains(&item.pkg);
                     item.installeduser = user_packages.contains(&item.pkg);
                 }
             }
-            SearchPageMsg::Noop => {}
         }
     }
 }
