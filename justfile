@@ -8,32 +8,33 @@ meson_flags := "-Dprofile=" + profile + " -Dprefix=" + local
 
 # Configure meson build directory
 setup:
-    @if [ ! -f {{builddir}}/build.ninja ]; then \
-        meson setup {{builddir}} {{meson_flags}}; \
-    elif ! meson configure {{builddir}} | grep -q "profile.*{{profile}}"; then \
-        meson setup {{builddir}} --reconfigure {{meson_flags}}; \
+    @if [ ! -f {{ builddir }}/build.ninja ]; then \
+        meson setup {{ builddir }} {{ meson_flags }}; \
+    elif ! meson configure {{ builddir }} | grep -q "profile.*{{ profile }}"; then \
+        meson setup {{ builddir }} --reconfigure {{ meson_flags }}; \
     fi
 
 # Reconfigure existing build directory
 reconfigure:
-    meson setup {{builddir}} --reconfigure {{meson_flags}}
+    meson setup {{ builddir }} --reconfigure {{ meson_flags }}
 
 # Build the project
 build: setup
-    meson compile -C {{builddir}}
+    meson compile -C {{ builddir }}
 
 # Install to local prefix
 install: build
-    meson install -C {{builddir}}
+    meson install -C {{ builddir }}
 
 # Build, install, and run the app
 run: install
-    RUST_LOG={{bin}}=DEBUG \
-    ~/.local/bin/{{bin}}
+    RUST_LOG={{ bin }}=DEBUG \
+    ~/.local/bin/{{ bin }}
 
 # Clean build directory
 clean:
-    rm -rf {{builddir}} ~/.local/bin/{{bin}}
+    cargo clean
+    rm -rf {{ builddir }} ~/.local/bin/{{ bin }}
 
 # Watch for changes and rebuild
 watch:
@@ -57,5 +58,5 @@ rebuild: clean setup build
 
 # generate new .pot file & update existing languages from LINGUAS
 trans:
-  xgettext --directory=. --files-from=./po/POTFILES.in --from-code=UTF-8 -kgettext -o ./po/translations.pot --language=Rust
-  grep -v '^#' ./po/LINGUAS | xargs -I {} sh -c "msgmerge --update --previous ./po/{}.po ./po/translations.pot"
+    xgettext --directory=. --files-from=./po/POTFILES.in --from-code=UTF-8 -kgettext -o ./po/translations.pot --language=Rust
+    grep -v '^#' ./po/LINGUAS | xargs -I {} sh -c "msgmerge --update --previous ./po/{}.po ./po/translations.pot"
