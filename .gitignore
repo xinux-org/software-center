@@ -7,3 +7,5 @@
 *.mo
 result*
 *po~
+.pre-commit-config.yaml
+

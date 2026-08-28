@@ -6,6 +6,19 @@
 let
   nixos-appstream-data =
     inputs.nixos-appstream-data.packages."${pkgs.stdenv.hostPlatform.system}".nixos-appstream-data;
+
+  treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs {
+    projectRootFile = "flake.nix";
+    programs.nixfmt.enable = true;
+    programs.rustfmt.enable = true;
+  };
+
+  preCommitCheck = inputs.git-hooks.lib."${pkgs.stdenv.hostPlatform.system}".run {
+    src = ./.;
+    hooks.treefmt.enable = true;
+    hooks.treefmt.package = treefmtEval.config.build.wrapper;
+  };
+
 in
 pkgs.mkShell {
   packages =
@@ -42,6 +55,8 @@ pkgs.mkShell {
       wrapGAppsHook4
     ]
     ++ [ nixos-appstream-data ];
+
+  shellHook = preCommitCheck.shellHook;
 
   # Set Environment Variables
   RUST_BACKTRACE = "full";
