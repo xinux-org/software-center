@@ -8,7 +8,7 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
 use crate::ui::{
-    package::package_page::{InstallType, PkgAction, PkgMsg, WorkPkg},
+    package::package_page::{InstallType, PackageAction, PackageMessage, WorkPackage},
     rebuild::rebuild_model::RebuildMsg,
     window::{REBUILD_BROKER, SystemPkgs},
 };
@@ -18,7 +18,7 @@ use crate::ui::{
 pub struct InstallAsyncHandler {
     #[tracker::no_eq]
     process: Option<JoinHandle<()>>,
-    work: Option<WorkPkg>,
+    work: Option<WorkPackage>,
     config: NixDataConfig,
     pid: Option<u32>,
     syspkgs: SystemPkgs,
@@ -28,7 +28,7 @@ pub struct InstallAsyncHandler {
 pub enum InstallAsyncHandlerMsg {
     SetConfig(NixDataConfig),
     SetPkgTypes(SystemPkgs),
-    Process(WorkPkg),
+    Process(WorkPackage),
     CancelProcess,
     SetPid(Option<u32>),
 }
@@ -41,7 +41,7 @@ pub struct InstallAsyncHandlerInit {
 impl Worker for InstallAsyncHandler {
     type Init = InstallAsyncHandlerInit;
     type Input = InstallAsyncHandlerMsg;
-    type Output = PkgMsg;
+    type Output = PackageMessage;
 
     fn init(params: Self::Init, _sender: relm4::ComponentSender<Self>) -> Self {
         Self {
@@ -74,15 +74,15 @@ impl Worker for InstallAsyncHandler {
                     return;
                 }
                 let config = self.config.clone();
-                match work.pkgtype {
+                match work.install_type {
                     InstallType::User => match work.action {
-                        PkgAction::Install => {
-                            info!("Installing user package: {}", work.pkg);
+                        PackageAction::Install => {
+                            info!("Installing user package: {}", work.package);
                             self.process = Some(relm4::spawn(async move {
                                 let mut p = tokio::process::Command::new("nix")
                                     .arg("profile")
                                     .arg("add")
-                                    .arg(format!("nixpkgs#{}", work.pkg))
+                                    .arg(format!("nixpkgs#{}", work.package))
                                     .arg("--impure")
                                     .kill_on_drop(true)
                                     .stdout(Stdio::piped())
@@ -101,27 +101,29 @@ impl Worker for InstallAsyncHandler {
                                 match p.wait().await {
                                     Ok(o) => {
                                         if o.success() {
-                                            info!("Removed user package: {} success", work.pkg);
-                                            let _ = sender.output(PkgMsg::FinishedProcess(work));
+                                            info!("Removed user package: {} success", work.package);
+                                            let _ = sender
+                                                .output(PackageMessage::FinishedProcess(work));
                                         } else {
-                                            warn!("Removed user package: {} failed", work.pkg);
-                                            let _ = sender.output(PkgMsg::FailedProcess(work));
+                                            warn!("Removed user package: {} failed", work.package);
+                                            let _ =
+                                                sender.output(PackageMessage::FailedProcess(work));
                                         }
                                     }
                                     Err(e) => {
                                         warn!("Error removing user package: {}", e);
-                                        let _ = sender.output(PkgMsg::FailedProcess(work));
+                                        let _ = sender.output(PackageMessage::FailedProcess(work));
                                     }
                                 }
                             }));
                         }
-                        PkgAction::Remove => {
-                            info!("Removing user package: {}", work.pkg);
+                        PackageAction::Remove => {
+                            info!("Removing user package: {}", work.package);
                             self.process = Some(relm4::spawn(async move {
                                 let mut p = tokio::process::Command::new("nix")
                                     .arg("profile")
                                     .arg("remove")
-                                    .arg(&work.pkg)
+                                    .arg(&work.package)
                                     .kill_on_drop(true)
                                     .stdout(Stdio::piped())
                                     .stderr(Stdio::piped())
@@ -137,17 +139,19 @@ impl Worker for InstallAsyncHandler {
                                 match p.wait().await {
                                     Ok(o) => {
                                         if o.success() {
-                                            info!("Removed user package: {} success", work.pkg);
-                                            let _ = sender.output(PkgMsg::FinishedProcess(work));
+                                            info!("Removed user package: {} success", work.package);
+                                            let _ = sender
+                                                .output(PackageMessage::FinishedProcess(work));
                                         } else {
-                                            warn!("Removed user package: {} failed", work.pkg);
-                                            let _ = sender.output(PkgMsg::FailedProcess(work));
+                                            warn!("Removed user package: {} failed", work.package);
+                                            let _ =
+                                                sender.output(PackageMessage::FailedProcess(work));
                                         }
                                     }
 
                                     Err(e) => {
                                         warn!("Error removing user package: {}", e);
-                                        let _ = sender.output(PkgMsg::FailedProcess(work));
+                                        let _ = sender.output(PackageMessage::FailedProcess(work));
                                     }
                                 }
                             }));
@@ -157,11 +161,11 @@ impl Worker for InstallAsyncHandler {
                         REBUILD_BROKER.send(RebuildMsg::Show);
                         if let Some(_systemconfig) = &config.systemconfig {
                             match work.action {
-                                PkgAction::Install => {
-                                    info!("Installing system package: {}", work.pkg);
+                                PackageAction::Install => {
+                                    info!("Installing system package: {}", work.package);
                                     self.process = Some(relm4::spawn(async move {
                                         match installsys(
-                                            work.pkg.to_string(),
+                                            work.package.to_string(),
                                             work.action.clone(),
                                             config,
                                             sender.clone(),
@@ -171,28 +175,31 @@ impl Worker for InstallAsyncHandler {
                                             Ok(b) => {
                                                 if b {
                                                     REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
-                                                    let _ = sender
-                                                        .output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(
+                                                        PackageMessage::FinishedProcess(work),
+                                                    );
                                                 } else {
                                                     REBUILD_BROKER
                                                         .send(RebuildMsg::FinishError(None));
-                                                    let _ =
-                                                        sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(
+                                                        PackageMessage::FailedProcess(work),
+                                                    );
                                                 }
                                             }
                                             Err(e) => {
                                                 REBUILD_BROKER.send(RebuildMsg::FinishError(None));
-                                                let _ = sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender
+                                                    .output(PackageMessage::FailedProcess(work));
                                                 warn!("Error installing system package: {}", e);
                                             }
                                         }
                                     }));
                                 }
-                                PkgAction::Remove => {
-                                    info!("Removing system package: {}", work.pkg);
+                                PackageAction::Remove => {
+                                    info!("Removing system package: {}", work.package);
                                     self.process = Some(relm4::spawn(async move {
                                         match installsys(
-                                            work.pkg.to_string(),
+                                            work.package.to_string(),
                                             work.action.clone(),
                                             config,
                                             sender.clone(),
@@ -202,18 +209,21 @@ impl Worker for InstallAsyncHandler {
                                             Ok(b) => {
                                                 if b {
                                                     REBUILD_BROKER.send(RebuildMsg::FinishSuccess);
-                                                    let _ = sender
-                                                        .output(PkgMsg::FinishedProcess(work));
+                                                    let _ = sender.output(
+                                                        PackageMessage::FinishedProcess(work),
+                                                    );
                                                 } else {
                                                     REBUILD_BROKER
                                                         .send(RebuildMsg::FinishError(None));
-                                                    let _ =
-                                                        sender.output(PkgMsg::FailedProcess(work));
+                                                    let _ = sender.output(
+                                                        PackageMessage::FailedProcess(work),
+                                                    );
                                                 }
                                             }
                                             Err(e) => {
                                                 REBUILD_BROKER.send(RebuildMsg::FinishError(None));
-                                                let _ = sender.output(PkgMsg::FailedProcess(work));
+                                                let _ = sender
+                                                    .output(PackageMessage::FailedProcess(work));
                                                 warn!("Error removing system package: {}", e);
                                             }
                                         }
@@ -231,7 +241,7 @@ impl Worker for InstallAsyncHandler {
                 }
                 self.process = None;
                 self.pid = None;
-                let _ = sender.output(PkgMsg::CancelFinished);
+                let _ = sender.output(PackageMessage::CancelFinished);
             }
             InstallAsyncHandlerMsg::SetPid(p) => self.pid = p,
         }
@@ -240,7 +250,7 @@ impl Worker for InstallAsyncHandler {
 
 async fn installsys(
     pkg: String,
-    action: PkgAction,
+    action: PackageAction,
     config: NixDataConfig,
     _sender: ComponentSender<InstallAsyncHandler>,
 ) -> Result<bool> {
@@ -265,7 +275,7 @@ async fn installsys(
     }
 
     let out = match action {
-        PkgAction::Install => {
+        PackageAction::Install => {
             match nix_editor::write::addtoarr(&f, "environment.systemPackages", vec![p]) {
                 Ok(x) => x,
                 Err(_) => {
@@ -273,7 +283,7 @@ async fn installsys(
                 }
             }
         }
-        PkgAction::Remove => {
+        PackageAction::Remove => {
             match nix_editor::write::rmarr(&f, "environment.systemPackages", vec![p]) {
                 Ok(x) => x,
                 Err(_) => {

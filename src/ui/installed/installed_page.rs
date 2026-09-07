@@ -4,7 +4,7 @@ use relm4::{factory::*, *};
 
 use super::components::installed_item::{InstalledItem, InstalledItemModel, InstalledItemMsg};
 use crate::ui::{
-    package::package_page::{InstallType, NotifyPage, PkgAction, WorkPkg},
+    package::package_page::{InstallType, NotifyPage, PackageAction, WorkPackage},
     window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
 };
 
@@ -28,7 +28,7 @@ pub enum InstalledPageMsg {
     UpdatePkgTypes(SystemPkgs),
     OpenRow(usize, InstallType),
     Remove(InstalledItem),
-    UnsetBusy(WorkPkg),
+    UnsetBusy(WorkPackage),
 }
 
 #[relm4::component(pub)]
@@ -197,23 +197,23 @@ impl SimpleComponent for InstalledPageModel {
                 }
             },
             InstalledPageMsg::Remove(item) => {
-                let work = WorkPkg {
-                    pkg: item.pkg,
-                    pname: item.pname,
-                    pkgtype: item.pkgtype,
-                    action: PkgAction::Remove,
+                let work = WorkPackage {
+                    package: item.pkg,
+                    package_name: item.pname,
+                    install_type: item.pkgtype,
+                    action: PackageAction::Remove,
                     block: false,
                     notify: Some(NotifyPage::Installed),
                 };
                 let _ = sender.output(AppMsg::AddInstalledToWorkQueue(work));
             }
-            InstalledPageMsg::UnsetBusy(work) => match work.pkgtype {
+            InstalledPageMsg::UnsetBusy(work) => match work.install_type {
                 InstallType::User => {
                     let mut installeduserlist_guard = self.installeduserlist.guard();
                     for i in 0..installeduserlist_guard.len() {
                         if let Some(item) = installeduserlist_guard.get_mut(i)
-                            && item.item.pname == work.pname
-                            && item.item.pkgtype == work.pkgtype
+                            && item.item.pname == work.package_name
+                            && item.item.pkgtype == work.install_type
                         {
                             item.item.busy = false;
                         }
@@ -223,8 +223,8 @@ impl SimpleComponent for InstalledPageModel {
                     let mut installedsystemlist_guard = self.installedsystemlist.guard();
                     for i in 0..installedsystemlist_guard.len() {
                         if let Some(item) = installedsystemlist_guard.get_mut(i)
-                            && item.item.pkg == work.pkg
-                            && item.item.pkgtype == work.pkgtype
+                            && item.item.pkg == work.package
+                            && item.item.pkgtype == work.install_type
                         {
                             item.item.busy = false;
                         }

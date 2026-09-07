@@ -19,6 +19,15 @@ use crate::{
 
 const NIXOS_PATH: &str = "/etc/nixos";
 
+#[derive(Default)]
+pub struct PackagesDBState {
+    pub packages_db: String,
+    pub nixpkgs_db: Option<String>,
+    pub system_db: Option<String>,
+}
+
+pub static PACKAGES_DB_STATE: SharedState<PackagesDBState> = SharedState::new();
+
 pub struct WindowAsyncHandler;
 
 #[derive(Debug)]
@@ -90,6 +99,12 @@ impl Worker for WindowAsyncHandler {
                     let systemdb = match syspkgs {
                         SystemPkgs::None => None,
                         SystemPkgs::Flake => nix_data_xinux::cache::flakes::flakespkgs().await.ok(),
+                    };
+
+                    *PACKAGES_DB_STATE.write() = PackagesDBState {
+                        packages_db: pkgdb,
+                        nixpkgs_db: nixpkgsdb,
+                        system_db: systemdb,
                     };
 
                     let pkglist: Vec<(String,)> = match sqlx::query_as("SELECT attribute FROM pkgs")
@@ -509,9 +524,6 @@ impl Worker for WindowAsyncHandler {
                         .expect("Cannot get reccomended audio pkgs");
 
                     let _ = sender.output(AppMsg::Initialize(
-                        pkgdb,
-                        nixpkgsdb,
-                        systemdb,
                         appdata,
                         recpicks,
                         devpicks.to_owned(),

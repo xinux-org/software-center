@@ -15,8 +15,10 @@ use relm4::{
 };
 use serde::{Deserialize, Serialize};
 use sha256::digest;
+use spdx::Expression;
+use sqlx::SqlitePool;
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     convert::identity,
     env,
     error::Error,
@@ -28,6 +30,7 @@ use std::{
 };
 
 use crate::{
+    APPINFO,
     ui::{
         installed::{
             components::installed_item::InstalledItem,
@@ -36,10 +39,11 @@ use crate::{
             },
         },
         window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
+        windowloading::PACKAGES_DB_STATE,
     },
     utils::{
-        online::checkonline,
-        packages::{AppRelease, AppUrl, ReleaseType},
+        online::{checkonline, checkonline_async},
+        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         state,
     },
 };
@@ -53,11 +57,12 @@ use super::components::{
 
 #[tracker::track]
 #[derive(Debug)]
-pub struct PkgModel {
+pub struct PackagePageModel {
     config: NixDataConfig,
+
     name: String,
-    pkg: String,
-    pname: String,
+    package: String,
+    package_name: String,
     summary: Option<String>,
     description: Option<String>,
     version: Option<String>,
@@ -71,7 +76,7 @@ pub struct PkgModel {
 
     launchable: Option<Launch>,
 
-    syspkgtype: SystemPkgs,
+    system_package_type: SystemPkgs,
 
     #[tracker::no_eq]
     icon: gtk::Image,
@@ -82,30 +87,29 @@ pub struct PkgModel {
     #[tracker::no_eq]
     latest_release: FactoryVecDeque<ReleaseItem>,
     #[tracker::no_eq]
-    installworker: WorkerController<InstallAsyncHandler>,
+    install_worker: WorkerController<InstallAsyncHandler>,
 
     #[tracker::no_eq]
     releases_dialog: Option<Connector<ReleasesDialog>>,
 
     toast_overlay: adw::ToastOverlay,
 
-    carpage: CarouselPage,
-    installtype: InstallType,
-    installed_pkgs: HashSet<String>,
-    installeduserpkgs: HashSet<String>,
-    installedsystempkgs: HashSet<String>,
+    carousel_page: CarouselPage,
+    install_type: InstallType,
+    installed_packages: HashSet<String>,
+    installed_user_packages: HashSet<String>,
+    installed_system_packages: HashSet<String>,
 
-    workqueue: HashSet<WorkPkg>,
-    visible: bool,
+    work_queue: HashSet<WorkPackage>,
     online: bool,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
-pub struct WorkPkg {
-    pub pkg: String,
-    pub pname: String,
-    pub pkgtype: InstallType,
-    pub action: PkgAction,
+pub struct WorkPackage {
+    pub package: String,
+    pub package_name: String,
+    pub install_type: InstallType,
+    pub action: PackageAction,
     pub block: bool,
     pub notify: Option<NotifyPage>,
 }
@@ -116,7 +120,7 @@ pub enum NotifyPage {
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
-pub enum PkgAction {
+pub enum PackageAction {
     Install,
     Remove,
 }
@@ -145,39 +149,18 @@ pub enum InstallType {
 pub struct License {
     pub free: Option<bool>,
     pub fullname: String,
-    pub spdxid: Option<String>,
+    pub spdx_id: Option<String>,
     pub url: Option<String>,
 }
 
 #[derive(Debug)]
-pub struct PkgInitModel {
-    pub name: String,
-    pub pkg: String,
-    pub pname: String,
-    pub summary: Option<String>,
-    pub description: Option<String>,
-    pub version: Option<String>,
-    pub icon: Option<String>,
-    pub screenshots: Vec<String>,
-    pub launchable: Option<String>,
-    pub url: Option<AppUrl>,
-    pub releases: Vec<AppRelease>,
-    pub position: String,
-    pub broken: bool,
-    pub insecure: bool,
-    pub unsupported: bool,
-    pub unfree: bool,
-}
-
-#[derive(Debug)]
-pub enum PkgMsg {
+pub enum PackageMessage {
     UpdateConfig(NixDataConfig),
     UpdatePkgTypes(SystemPkgs),
     UpdateInstalledPackages {
         system_packages: Vec<InstalledItem>,
         user_packages: Vec<InstalledItem>,
     },
-    Open(Box<PkgInitModel>),
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
     SetCarouselPage(CarouselPage),
@@ -185,13 +168,13 @@ pub enum PkgMsg {
     Remove,
     Cancel,
     CancelFinished,
-    FinishedProcess(WorkPkg),
-    FailedProcess(WorkPkg),
+    FinishedProcess(WorkPackage),
+    FailedProcess(WorkPackage),
     Launch,
     NixRun,
     NixShell,
     SetInstallType(InstallType),
-    AddToQueue(WorkPkg),
+    AddToQueue(WorkPackage),
     UpdateOnline(bool),
     ShowReleases,
     ShowToast(String),
@@ -199,28 +182,29 @@ pub enum PkgMsg {
 }
 
 #[derive(Debug)]
-pub enum PkgAsyncMsg {
+pub enum PackageAsyncMessage {
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
 }
 
 #[derive(Debug)]
-pub struct PkgPageInit {
+pub struct PackagePageInit {
+    pub package: String,
     pub syspkgs: SystemPkgs,
     pub config: NixDataConfig,
-    pub online: bool,
+    pub app_data: HashMap<String, AppData>,
 }
 
-#[relm4::component(pub)]
-impl Component for PkgModel {
-    type Init = PkgPageInit;
-    type Input = PkgMsg;
+#[relm4::component(pub, async)]
+impl AsyncComponent for PackagePageModel {
+    type Init = PackagePageInit;
+    type Input = PackageMessage;
     type Output = AppMsg;
-    type CommandOutput = PkgAsyncMsg;
+    type CommandOutput = PackageAsyncMessage;
 
     view! {
         #[root]
-        #[name(pkg_window)]
+        #[name(package_window)]
         adw::NavigationPage {
 
             #[watch]
@@ -271,12 +255,13 @@ impl Component for PkgModel {
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         adw::HeaderBar {
+                            #[name = "install_type_button"]
                             pack_end = &gtk::MenuButton {
                                 #[watch]
-                                set_visible: model.syspkgtype != SystemPkgs::None,
+                                set_visible: model.system_package_type != SystemPkgs::None,
 
                                 #[watch]
-                                set_label: &match model.installtype {
+                                set_label: &match model.install_type {
                                     InstallType::User =>  gettext("User (nix profile)"),
                                     InstallType::System => gettext("System (configuration.nix)"),
                                 },
@@ -285,12 +270,12 @@ impl Component for PkgModel {
                                 set_popover = &gtk::PopoverMenu::from_model(Some(&installtype)) {}
                             }
                         },
+                        #[name = "content"]
                         gtk::ScrolledWindow {
                             set_vexpand: true,
                             set_hexpand: true,
                             set_hscrollbar_policy: gtk::PolicyType::Never,
                             set_vscrollbar_policy: gtk::PolicyType::Automatic,
-                            #[track(model.changed(PkgModel::visible()) && !self.visible)]
                             set_vadjustment: gtk::Adjustment::NONE,
                             gtk::Box {
                                 set_orientation: gtk::Orientation::Vertical,
@@ -349,7 +334,7 @@ impl Component for PkgModel {
                                                             set_wrap_mode: pango::WrapMode::WordChar,
                                                             set_natural_wrap_mode: gtk::NaturalWrapMode::Word,
                                                             #[watch]
-                                                            set_label: &model.pkg,
+                                                            set_label: &model.package,
                                                         },
                                                         gtk::Label {
                                                             add_css_class: "dim-label",
@@ -372,7 +357,7 @@ impl Component for PkgModel {
                                                         set_halign: gtk::Align::End,
                                                         set_spacing: 5,
                                                         #[name(install_stack)]
-                                                        if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
+                                                        if model.work_queue.iter().any(|x| x.package == model.package && x.install_type == model.install_type) {
                                                             gtk::Box {
                                                                 set_halign: gtk::Align::End,
                                                                 set_valign: gtk::Align::Center,
@@ -404,11 +389,11 @@ impl Component for PkgModel {
                                                                     set_icon_name: "process-stop-symbolic",
                                                                     set_width_request: 44,
                                                                     connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Cancel)
+                                                                        sender.input(PackageMessage::Cancel)
                                                                     },
                                                                 }
                                                             }
-                                                        } else if model.installed_pkgs.contains(&model.pkg) {
+                                                        } else if model.installed_packages.contains(&model.package) {
                                                             gtk::Box {
                                                                 set_halign: gtk::Align::End,
                                                                 set_valign: gtk::Align::Center,
@@ -424,7 +409,7 @@ impl Component for PkgModel {
                                                                     #[watch]
                                                                     set_sensitive: model.launchable.is_some(),
                                                                     connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Launch)
+                                                                        sender.input(PackageMessage::Launch)
                                                                     }
                                                                 },
                                                                 gtk::Button {
@@ -435,7 +420,7 @@ impl Component for PkgModel {
                                                                     set_icon_name: "user-trash-symbolic",
                                                                     set_width_request: 44,
                                                                     connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Remove)
+                                                                        sender.input(PackageMessage::Remove)
                                                                     }
                                                                 }
                                                             }
@@ -479,7 +464,7 @@ impl Component for PkgModel {
                                                                     set_width_request: 105,
                                                                     set_label: &gettext("Install"),
                                                                     connect_clicked[sender] => move |_| {
-                                                                        sender.input(PkgMsg::Install);
+                                                                        sender.input(PackageMessage::Install);
                                                                     },
                                                                 },
                                                                 gtk::MenuButton {
@@ -628,7 +613,7 @@ impl Component for PkgModel {
                                         #[name(install_options_small)]
                                         gtk::Box {
                                             set_margin_top: 20,
-                                            if model.workqueue.iter().any(|x| x.pkg == model.pkg && x.pkgtype == model.installtype) {
+                                            if model.work_queue.iter().any(|x| x.package == model.package && x.install_type == model.install_type) {
                                                 gtk::Box {
                                                     set_spacing: 8,
                                                     set_homogeneous: true,
@@ -644,11 +629,11 @@ impl Component for PkgModel {
                                                         set_hexpand: true,
                                                         set_label: &gettext("Cancel"),
                                                         connect_clicked[sender] => move |_| {
-                                                            sender.input(PkgMsg::Cancel)
+                                                            sender.input(PackageMessage::Cancel)
                                                         },
                                                     }
                                                 }
-                                            } else if model.installed_pkgs.contains(&model.pkg) {
+                                            } else if model.installed_packages.contains(&model.package) {
                                                 gtk::Box {
                                                     set_spacing: 8,
                                                     set_homogeneous: true,
@@ -661,7 +646,7 @@ impl Component for PkgModel {
                                                         #[watch]
                                                         set_sensitive: model.launchable.is_some(),
                                                         connect_clicked[sender] => move |_| {
-                                                            sender.input(PkgMsg::Launch)
+                                                            sender.input(PackageMessage::Launch)
                                                         }
                                                     },
                                                     gtk::Button {
@@ -670,7 +655,7 @@ impl Component for PkgModel {
                                                         set_hexpand: true,
                                                         set_label: &gettext("Delete"),
                                                         connect_clicked[sender] => move |_| {
-                                                            sender.input(PkgMsg::Remove)
+                                                            sender.input(PackageMessage::Remove)
                                                         }
                                                     },
                                                 }
@@ -706,7 +691,7 @@ impl Component for PkgModel {
                                                         set_hexpand: true,
                                                         set_label: &gettext("Install"),
                                                         connect_clicked[sender] => move |_| {
-                                                            sender.input(PkgMsg::Install);
+                                                            sender.input(PackageMessage::Install);
                                                         },
                                                     },
                                                     gtk::MenuButton {
@@ -743,20 +728,20 @@ impl Component for PkgModel {
                                                 let n = adw::Carousel::n_pages(x);
                                                 let i = adw::Carousel::position(x) as u32;
                                                 if i == 0 && n == 1 {
-                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::Single));
+                                                    sender.input(PackageMessage::SetCarouselPage(CarouselPage::Single));
                                                 } else if i == 0 {
-                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::First));
+                                                    sender.input(PackageMessage::SetCarouselPage(CarouselPage::First));
                                                 } else if i == n - 1 {
-                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
+                                                    sender.input(PackageMessage::SetCarouselPage(CarouselPage::Last));
                                                 } else {
-                                                    sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
+                                                    sender.input(PackageMessage::SetCarouselPage(CarouselPage::Middle));
                                                 }
                                             },
                                         },
                                         add_overlay = &gtk::Revealer {
                                             set_transition_type: gtk::RevealerTransitionType::Crossfade,
                                             #[watch]
-                                            set_reveal_child: model.carpage != CarouselPage::First && model.carpage != CarouselPage::Single,
+                                            set_reveal_child: model.carousel_page != CarouselPage::First && model.carousel_page != CarouselPage::Single,
                                             set_halign: gtk::Align::Start,
                                             set_valign: gtk::Align::Fill,
                                             gtk::Button {
@@ -776,9 +761,9 @@ impl Component for PkgModel {
                                                         scrnfactory.scroll_to(&w, true);
                                                     }
                                                     if i == 1 {
-                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::First));
+                                                        sender.input(PackageMessage::SetCarouselPage(CarouselPage::First));
                                                     } else if i > 0 {
-                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
+                                                        sender.input(PackageMessage::SetCarouselPage(CarouselPage::Middle));
                                                     }
                                                 }
                                             }
@@ -786,7 +771,7 @@ impl Component for PkgModel {
                                         add_overlay = &gtk::Revealer {
                                             set_transition_type: gtk::RevealerTransitionType::Crossfade,
                                             #[watch]
-                                            set_reveal_child: model.carpage != CarouselPage::Last && model.carpage != CarouselPage::Single,
+                                            set_reveal_child: model.carousel_page != CarouselPage::Last && model.carousel_page != CarouselPage::Single,
                                             set_halign: gtk::Align::End,
                                             set_valign: gtk::Align::Fill,
                                             gtk::Button {
@@ -807,11 +792,11 @@ impl Component for PkgModel {
                                                     }
                                                     let n = scrnfactory.n_pages();
                                                     if i == n - 2 {
-                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
+                                                        sender.input(PackageMessage::SetCarouselPage(CarouselPage::Last));
                                                     } else if i <= n - 2 {
-                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Middle));
+                                                        sender.input(PackageMessage::SetCarouselPage(CarouselPage::Middle));
                                                     } else {
-                                                        sender.input(PkgMsg::SetCarouselPage(CarouselPage::Last));
+                                                        sender.input(PackageMessage::SetCarouselPage(CarouselPage::Last));
                                                     }
                                                 }
                                             }
@@ -883,7 +868,7 @@ impl Component for PkgModel {
                                                     set_title: &gettext("Version History"),
                                                     set_end_icon_name: Some("right-symbolic"),
                                                     connect_activated[sender] => move |_| {
-                                                        sender.input(PkgMsg::ShowReleases);
+                                                        sender.input(PackageMessage::ShowReleases);
                                                     }
                                                 }
                                             }
@@ -934,31 +919,63 @@ impl Component for PkgModel {
         }
     }
 
-    fn init(
-        initparams: Self::Init,
+    async fn init(
+        init: Self::Init,
         root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
         INSTALLED_PACKAGES_STATE.subscribe(sender.input_sender(), |state| {
-            PkgMsg::UpdateInstalledPackages {
+            PackageMessage::UpdateInstalledPackages {
                 system_packages: state.installed_system_packages.clone(),
                 user_packages: state.installed_user_packages.clone(),
             }
         });
 
-        let installworker = InstallAsyncHandler::builder()
+        let install_worker = InstallAsyncHandler::builder()
             .detach_worker(InstallAsyncHandlerInit {
-                syspkgs: initparams.syspkgs.clone(),
+                syspkgs: init.syspkgs.clone(),
             })
             .forward(sender.input_sender(), identity);
-        let config = initparams.config;
-        installworker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
+        let config = init.config;
+        install_worker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
 
-        let model = PkgModel {
+        let online = checkonline_async().await;
+
+        let installed_packages = INSTALLED_PACKAGES_STATE.read();
+        let installed_system_packages = installed_packages
+            .installed_system_packages
+            .iter()
+            .map(|item| item.pkg.to_string())
+            .collect::<HashSet<_>>();
+        let installed_user_packages = installed_packages
+            .installed_user_packages
+            .iter()
+            .map(|item| item.pkg.to_string())
+            .collect::<HashSet<_>>();
+
+        let install_type = {
+            let is_system_pkg = installed_system_packages.contains(&init.package);
+            let is_user_pkg = installed_user_packages.contains(&init.package);
+
+            match (is_system_pkg, is_user_pkg) {
+                (true, false) => InstallType::System,
+                (false, true) => InstallType::User,
+                _ => state::get_state()
+                    .and_then(|state| state.install_type)
+                    .unwrap_or(InstallType::User),
+            }
+        };
+
+        let installed_packages = match install_type {
+            InstallType::System => installed_system_packages.clone(),
+            InstallType::User => installed_user_packages.clone(),
+        };
+
+        let mut model = PackagePageModel {
             config,
             name: String::default(),
-            pkg: String::default(),
-            pname: String::default(),
+            package: init.package.clone(),
+            package_name: String::default(),
             summary: None,
             description: None,
             version: None,
@@ -973,273 +990,381 @@ impl Component for PkgModel {
             icon: gtk::Image::new(),
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
-                .forward(sender.input_sender(), |_| PkgMsg::Noop),
+                .detach(),
             links: FactoryVecDeque::builder()
                 .launch(adw::PreferencesGroup::new())
                 .forward(sender.input_sender(), |msg| match msg {
-                    LinkItemMsg::ShowToast(msg) => PkgMsg::ShowToast(msg),
+                    LinkItemMsg::ShowToast(msg) => PackageMessage::ShowToast(msg),
                 }),
             latest_release: FactoryVecDeque::builder()
                 .launch(adw::PreferencesGroup::new())
-                .forward(sender.input_sender(), |_| PkgMsg::Noop),
-            installworker,
+                .detach(),
+            install_worker,
 
             releases_dialog: None,
 
             toast_overlay: adw::ToastOverlay::new(),
 
-            carpage: CarouselPage::Single,
-            installtype: InstallType::User,
-            installed_pkgs: HashSet::new(),
-            installeduserpkgs: HashSet::new(),
-            installedsystempkgs: HashSet::new(),
-            syspkgtype: initparams.syspkgs,
-            workqueue: HashSet::new(),
+            carousel_page: CarouselPage::Single,
+
+            install_type,
+            installed_packages,
+            installed_user_packages,
+            installed_system_packages,
+            system_package_type: init.syspkgs,
+
+            work_queue: HashSet::new(),
             launchable: None,
-            visible: false,
-            online: initparams.online,
+            online,
             tracker: 0,
         };
 
-        let toast_overlay = &model.toast_overlay;
+        let package_db = &PACKAGES_DB_STATE.read().packages_db;
+        if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", package_db)).await {
+            let pkgdata: Result<
+                (
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    bool,
+                    bool,
+                    bool,
+                    bool,
+                ),
+                _,
+            > = sqlx::query_as(
+                r#"
+        SELECT pname, version, system, description, longdescription, license, platforms, maintainers, position, broken, insecure, unsupported, unfree
+        FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1
+            "#,
+            )
+            .bind(&init.package)
+            .fetch_one(pool)
+            .await;
 
-        let package_icon = &model.icon;
+            if let Ok((
+                package_name,
+                version,
+                system,
+                description,
+                longdescription,
+                licensejson,
+                platformsjson,
+                maintainersjson,
+                position,
+                broken,
+                insecure,
+                unsupported,
+                unfree,
+            )) = pkgdata
+            {
+                model.name = package_name.to_string();
 
-        let link_factory = model.links.widget();
-
-        let latest_release_factory = model.latest_release.widget();
-
-        let scrnfactory = model.screenshots.widget();
-        relm4::set_global_css(
-            ".scrnbox {
-            border-left-width: 0;
-            border-right-width: 0;
-            border-top-width: 1px;
-            border-bottom-width: 1px;
-        }",
-        );
-        let widgets = view_output!();
-        widgets.install_stack.set_hhomogeneous(false);
-
-        let mut group = RelmActionGroup::<ModeActionGroup>::new();
-
-        let nixprofile: RelmAction<NixProfileAction> = {
-            let sender = sender.clone();
-            RelmAction::new_stateless(move |_| {
-                sender.input(PkgMsg::SetInstallType(InstallType::User));
-            })
-        };
-
-        let nixsystem: RelmAction<NixSystemAction> = {
-            let sender = sender.clone();
-            RelmAction::new_stateless(move |_| {
-                sender.input(PkgMsg::SetInstallType(InstallType::System));
-            })
-        };
-
-        group.add_action(nixprofile);
-        group.add_action(nixsystem);
-
-        let actions = group.into_action_group();
-        widgets
-            .pkg_window
-            .insert_action_group("mode", Some(&actions));
-
-        let mut rungroup = RelmActionGroup::<RunActionGroup>::new();
-        let launchaction: RelmAction<LaunchAction> = {
-            let sender = sender.clone();
-            RelmAction::new_stateless(move |_| {
-                sender.input(PkgMsg::NixRun);
-            })
-        };
-
-        let termaction: RelmAction<TermShellAction> = {
-            let sender = sender;
-            RelmAction::new_stateless(move |_| sender.input(PkgMsg::NixShell))
-        };
-
-        rungroup.add_action(launchaction);
-        rungroup.add_action(termaction);
-
-        let runactions = rungroup.into_action_group();
-        widgets
-            .pkg_window
-            .insert_action_group("run", Some(&runactions));
-
-        ComponentParts { model, widgets }
-    }
-
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
-        self.reset();
-        match msg {
-            PkgMsg::UpdateConfig(config) => {
-                self.config = config.clone();
-                self.installworker
-                    .emit(InstallAsyncHandlerMsg::SetConfig(config));
-            }
-            PkgMsg::UpdatePkgTypes(syspkgs) => {
-                self.syspkgtype = syspkgs.clone();
-                self.installworker
-                    .emit(InstallAsyncHandlerMsg::SetPkgTypes(syspkgs));
-            }
-            PkgMsg::UpdateInstalledPackages {
-                system_packages,
-                user_packages,
-            } => {
-                let system_packages = system_packages
-                    .iter()
-                    .map(|item| item.pkg.to_string())
-                    .collect::<HashSet<_>>();
-                let user_packages = user_packages
-                    .iter()
-                    .map(|item| item.pkg.to_string())
-                    .collect::<HashSet<_>>();
-
-                self.set_installedsystempkgs(system_packages);
-                self.set_installeduserpkgs(user_packages);
-                self.set_installed_pkgs(match self.installtype {
-                    InstallType::System => self.installedsystempkgs.clone(),
-                    InstallType::User => self.installeduserpkgs.clone(),
-                });
-            }
-            PkgMsg::Open(pkgmodel) => {
-                // First clean up from previous package
-                self.summary = None;
-                self.description = None;
-                let mut scrn_guard = self.screenshots.guard();
-                scrn_guard.clear();
-                scrn_guard.drop();
-
-                self.set_visible(true);
-                self.set_pkg(pkgmodel.pkg);
-                self.set_name(pkgmodel.name);
-
-                if pkgmodel.icon.is_some() {
-                    self.update_icon(|image| image.set_from_file(pkgmodel.icon.clone()));
+                model.summary = if description.is_empty() {
+                    None
                 } else {
-                    self.update_icon(|image| image.set_icon_name(Some("package-x-generic")));
-                }
+                    Some(description)
+                };
 
-                self.set_version(pkgmodel.version);
-                self.set_pname(pkgmodel.pname);
+                model.description = if longdescription.is_empty() {
+                    None
+                } else {
+                    Some(longdescription)
+                };
 
-                self.set_position(pkgmodel.position);
+                model.version = Some(version);
 
-                self.set_broken(pkgmodel.broken);
-                self.set_insecure(pkgmodel.insecure);
-                self.set_unsupported(pkgmodel.unsupported);
-                self.set_unfree(pkgmodel.unfree);
+                model.broken = broken;
+                model.insecure = insecure;
+                model.unsupported = unsupported;
+                model.unfree = unfree;
 
-                let installed_packages_state = INSTALLED_PACKAGES_STATE.read();
+                let mut licenses = vec![];
+                let mut platforms = vec![];
+                let mut maintainers = vec![];
 
-                self.set_installeduserpkgs(
-                    installed_packages_state
-                        .installed_user_packages
-                        .iter()
-                        .map(|item| item.pkg.to_string())
-                        .collect::<HashSet<_>>(),
-                );
-                self.set_installedsystempkgs(
-                    installed_packages_state
-                        .installed_system_packages
-                        .iter()
-                        .map(|item| item.pkg.to_string())
-                        .collect::<HashSet<_>>(),
-                );
+                let mut url = None;
 
-                let is_system_pkg = self.get_installedsystempkgs().contains(&self.pkg);
-                let is_user_pkg = self.get_installeduserpkgs().contains(&self.pkg);
-                match (is_system_pkg, is_user_pkg) {
-                    (true, false) => self.set_installtype(InstallType::System),
-                    (false, true) => self.set_installtype(InstallType::User),
-                    _ => {
-                        let install_type = state::get_state()
-                            .and_then(|state| state.install_type)
-                            .unwrap_or(InstallType::User);
-                        self.set_installtype(install_type);
+                let app_data = init.app_data.get(&init.package);
+
+                if let Some(data) = app_data {
+                    if let Some(names) = &data.name
+                        && let Some(name) = names.get("C")
+                    {
+                        model.name = name.to_string();
                     }
-                }
 
-                self.set_installed_pkgs(match self.installtype {
-                    InstallType::System => self.installedsystempkgs.clone(),
-                    InstallType::User => self.installeduserpkgs.clone(),
-                });
+                    if let Some(summaries) = &data.summary
+                        && let Some(summary) = summaries.get("C")
+                    {
+                        model.summary = Some(summary.to_string());
+                    }
 
-                self.launchable = if let Some(l) = pkgmodel.launchable {
-                    Some(Launch::GtkApp(l))
-                } else if self.installeduserpkgs.contains(&self.pkg) {
-                    if let Ok(o) = Command::new("command").arg("-v").arg(&self.pname).output() {
-                        if o.status.success() {
-                            Some(Launch::TerminalApp(self.pname.to_string()))
-                        } else {
-                            None
+                    if let Some(descriptions) = &data.description
+                        && let Some(description) = descriptions.get("C")
+                    {
+                        model.description = Some(html_to_pango(description));
+                    }
+
+                    model.icon = data
+                        .icon
+                        .as_ref()
+                        .and_then(|icon_list| icon_list.cached.as_ref())
+                        .and_then(|icons| {
+                            let mut icons = icons.clone();
+                            icons.sort_by_key(|icon| icon.height);
+                            icons.last().cloned()
+                        })
+                        .map(|icon| {
+                            format!(
+                                "{}/icons/nixos/{}x{}/{}",
+                                APPINFO, icon.width, icon.height, icon.name
+                            )
+                        })
+                        .map(|icon_path| gtk::Image::from_file(icon_path))
+                        .unwrap_or_else(|| gtk::Image::from_icon_name("package-x-generic"));
+
+                    if let Some(app_screenshots) = &data.screenshots {
+                        let mut screenshot_urls = vec![];
+
+                        for screenshot in app_screenshots {
+                            if let Some(image) = &screenshot.sourceimage {
+                                if !screenshot_urls.contains(&image.url) {
+                                    if screenshot.default.unwrap_or_default() {
+                                        screenshot_urls.insert(0, image.url.clone());
+                                    } else {
+                                        screenshot_urls.push(image.url.clone());
+                                    }
+                                } else if screenshot.default.unwrap_or_default()
+                                    && let Some(index) =
+                                        screenshot_urls.iter().position(|x| *x == image.url)
+                                {
+                                    screenshot_urls.remove(index);
+                                    screenshot_urls.insert(0, image.url.clone());
+                                }
+                            }
                         }
+
+                        let screenshots = screenshot_urls.iter().map(|_url| ());
+                        model.screenshots =
+                            FactoryVecDeque::from_iter(screenshots, adw::Carousel::new());
+
+                        let mut headers = reqwest::header::HeaderMap::new();
+                        headers.insert(
+                            reqwest::header::ACCEPT,
+                            reqwest::header::HeaderValue::from_static("image/*"),
+                        );
+
+                        let client = reqwest::Client::builder()
+                            .default_headers(headers)
+                            .user_agent("nix-software-center")
+                            .build()
+                            .unwrap();
+
+                        for (i, url) in screenshot_urls.clone().into_iter().enumerate() {
+                            if let Ok(home) = env::var("HOME") {
+                                let cache_dir = format!("{}/.cache/nix-software-center", home);
+                                let sha = digest(&url);
+                                let screenshot_path = format!("{}/screenshots/{}", cache_dir, sha);
+                                let package = init.package.clone();
+                                let client = client.clone();
+
+                                sender.command(move |out, shutdown| {
+                                    let url = url.clone();
+                                    let home = home.clone();
+
+                                    shutdown
+                                        .register(async move {
+                                            tokio::time::sleep(Duration::from_millis(5)).await;
+                                            if Path::new(&format!("{}.png", screenshot_path)).exists() {
+                                                out.send(PackageAsyncMessage::LoadScreenshot(package, i, format!("{}.png", screenshot_path)));
+                                            } else {
+                                                match client.get(&url).send().await {
+                                                    Ok(response) => {
+                                                        if response.status().is_success() {
+                                                            if !Path::new(&format!(
+                                                                "{}/.cache/nix-software-center/screenshots",
+                                                                home
+                                                            ))
+                                                            .exists()
+                                                            {
+                                                                match fs::create_dir_all(format!(
+                                                                    "{}/.cache/nix-software-center/screenshots",
+                                                                    home
+                                                                )) {
+                                                                    Ok(_) => {}
+                                                                    Err(_) => {
+                                                                        out.send(PackageAsyncMessage::SetError(package, i));
+                                                                        return;
+                                                                    }
+                                                                }
+                                                            }
+                                                            if let Ok(mut file) = File::create(&screenshot_path) {
+                                                                if let Ok(b) = response.bytes().await {
+                                                                    let mut content =  Cursor::new(b);
+                                                                    if std::io::copy(&mut content, &mut file).is_ok() {
+                                                                        fn openimg(scrnpath: &str) -> Result<(), Box<dyn Error>> {
+                                                                            let img = if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::Png) {
+                                                                                x
+                                                                            } else if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::Jpeg) {
+                                                                                x
+                                                                            } else if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::WebP) {
+                                                                                x
+                                                                            } else {
+                                                                                let imgdata = BufReader::new(File::open(scrnpath)?);
+                                                                                let format = image::guess_format(imgdata.buffer())?;
+                                                                                image::load(imgdata, format)?
+                                                                            };
+                                                                            let scaled = img.resize(640, 360, FilterType::Lanczos3);
+                                                                            let mut output = File::create(format!("{}.png", scrnpath))?;
+                                                                            scaled.write_to(&mut output, ImageFormat::Png)?;
+                                                                            if let Err(e) = fs::remove_file(scrnpath) {
+                                                                                warn!("{}", e);
+                                                                            }
+                                                                            Ok(())
+                                                                        }
+
+                                                                        match openimg(&screenshot_path) {
+                                                                            Ok(_) => {
+                                                                                out.send(PackageAsyncMessage::LoadScreenshot(
+                                                                                    package, i, format!("{}.png", screenshot_path),
+                                                                                ));
+                                                                            }
+                                                                            Err(_) => {
+                                                                                if let Err(e) = fs::remove_file(&screenshot_path) {
+                                                                                    warn!("{}", e);
+                                                                                }
+                                                                                out.send(PackageAsyncMessage::SetError(package, i));
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                out.send(PackageAsyncMessage::SetError(package, i));
+                                                                warn!("Error: {}", response.status());
+                                                            }
+                                                        } else {
+                                                            out.send(PackageAsyncMessage::SetError(package, i));
+                                                            warn!("Error: {}", response.status());
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        out.send(PackageAsyncMessage::SetError(package, i));
+                                                        warn!("Error: {}", e);
+                                                    }
+                                                }
+                                            }
+                                        })
+                                        .drop_on_shutdown()
+                                })
+                            }
+                        }
+
+                        if screenshot_urls.len() <= 1 {
+                            model.carousel_page = CarouselPage::Single;
+                        } else {
+                            model.carousel_page = CarouselPage::First;
+                        }
+                    }
+
+                    model.launchable = if let Some(l) = data.launchable.as_ref()
+                        && let Some(d) = l.desktopid.first()
+                    {
+                        Some(Launch::GtkApp(d.clone()))
+                    } else if model.installed_user_packages.contains(&model.package)
+                        && let Ok(o) = Command::new("command")
+                            .arg("-v")
+                            .arg(&model.package_name)
+                            .output()
+                        && o.status.success()
+                    {
+                        Some(Launch::TerminalApp(model.package_name.to_string()))
                     } else {
                         None
-                    }
-                } else {
-                    None
-                };
-                self.summary = if let Some(s) = pkgmodel.summary {
-                    let mut sum = s.trim().to_string();
-                    while sum.contains('\n') {
-                        sum = sum.replace('\n', " ");
-                    }
-                    while sum.contains("  ") {
-                        sum = sum.replace("  ", " ");
-                    }
-                    Some(sum)
-                } else {
-                    None
-                };
+                    };
 
-                if let Some(d) = pkgmodel.description {
-                    let mut input = d;
-                    // Fix formatting
-                    while input.contains('\n') {
-                        input = input.replace('\n', " ");
+                    url = data.url.clone();
+
+                    if let Some(releases) = data.releases.as_ref() {
+                        let releases = releases
+                            .iter()
+                            .map(|release| ReleaseItemInit {
+                                version: release.version.clone(),
+                                date: release.date,
+                                description: release
+                                    .description
+                                    .as_ref()
+                                    .and_then(|descriptions| descriptions.get("C"))
+                                    .map(|description| html_to_pango(description)),
+                                url: release.url.as_ref().and_then(|url| url.details.clone()),
+                                installed: false,
+                            })
+                            .collect::<Vec<_>>();
+
+                        if let Some(release) = releases.first() {
+                            model.latest_release = FactoryVecDeque::from_iter(
+                                vec![release.clone()],
+                                adw::PreferencesGroup::new(),
+                            );
+                        }
+
+                        if releases.len() > 0 {
+                            let connector =
+                                ReleasesDialog::builder().launch(ReleasesInit { releases });
+                            model.releases_dialog = Some(connector);
+                        }
                     }
-                    while input.contains('\t') {
-                        input = input.replace('\t', " ");
-                    }
-                    while input.contains("  ") {
-                        input = input.replace("  ", " ");
-                    }
-                    let mut pango = html2pango::markup_html(&input)
-                        .unwrap_or_else(|_| {
-                            warn!("Pango failed to parse description");
-                            input.to_string()
-                        })
-                        .trim()
-                        .to_string();
-                    while pango.contains("\n ") {
-                        pango = pango.replace("\n ", "\n");
-                    }
-                    while pango.ends_with('\n') {
-                        pango.pop();
-                    }
-                    self.description = Some(pango.strip_prefix('\n').unwrap_or(&pango).to_string());
                 }
 
-                if pkgmodel.screenshots.len() <= 1 {
-                    self.carpage = CarouselPage::Single;
-                } else {
-                    self.carpage = CarouselPage::First;
+                if let Ok(pkglicense) = serde_json::from_str::<LicenseEnum>(&licensejson) {
+                    addlicense(&pkglicense, &mut licenses);
+                }
+
+                let platformslst = serde_json::from_str::<Platform>(&platformsjson);
+                if let Ok(p) = platformslst {
+                    match p {
+                        Platform::Single(p) => {
+                            if !platforms.contains(&p) && p != system {
+                                platforms.push(p);
+                            }
+                        }
+                        Platform::List(v) => {
+                            for p in v {
+                                if !platforms.contains(&p.to_string()) && p != system {
+                                    platforms.push(p.to_string());
+                                }
+                            }
+                        }
+                        Platform::ListList(vv) => {
+                            for v in vv {
+                                for p in v {
+                                    if !platforms.contains(&p.to_string()) && p != system {
+                                        platforms.push(p.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                platforms.sort();
+                platforms.insert(0, system);
+
+                if let Ok(m) = serde_json::from_str::<Vec<PkgMaintainer>>(&maintainersjson) {
+                    for m in m {
+                        maintainers.push(m);
+                    }
                 }
 
                 {
-                    let mut scrn_guard = self.screenshots.guard();
-                    scrn_guard.clear();
-                    for _i in 0..pkgmodel.screenshots.len() {
-                        scrn_guard.push_back(());
-                    }
-                }
+                    let mut links_guard = model.links.guard();
 
-                {
-                    let mut links_guard = self.links.guard();
-                    links_guard.clear();
-
-                    if let Some(url) = pkgmodel.url {
+                    if let Some(url) = url {
                         url.homepage.map(|link| {
                             links_guard.push_back(LinkItemInit {
                                 link_type: LinkType::Website,
@@ -1299,191 +1424,128 @@ impl Component for PkgModel {
                     links_guard.push_back(LinkItemInit {
                         link_type: LinkType::NixSource,
                         link: "https://github.com/NixOS/nixpkgs/blob/nixos-unstable/".to_string()
-                            + &self.position.replace(':', "#L"),
+                            + &position.replace(':', "#L"),
                     });
                 }
-
-                {
-                    let releases = pkgmodel
-                        .releases
-                        .iter()
-                        .filter(|release| release.release_type == ReleaseType::Stable)
-                        .map(|release| {
-                            let description = release
-                                .description
-                                .as_ref()
-                                .and_then(|description| description.get("C"))
-                                .map(|description| {
-                                    let mut input = description.to_string();
-                                    // Fix formatting
-                                    while input.contains('\n') {
-                                        input = input.replace('\n', " ");
-                                    }
-                                    while input.contains('\t') {
-                                        input = input.replace('\t', " ");
-                                    }
-                                    while input.contains("  ") {
-                                        input = input.replace("  ", " ");
-                                    }
-                                    let mut pango = html2pango::markup_html(&input)
-                                        .unwrap_or_else(|_| {
-                                            warn!("Pango failed to parse description");
-                                            input.to_string()
-                                        })
-                                        .trim()
-                                        .to_string();
-                                    while pango.contains("\n ") {
-                                        pango = pango.replace("\n ", "\n");
-                                    }
-                                    while pango.ends_with('\n') {
-                                        pango.pop();
-                                    }
-
-                                    pango.strip_prefix('\n').unwrap_or(&pango).to_string()
-                                });
-
-                            ReleaseItemInit {
-                                version: release.version.as_ref().map(|v| v.to_string()),
-                                date: release.timestamp.or(release.date),
-                                description,
-                                url: release.url.as_ref().and_then(|url| url.details.clone()),
-                                installed: self.installed_pkgs.contains(&self.pkg)
-                                    && release.version == self.version,
-                            }
-                        })
-                        .collect::<Vec<_>>();
-
-                    {
-                        let mut latest_release_guard = self.latest_release.guard();
-                        latest_release_guard.clear();
-                        if let Some(release) = releases.get(0) {
-                            latest_release_guard.push_back(release.clone());
-                        }
-                    }
-
-                    if releases.is_empty() {
-                        self.set_releases_dialog(None);
-                    } else {
-                        self.set_releases_dialog(Some(
-                            ReleasesDialog::builder().launch(ReleasesInit { releases: releases }),
-                        ));
-                    }
-                }
-
-                let mut headers = reqwest::header::HeaderMap::new();
-                headers.insert(
-                    reqwest::header::ACCEPT,
-                    reqwest::header::HeaderValue::from_static("image/*"),
-                );
-                let client = reqwest::Client::builder()
-                    .default_headers(headers)
-                    .user_agent("nix-software-center")
-                    .build()
-                    .unwrap();
-
-                for (i, url) in pkgmodel.screenshots.into_iter().enumerate() {
-                    if let Ok(home) = env::var("HOME") {
-                        let cachedir = format!("{}/.cache/nix-software-center", home);
-                        let sha = digest(url.to_string());
-                        let scrnpath = format!("{}/screenshots/{}", cachedir, sha);
-                        let pkg = self.pkg.clone();
-                        let client = client.clone();
-
-                        sender.command(move |out, shutdown| {
-                            let url = url.clone();
-                            let home = home.clone();
-                            let scrnpath = scrnpath.clone();
-                            let pkg = pkg.clone();
-                            shutdown
-                                .register(async move {
-                                    tokio::time::sleep(Duration::from_millis(5)).await;
-                                    if Path::new(&format!("{}.png", scrnpath)).exists() {
-                                        out.send(PkgAsyncMsg::LoadScreenshot(pkg, i, format!("{}.png", scrnpath)));
-                                    } else {
-                                        match client.get(&url).send().await {
-                                            Ok(response) => {
-                                                if response.status().is_success() {
-                                                    if !Path::new(&format!(
-                                                        "{}/.cache/nix-software-center/screenshots",
-                                                        home
-                                                    ))
-                                                    .exists()
-                                                    {
-                                                        match fs::create_dir_all(format!(
-                                                            "{}/.cache/nix-software-center/screenshots",
-                                                            home
-                                                        )) {
-                                                            Ok(_) => {}
-                                                            Err(_) => {
-                                                                out.send(PkgAsyncMsg::SetError(pkg, i));
-                                                                return;
-                                                            }
-                                                        }
-                                                    }
-                                                    if let Ok(mut file) = File::create(&scrnpath) {
-                                                        if let Ok(b) = response.bytes().await {
-                                                            let mut content =  Cursor::new(b);
-                                                            if std::io::copy(&mut content, &mut file).is_ok() {
-                                                                fn openimg(scrnpath: &str) -> Result<(), Box<dyn Error>> {
-                                                                    let img = if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::Png) {
-                                                                        x
-                                                                    } else if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::Jpeg) {
-                                                                        x
-                                                                    } else if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::WebP) {
-                                                                        x
-                                                                    } else {
-                                                                        let imgdata = BufReader::new(File::open(scrnpath)?);
-                                                                        let format = image::guess_format(imgdata.buffer())?;
-                                                                        image::load(imgdata, format)?
-                                                                    };
-                                                                    let scaled = img.resize(640, 360, FilterType::Lanczos3);
-                                                                    let mut output = File::create(format!("{}.png", scrnpath))?;
-                                                                    scaled.write_to(&mut output, ImageFormat::Png)?;
-                                                                    if let Err(e) = fs::remove_file(scrnpath) {
-                                                                        warn!("{}", e);
-                                                                    }
-                                                                    Ok(())
-                                                                }
-
-                                                                match openimg(&scrnpath) {
-                                                                    Ok(_) => {
-                                                                        out.send(PkgAsyncMsg::LoadScreenshot(
-                                                                            pkg, i, format!("{}.png", scrnpath),
-                                                                        ));
-                                                                    }
-                                                                    Err(_) => {
-                                                                        if let Err(e) = fs::remove_file(&scrnpath) {
-                                                                            warn!("{}", e);
-                                                                        }
-                                                                        out.send(PkgAsyncMsg::SetError(pkg, i));
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        out.send(PkgAsyncMsg::SetError(pkg, i));
-                                                        warn!("Error: {}", response.status());
-                                                    }
-                                                } else {
-                                                    out.send(PkgAsyncMsg::SetError(pkg, i));
-                                                    warn!("Error: {}", response.status());
-                                                }
-                                            }
-                                            Err(e) => {
-                                                out.send(PkgAsyncMsg::SetError(pkg, i));
-                                                warn!("Error: {}", e);
-                                            }
-                                        }
-                                    }
-                                })
-                                .drop_on_shutdown()
-                        })
-                    }
-                }
             }
-            PkgMsg::LoadScreenshot(pkg, i, u) => {
+        } else {
+            error!("No pkgdb!");
+        }
+
+        let model = model;
+
+        let toast_overlay = &model.toast_overlay;
+
+        let package_icon = &model.icon;
+
+        let link_factory = model.links.widget();
+
+        let latest_release_factory = model.latest_release.widget();
+
+        info!("latest release: {:?}", model.latest_release.get(0));
+        info!("latest release factory: {:?}", latest_release_factory);
+
+        let scrnfactory = model.screenshots.widget();
+        relm4::set_global_css(
+            ".scrnbox {
+            border-left-width: 0;
+            border-right-width: 0;
+            border-top-width: 1px;
+            border-bottom-width: 1px;
+        }",
+        );
+        let widgets = view_output!();
+        widgets.install_stack.set_hhomogeneous(false);
+
+        let mut install_type_group = RelmActionGroup::<ModeActionGroup>::new();
+
+        let nixprofile: RelmAction<NixProfileAction> = {
+            let sender = sender.clone();
+            RelmAction::new_stateless(move |_| {
+                sender.input(PackageMessage::SetInstallType(InstallType::User));
+            })
+        };
+
+        let nixsystem: RelmAction<NixSystemAction> = {
+            let sender = sender.clone();
+            RelmAction::new_stateless(move |_| {
+                sender.input(PackageMessage::SetInstallType(InstallType::System));
+            })
+        };
+
+        install_type_group.add_action(nixprofile);
+        install_type_group.add_action(nixsystem);
+
+        let install_type_actions = install_type_group.into_action_group();
+        widgets
+            .install_type_button
+            .insert_action_group("install_type", Some(&install_type_actions));
+
+        let mut run_group = RelmActionGroup::<RunActionGroup>::new();
+        let launch_action: RelmAction<LaunchAction> = {
+            let sender = sender.clone();
+            RelmAction::new_stateless(move |_| {
+                sender.input(PackageMessage::NixRun);
+            })
+        };
+
+        let term_action: RelmAction<TermShellAction> = {
+            let sender = sender;
+            RelmAction::new_stateless(move |_| sender.input(PackageMessage::NixShell))
+        };
+
+        run_group.add_action(launch_action);
+        run_group.add_action(term_action);
+
+        let run_actions = run_group.into_action_group();
+        widgets
+            .content
+            .insert_action_group("run", Some(&run_actions));
+
+        AsyncComponentParts { model, widgets }
+    }
+
+    async fn update(
+        &mut self,
+        msg: Self::Input,
+        sender: AsyncComponentSender<Self>,
+        root: &Self::Root,
+    ) {
+        self.reset();
+        match msg {
+            PackageMessage::UpdateConfig(config) => {
+                self.config = config.clone();
+                self.install_worker
+                    .emit(InstallAsyncHandlerMsg::SetConfig(config));
+            }
+            PackageMessage::UpdatePkgTypes(system_package_type) => {
+                self.system_package_type = system_package_type.clone();
+                self.install_worker
+                    .emit(InstallAsyncHandlerMsg::SetPkgTypes(system_package_type));
+            }
+            PackageMessage::UpdateInstalledPackages {
+                system_packages,
+                user_packages,
+            } => {
+                let system_packages = system_packages
+                    .iter()
+                    .map(|item| item.pkg.to_string())
+                    .collect::<HashSet<_>>();
+                let user_packages = user_packages
+                    .iter()
+                    .map(|item| item.pkg.to_string())
+                    .collect::<HashSet<_>>();
+
+                self.set_installed_system_packages(system_packages);
+                self.set_installed_user_packages(user_packages);
+                self.set_installed_packages(match self.install_type {
+                    InstallType::System => self.installed_system_packages.clone(),
+                    InstallType::User => self.installed_user_packages.clone(),
+                });
+            }
+            PackageMessage::LoadScreenshot(pkg, i, u) => {
                 info!("PkgMsg::LoadScreenshot {}", u);
-                if pkg == self.pkg {
+                if pkg == self.package {
                     let mut scrn_guard = self.screenshots.guard();
                     if let Some(scrn_widget) = scrn_guard.get_mut(i) {
                         scrn_widget.path = Some(u);
@@ -1495,78 +1557,86 @@ impl Component for PkgModel {
                     trace!("WRONG PACKAGE")
                 }
             }
-            PkgMsg::SetError(pkg, i) => {
-                if pkg == self.pkg {
+            PackageMessage::SetError(pkg, i) => {
+                if pkg == self.package {
                     let mut scrn_guard = self.screenshots.guard();
                     if let Some(scrn_widget) = scrn_guard.get_mut(i) {
                         scrn_widget.error = true;
                     }
                 }
             }
-            PkgMsg::SetCarouselPage(page) => {
-                self.carpage = page;
+            PackageMessage::SetCarouselPage(page) => {
+                self.carousel_page = page;
             }
-            PkgMsg::Install => {
+            PackageMessage::Install => {
                 let online = checkonline();
                 if !online {
                     let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
                     return;
                 }
-                let w = WorkPkg {
-                    pkg: self.pkg.to_string(),
-                    pname: self.pname.to_string(),
-                    pkgtype: self.installtype.clone(),
-                    action: PkgAction::Install,
+                let w = WorkPackage {
+                    package: self.package.to_string(),
+                    package_name: self.package_name.to_string(),
+                    install_type: self.install_type.clone(),
+                    action: PackageAction::Install,
                     block: false,
                     notify: None,
                 };
-                self.workqueue.insert(w.clone());
-                if self.workqueue.len() == 1 {
-                    self.installworker.emit(InstallAsyncHandlerMsg::Process(w));
+                self.work_queue.insert(w.clone());
+                if self.work_queue.len() == 1 {
+                    self.install_worker.emit(InstallAsyncHandlerMsg::Process(w));
                 }
             }
-            PkgMsg::Remove => {
-                let w = WorkPkg {
-                    pkg: self.pkg.to_string(),
-                    pname: self.pname.to_string(),
-                    pkgtype: self.installtype.clone(),
-                    action: PkgAction::Remove,
+            PackageMessage::Remove => {
+                let w = WorkPackage {
+                    package: self.package.to_string(),
+                    package_name: self.package_name.to_string(),
+                    install_type: self.install_type.clone(),
+                    action: PackageAction::Remove,
                     block: false,
                     notify: None,
                 };
-                self.workqueue.insert(w.clone());
-                if self.workqueue.len() == 1 {
-                    self.installworker.emit(InstallAsyncHandlerMsg::Process(w));
+                self.work_queue.insert(w.clone());
+                if self.work_queue.len() == 1 {
+                    self.install_worker.emit(InstallAsyncHandlerMsg::Process(w));
                 }
             }
-            PkgMsg::FinishedProcess(work) => {
+            PackageMessage::FinishedProcess(work) => {
                 let _ = nix_data_xinux::utils::refreshicons();
-                self.workqueue.remove(&work);
-                trace!("WORK QUEUE: {}", self.workqueue.len());
+                self.work_queue.remove(&work);
+                trace!("WORK QUEUE: {}", self.work_queue.len());
                 match work.action {
-                    PkgAction::Install => {
-                        match work.pkgtype {
-                            InstallType::System => {
-                                self.installeduserpkgs.insert(work.pkg.to_string())
+                    PackageAction::Install => {
+                        match work.install_type {
+                            InstallType::System => self
+                                .installed_user_packages
+                                .insert(work.package.to_string()),
+                            InstallType::User => {
+                                self.installed_system_packages.insert(work.package.clone())
                             }
-                            InstallType::User => self.installedsystempkgs.insert(work.pkg.clone()),
                         };
-                        self.installed_pkgs.insert(work.pkg.to_string());
+                        self.installed_packages.insert(work.package.to_string());
                         if self.launchable.is_none()
-                            && let Ok(o) =
-                                Command::new("command").arg("-v").arg(&self.pname).output()
+                            && let Ok(o) = Command::new("command")
+                                .arg("-v")
+                                .arg(&self.package_name)
+                                .output()
                             && o.status.success()
                         {
-                            self.set_launchable(Some(Launch::TerminalApp(self.pname.to_string())))
+                            self.set_launchable(Some(Launch::TerminalApp(
+                                self.package_name.to_string(),
+                            )))
                         }
                     }
-                    PkgAction::Remove => {
-                        match work.pkgtype {
-                            InstallType::System => self.installedsystempkgs.remove(&work.pkg),
-                            InstallType::User => self.installeduserpkgs.remove(&work.pkg),
+                    PackageAction::Remove => {
+                        match work.install_type {
+                            InstallType::System => {
+                                self.installed_system_packages.remove(&work.package)
+                            }
+                            InstallType::User => self.installed_user_packages.remove(&work.package),
                         };
-                        self.installed_pkgs.remove(&work.pkg);
+                        self.installed_packages.remove(&work.package);
                     }
                 }
                 let _ = sender.output(AppMsg::UpdateInstalledPkgs);
@@ -1578,15 +1648,15 @@ impl Component for PkgModel {
                     }
                 }
 
-                if !self.workqueue.is_empty()
-                    && let Some(w) = self.workqueue.clone().iter().next()
+                if !self.work_queue.is_empty()
+                    && let Some(w) = self.work_queue.clone().iter().next()
                 {
-                    self.installworker
+                    self.install_worker
                         .emit(InstallAsyncHandlerMsg::Process(w.clone()));
                 }
             }
-            PkgMsg::FailedProcess(work) => {
-                self.workqueue.remove(&work);
+            PackageMessage::FailedProcess(work) => {
+                self.work_queue.remove(&work);
                 if let Some(n) = &work.notify {
                     match n {
                         NotifyPage::Installed => {
@@ -1594,47 +1664,47 @@ impl Component for PkgModel {
                         }
                     }
                 }
-                if !self.workqueue.is_empty()
-                    && let Some(w) = self.workqueue.clone().iter().next()
+                if !self.work_queue.is_empty()
+                    && let Some(w) = self.work_queue.clone().iter().next()
                 {
-                    self.installworker
+                    self.install_worker
                         .emit(InstallAsyncHandlerMsg::Process(w.clone()));
                 }
             }
-            PkgMsg::Cancel => {
+            PackageMessage::Cancel => {
                 // If running, cancel the current process
-                if let Some(h) = self.workqueue.iter().next()
-                    && h.pkg == self.pkg
+                if let Some(h) = self.work_queue.iter().next()
+                    && h.package == self.package
                 {
-                    self.installworker
+                    self.install_worker
                         .emit(InstallAsyncHandlerMsg::CancelProcess);
                     return;
                 }
 
                 // If not running, remove from queue
-                for w in self.workqueue.clone() {
-                    if w.pkg == self.pkg {
-                        self.workqueue.remove(&w);
+                for w in self.work_queue.clone() {
+                    if w.package == self.package {
+                        self.work_queue.remove(&w);
                     }
                 }
             }
-            PkgMsg::CancelFinished => {
+            PackageMessage::CancelFinished => {
                 // If running, cancel the current process
-                if let Some(h) = self.workqueue.clone().iter().next()
-                    && h.pkg == self.pkg
+                if let Some(h) = self.work_queue.clone().iter().next()
+                    && h.package == self.package
                 {
-                    self.workqueue.remove(h);
+                    self.work_queue.remove(h);
                     return;
                 }
 
                 // If not running, remove from queue
-                for w in self.workqueue.clone() {
-                    if w.pkg == self.pkg {
-                        self.workqueue.remove(&w);
+                for w in self.work_queue.clone() {
+                    if w.package == self.package {
+                        self.work_queue.remove(&w);
                     }
                 }
             }
-            PkgMsg::Launch => {
+            PackageMessage::Launch => {
                 if let Some(l) = &self.launchable {
                     match l {
                         Launch::GtkApp(x) => {
@@ -1646,24 +1716,24 @@ impl Component for PkgModel {
                     }
                 }
             }
-            PkgMsg::NixRun => {
+            PackageMessage::NixRun => {
                 if let Some(l) = &self.launchable {
                     match l {
                         Launch::GtkApp(x) => {
                             debug!("Launching {} with nix shell", x);
                             let _ = Command::new("nix")
                                     .arg("shell")
-                                    .arg(format!("nixpkgs#{}", self.pkg))
+                                    .arg(format!("nixpkgs#{}", self.package))
                                     .arg("--command")
                                     .arg("bash")
                                     .arg("-c")
-                                    .arg(format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.pkg, x))
+                                    .arg(format!("env XDG_DATA_DIRS=$XDG_DATA_DIRS:$(nix eval nixpkgs#{}.outPath --raw)/share gtk-launch {}", self.package, x))
                                     .spawn();
                         }
                         Launch::TerminalApp(x) => {
                             let cmd = format!(
                                 "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
-                                self.pkg, x
+                                self.package, x
                             );
                             launchterm(&cmd);
                         }
@@ -1671,59 +1741,59 @@ impl Component for PkgModel {
                 } else {
                     let cmd = format!(
                         "nix shell nixpkgs#{} --command bash -c \"{}; $SHELL\"",
-                        self.pkg, self.pname
+                        self.package, self.package_name
                     );
                     launchterm(&cmd);
                 }
             }
-            PkgMsg::NixShell => {
-                let cmd = format!("nix shell nixpkgs#{}", self.pkg);
+            PackageMessage::NixShell => {
+                let cmd = format!("nix shell nixpkgs#{}", self.package);
                 launchterm(&cmd);
             }
-            PkgMsg::SetInstallType(t) => {
-                self.set_installed_pkgs(match t {
-                    InstallType::System => self.installedsystempkgs.clone(),
-                    InstallType::User => self.installeduserpkgs.clone(),
+            PackageMessage::SetInstallType(t) => {
+                self.set_installed_packages(match t {
+                    InstallType::System => self.installed_system_packages.clone(),
+                    InstallType::User => self.installed_user_packages.clone(),
                 });
-                self.set_installtype(t.clone());
+                self.set_install_type(t.clone());
                 let _ = state::update_state(|state| state.install_type = Some(t));
             }
-            PkgMsg::AddToQueue(work) => {
-                self.workqueue.insert(work.clone());
-                if self.workqueue.len() == 1 {
-                    self.installworker
+            PackageMessage::AddToQueue(work) => {
+                self.work_queue.insert(work.clone());
+                if self.work_queue.len() == 1 {
+                    self.install_worker
                         .emit(InstallAsyncHandlerMsg::Process(work));
                 }
             }
-            PkgMsg::UpdateOnline(online) => {
+            PackageMessage::UpdateOnline(online) => {
                 self.set_online(online);
             }
-            PkgMsg::ShowReleases => {
+            PackageMessage::ShowReleases => {
                 self.releases_dialog
                     .as_ref()
                     .map(|dialog| dialog.widget().present(Some(root)));
             }
-            PkgMsg::ShowToast(msg) => {
+            PackageMessage::ShowToast(msg) => {
                 let toast = adw::Toast::new(&msg);
                 toast.set_timeout(2);
                 self.toast_overlay.add_toast(toast);
             }
-            PkgMsg::Noop => (),
+            PackageMessage::Noop => (),
         }
     }
 
-    fn update_cmd(
+    async fn update_cmd(
         &mut self,
         msg: Self::CommandOutput,
-        sender: ComponentSender<Self>,
+        sender: AsyncComponentSender<Self>,
         _root: &Self::Root,
     ) {
         match msg {
-            PkgAsyncMsg::LoadScreenshot(pkg, i, u) => {
-                sender.input(PkgMsg::LoadScreenshot(pkg, i, u));
+            PackageAsyncMessage::LoadScreenshot(pkg, i, u) => {
+                sender.input(PackageMessage::LoadScreenshot(pkg, i, u));
             }
-            PkgAsyncMsg::SetError(pkg, i) => {
-                sender.input(PkgMsg::SetError(pkg, i));
+            PackageAsyncMessage::SetError(pkg, i) => {
+                sender.input(PackageMessage::SetError(pkg, i));
             }
         }
     }
@@ -1733,7 +1803,134 @@ fn launchterm(cmd: &str) {
     let _ = Command::new("kgx").arg("-e").arg(cmd).spawn();
 }
 
-relm4::new_action_group!(ModeActionGroup, "mode");
+fn addlicense(pkglicense: &LicenseEnum, licenses: &mut Vec<License>) {
+    match pkglicense {
+        LicenseEnum::Single(l) => {
+            if let Some(n) = &l.fullname {
+                let parsed = if let Some(id) = &l.spdxid {
+                    if let Ok(Some(license)) = Expression::parse(id).map(|p| {
+                        p.requirements()
+                            .map(|er| er.req.license.id())
+                            .collect::<Vec<_>>()[0]
+                    }) {
+                        Some(license)
+                    } else {
+                        None
+                    }
+                } else if let Ok(Some(license)) = Expression::parse(n).map(|p| {
+                    p.requirements()
+                        .map(|er| er.req.license.id())
+                        .collect::<Vec<_>>()[0]
+                }) {
+                    Some(license)
+                } else {
+                    None
+                };
+                licenses.push(License {
+                    free: if let Some(f) = l.free {
+                        Some(f)
+                    } else {
+                        parsed.map(|p| p.is_osi_approved() || p.is_fsf_free_libre())
+                    },
+                    fullname: n.to_string(),
+                    spdx_id: l.spdxid.clone(),
+                    url: if let Some(u) = &l.url {
+                        Some(u.to_string())
+                    } else {
+                        parsed.map(|p| format!("https://spdx.org/licenses/{}.html", p.name))
+                    },
+                })
+            } else if let Some(s) = &l.spdxid
+                && let Ok(Some(license)) = Expression::parse(s).map(|p| {
+                    p.requirements()
+                        .map(|er| er.req.license.id())
+                        .collect::<Vec<_>>()[0]
+                })
+            {
+                licenses.push(License {
+                    free: Some(
+                        license.is_osi_approved()
+                            || license.is_fsf_free_libre()
+                            || l.free.unwrap_or(false),
+                    ),
+                    fullname: license.full_name.to_string(),
+                    spdx_id: Some(license.name.to_string()),
+                    url: if l.url.is_some() {
+                        l.url.clone()
+                    } else {
+                        Some(format!("https://spdx.org/licenses/{}.html", license.name))
+                    },
+                })
+            }
+        }
+        LicenseEnum::List(lst) => {
+            for l in lst {
+                addlicense(&LicenseEnum::Single(l.clone()), licenses);
+            }
+        }
+        LicenseEnum::SingleStr(s) => {
+            if let Ok(Some(license)) = Expression::parse(s).map(|p| {
+                p.requirements()
+                    .map(|er| er.req.license.id())
+                    .collect::<Vec<_>>()[0]
+            }) {
+                licenses.push(License {
+                    free: Some(license.is_osi_approved() || license.is_fsf_free_libre()),
+                    fullname: license.full_name.to_string(),
+                    spdx_id: Some(license.name.to_string()),
+                    url: Some(format!("https://spdx.org/licenses/{}.html", license.name)),
+                })
+            }
+        }
+        LicenseEnum::VecStr(lst) => {
+            for s in lst {
+                addlicense(&LicenseEnum::SingleStr(s.clone()), licenses);
+            }
+        }
+        LicenseEnum::Mixed(v) => {
+            for l in v {
+                addlicense(l, licenses);
+            }
+        }
+    }
+}
+
+fn html_to_pango(text: &str) -> String {
+    let mut text = text.to_string();
+
+    // Fix formatting
+    while text.contains('\n') {
+        text = text.replace('\n', " ");
+    }
+    while text.contains('\t') {
+        text = text.replace('\t', " ");
+    }
+    while text.contains("  ") {
+        text = text.replace("  ", " ");
+    }
+
+    text = html2pango::markup_html(&text)
+        .unwrap_or_else(|_| {
+            warn!("Pango failed to parse text: {}", text);
+            text
+        })
+        .trim()
+        .to_string();
+
+    while text.contains("\n ") {
+        text = text.replace("\n ", "\n");
+    }
+
+    while text.ends_with('\n') {
+        text.pop();
+    }
+
+    text = text.strip_prefix('\n').unwrap_or(&text).to_string();
+
+    text
+}
+
+relm4::new_action_group!(ModeActionGroup, "install_type");
 relm4::new_stateless_action!(NixProfileAction, ModeActionGroup, "profile");
 relm4::new_stateless_action!(NixSystemAction, ModeActionGroup, "system");
 

@@ -6,10 +6,10 @@ use relm4::{
     SharedState, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
+    component::{AsyncComponentController, AsyncController},
     gtk::{self},
     prelude::{AsyncComponent, AsyncComponentParts},
 };
-use spdx::Expression;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 use std::{
     collections::{HashMap, HashSet},
@@ -20,7 +20,7 @@ use std::{
 };
 
 use crate::{
-    APPINFO, config,
+    config,
     ui::{
         about::about_page::AboutPageModel,
         category::{
@@ -34,9 +34,7 @@ use crate::{
         },
         package::{
             components::package_tile::PkgTile,
-            package_page::{
-                InstallType, License, PkgInitModel, PkgModel, PkgMsg, PkgPageInit, WorkPkg,
-            },
+            package_page::{InstallType, PackagePageInit, PackagePageModel, WorkPackage},
         },
         preferences::preferences_page::{PreferencesPageModel, PreferencesPageMsg},
         rebuild::rebuild_model::{RebuildModel, RebuildMsg},
@@ -52,13 +50,16 @@ use crate::{
             },
         },
         welcome::welcome_page::{WelcomeModel, WelcomeMsg},
-        windowloading::{LoadErrorModel, LoadErrorMsg, WindowAsyncHandler, WindowAsyncHandlerMsg},
+        windowloading::{
+            LoadErrorModel, LoadErrorMsg, PACKAGES_DB_STATE, WindowAsyncHandler,
+            WindowAsyncHandlerMsg,
+        },
     },
     utils::{
         cli,
         config::{editconfig, getconfig},
         online::{checkonline, checkonline_async},
-        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
+        packages::AppData,
     },
 };
 
@@ -93,20 +94,12 @@ pub struct AppModel {
     // syspkgs: HashMap<String, String>,
     // profilepkgs: Option<HashMap<String, String>>,
     // pkgitems: HashMap<String, PkgItem>,
-    #[tracker::no_eq]
-    pkgdb: String,
-    #[tracker::no_eq]
-    nixpkgsdb: Option<String>,
-    #[tracker::no_eq]
-    systemdb: Option<String>,
     appdata: HashMap<String, AppData>,
     installeduserpkgs: HashMap<String, String>,
     installedsystempkgs: HashSet<String>,
     syspkgtype: SystemPkgs,
     categoryrec: HashMap<PkgCategory, Vec<String>>,
     categoryall: HashMap<PkgCategory, Vec<String>>,
-    #[tracker::no_eq]
-    pkgpage: Controller<PkgModel>,
     #[tracker::no_eq]
     searchpage: Controller<SearchPageModel>,
     #[tracker::no_eq]
@@ -123,6 +116,8 @@ pub struct AppModel {
     installedpage: Controller<InstalledPageModel>,
     #[tracker::no_eq]
     updatepage: Controller<UpdatePageModel>,
+    #[tracker::no_eq]
+    package_page: Option<AsyncController<PackagePageModel>>,
     viewstack: adw::ViewStack,
     installedpagebusy: Vec<(String, InstallType)>,
     #[tracker::no_eq]
@@ -143,9 +138,6 @@ pub enum AppMsg {
     Close,
     LoadError(String, String),
     Initialize(
-        String,
-        Option<String>,
-        Option<String>,
         HashMap<String, AppData>,
         Vec<String>,
         // rec apps based on different category below 5 vectors
@@ -167,8 +159,8 @@ pub enum AppMsg {
     SetSearch(bool),
     SetVsBar(bool),
     Search(String),
-    AddInstalledToWorkQueue(WorkPkg),
-    RemoveInstalledBusy(WorkPkg),
+    AddInstalledToWorkQueue(WorkPackage),
+    RemoveInstalledBusy(WorkPackage),
     OpenCategoryPage(PkgCategory),
     LoadCategory(PkgCategory),
     UpdateRecPkgs(Vec<String>, Option<PkgCategory>), // if None then itʻs recomended apps
@@ -436,13 +428,6 @@ impl AsyncComponent for AppModel {
         let preferencespage = PreferencesPageModel::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
-        let pkgpage = PkgModel::builder()
-            .launch(PkgPageInit {
-                syspkgs: syspkgtype.clone(),
-                config: config.clone(),
-                online,
-            })
-            .forward(sender.input_sender(), identity);
         let searchpage = SearchPageModel::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
@@ -477,16 +462,12 @@ impl AsyncComponent for AppModel {
             windowloading,
             loaderrordialog,
             busy: true,
-            pkgdb: String::new(),
-            nixpkgsdb: None,
-            systemdb: None,
             appdata: HashMap::new(),
             installeduserpkgs: HashMap::new(),
             installedsystempkgs: HashSet::new(),
             syspkgtype,
             categoryrec: HashMap::new(),
             categoryall: HashMap::new(),
-            pkgpage,
             searchpage,
             categorypage,
             searching: false,
@@ -496,6 +477,7 @@ impl AsyncComponent for AppModel {
             explore_page,
             installedpage,
             updatepage,
+            package_page: None,
             viewstack: adw::ViewStack::new(),
             installedpagebusy: vec![],
             rebuild,
@@ -639,9 +621,6 @@ impl AsyncComponent for AppModel {
                         Err(_) => SystemPkgs::None,
                     }
                 };
-                self.pkgpage
-                    .emit(PkgMsg::UpdatePkgTypes(self.syspkgtype.clone()));
-                self.pkgpage.emit(PkgMsg::UpdateConfig(self.config.clone()));
                 self.updatepage
                     .emit(UpdatePageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
                 self.updatepage
@@ -697,11 +676,8 @@ impl AsyncComponent for AppModel {
                     self.syspkgtype = SystemPkgs::None;
                 }
 
-                self.pkgpage.emit(PkgMsg::UpdateConfig(self.config.clone()));
                 self.updatepage
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
-                self.pkgpage
-                    .emit(PkgMsg::UpdatePkgTypes(self.syspkgtype.clone()));
                 self.updatepage
                     .emit(UpdatePageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
                 self.installedpage
@@ -734,20 +710,14 @@ impl AsyncComponent for AppModel {
                     }
                 }
 
-                self.pkgpage.emit(PkgMsg::UpdateConfig(self.config.clone()));
                 self.updatepage
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
-                self.pkgpage
-                    .emit(PkgMsg::UpdatePkgTypes(self.syspkgtype.clone()));
                 self.updatepage
                     .emit(UpdatePageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
                 self.installedpage
                     .emit(InstalledPageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
             }
             AppMsg::Initialize(
-                pkgdb,
-                nixpkgsdb,
-                systemdb,
                 appdata,
                 recommendedapps,
                 devapps,
@@ -759,14 +729,10 @@ impl AsyncComponent for AppModel {
                 categoryall,
             ) => {
                 info!("AppMsg::Initialize");
-                self.pkgdb = pkgdb;
-                self.nixpkgsdb = nixpkgsdb;
-                self.systemdb = systemdb;
                 self.appdata = appdata;
                 self.categoryrec = categoryrec;
                 self.categoryall = categoryall;
 
-                self.pkgpage.emit(PkgMsg::UpdateConfig(self.config.clone()));
                 self.updatepage
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
 
@@ -805,7 +771,7 @@ impl AsyncComponent for AppModel {
                     .collect();
                 let installeduser = self.installeduserpkgs.clone();
                 let installedsystem = self.installedsystempkgs.clone();
-                let poolref = self.pkgdb.clone();
+                let poolref = PACKAGES_DB_STATE.read().packages_db.clone();
                 sender.oneshot_command(async move {
                     let mut pkgtiles = vec![];
                     if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", poolref)).await {
@@ -860,320 +826,17 @@ impl AsyncComponent for AppModel {
                 }
                 cli::scheme::Scheme::NixPkg(package) => sender.input(AppMsg::OpenPkg(package)),
             },
-            AppMsg::OpenPkg(pkg) => {
-                info!("AppMsg::OpenPkg {}", pkg);
-                sender.input(AppMsg::CheckNetwork);
-                if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
-                    let pkgdata: Result<
-                        (
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            String,
-                            bool,
-                            bool,
-                            bool,
-                            bool,
-                        ),
-                        _,
-                    > = sqlx::query_as(
-                        r#"
-SELECT pname, version, system, description, longdescription, license, platforms, maintainers, position, broken, insecure, unsupported, unfree
-FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1
-                    "#,
-                    )
-                    .bind(&pkg)
-                    .fetch_one(pool)
-                    .await;
-
-                    if let Ok((
-                        pname,
-                        version,
-                        system,
-                        description,
-                        longdescription,
-                        licensejson,
-                        platformsjson,
-                        maintainersjson,
-                        position,
-                        broken,
-                        insecure,
-                        unsupported,
-                        unfree,
-                    )) = pkgdata
-                    {
-                        let mut name = pname.to_string();
-                        let mut summary = if description.is_empty() {
-                            None
-                        } else {
-                            Some(description)
-                        };
-                        let mut description = if longdescription.is_empty() {
-                            None
-                        } else {
-                            Some(longdescription)
-                        };
-                        let mut icon = None;
-                        let mut screenshots = vec![];
-                        let mut licenses = vec![];
-                        let mut platforms = vec![];
-                        let mut maintainers = vec![];
-                        let mut launchable = None;
-                        let mut url = None;
-
-                        let app_data = self.appdata.get(&pkg);
-
-                        if let Some(data) = app_data {
-                            if let Some(n) = &data.name
-                                && let Some(n) = n.get("C")
-                            {
-                                name = n.to_string();
-                            }
-                            if let Some(s) = &data.summary
-                                && let Some(s) = s.get("C")
-                            {
-                                summary = Some(s.to_string());
-                            }
-                            if let Some(d) = &data.description
-                                && let Some(d) = d.get("C")
-                            {
-                                description = Some(d.to_string());
-                            }
-                            if let Some(i) = &data.icon
-                                && let Some(mut i) = i.cached.clone()
-                            {
-                                i.sort_by_key(|x| x.height);
-                                if let Some(i) = i.last() {
-                                    icon = Some(format!(
-                                        "{}/icons/nixos/{}x{}/{}",
-                                        APPINFO, i.width, i.height, i.name
-                                    ));
-                                }
-                            }
-                            if let Some(s) = &data.screenshots {
-                                for s in s {
-                                    if let Some(u) = &s.sourceimage {
-                                        if !screenshots.contains(&u.url) {
-                                            if s.default == Some(true) {
-                                                screenshots.insert(0, u.url.clone());
-                                            } else {
-                                                screenshots.push(u.url.clone());
-                                            }
-                                        } else if s.default == Some(true)
-                                            && let Some(index) =
-                                                screenshots.iter().position(|x| *x == u.url)
-                                        {
-                                            screenshots.remove(index);
-                                            screenshots.insert(0, u.url.clone());
-                                        }
-                                    }
-                                }
-                            }
-                            if let Some(l) = &data.launchable
-                                && let Some(d) = l.desktopid.first()
-                            {
-                                launchable = Some(d.to_string());
-                            }
-                            url = data.url.clone();
-                        }
-
-                        fn addlicense(pkglicense: &LicenseEnum, licenses: &mut Vec<License>) {
-                            match pkglicense {
-                                LicenseEnum::Single(l) => {
-                                    if let Some(n) = &l.fullname {
-                                        let parsed = if let Some(id) = &l.spdxid {
-                                            if let Ok(Some(license)) =
-                                                Expression::parse(id).map(|p| {
-                                                    p.requirements()
-                                                        .map(|er| er.req.license.id())
-                                                        .collect::<Vec<_>>()[0]
-                                                })
-                                            {
-                                                Some(license)
-                                            } else {
-                                                None
-                                            }
-                                        } else if let Ok(Some(license)) =
-                                            Expression::parse(n).map(|p| {
-                                                p.requirements()
-                                                    .map(|er| er.req.license.id())
-                                                    .collect::<Vec<_>>()[0]
-                                            })
-                                        {
-                                            Some(license)
-                                        } else {
-                                            None
-                                        };
-                                        licenses.push(License {
-                                            free: if let Some(f) = l.free {
-                                                Some(f)
-                                            } else {
-                                                parsed.map(|p| {
-                                                    p.is_osi_approved() || p.is_fsf_free_libre()
-                                                })
-                                            },
-                                            fullname: n.to_string(),
-                                            spdxid: l.spdxid.clone(),
-                                            url: if let Some(u) = &l.url {
-                                                Some(u.to_string())
-                                            } else {
-                                                parsed.map(|p| {
-                                                    format!(
-                                                        "https://spdx.org/licenses/{}.html",
-                                                        p.name
-                                                    )
-                                                })
-                                            },
-                                        })
-                                    } else if let Some(s) = &l.spdxid
-                                        && let Ok(Some(license)) = Expression::parse(s).map(|p| {
-                                            p.requirements()
-                                                .map(|er| er.req.license.id())
-                                                .collect::<Vec<_>>()[0]
-                                        })
-                                    {
-                                        licenses.push(License {
-                                            free: Some(
-                                                license.is_osi_approved()
-                                                    || license.is_fsf_free_libre()
-                                                    || l.free.unwrap_or(false),
-                                            ),
-                                            fullname: license.full_name.to_string(),
-                                            spdxid: Some(license.name.to_string()),
-                                            url: if l.url.is_some() {
-                                                l.url.clone()
-                                            } else {
-                                                Some(format!(
-                                                    "https://spdx.org/licenses/{}.html",
-                                                    license.name
-                                                ))
-                                            },
-                                        })
-                                    }
-                                }
-                                LicenseEnum::List(lst) => {
-                                    for l in lst {
-                                        addlicense(&LicenseEnum::Single(l.clone()), licenses);
-                                    }
-                                }
-                                LicenseEnum::SingleStr(s) => {
-                                    if let Ok(Some(license)) = Expression::parse(s).map(|p| {
-                                        p.requirements()
-                                            .map(|er| er.req.license.id())
-                                            .collect::<Vec<_>>()[0]
-                                    }) {
-                                        licenses.push(License {
-                                            free: Some(
-                                                license.is_osi_approved()
-                                                    || license.is_fsf_free_libre(),
-                                            ),
-                                            fullname: license.full_name.to_string(),
-                                            spdxid: Some(license.name.to_string()),
-                                            url: Some(format!(
-                                                "https://spdx.org/licenses/{}.html",
-                                                license.name
-                                            )),
-                                        })
-                                    }
-                                }
-                                LicenseEnum::VecStr(lst) => {
-                                    for s in lst {
-                                        addlicense(&LicenseEnum::SingleStr(s.clone()), licenses);
-                                    }
-                                }
-                                LicenseEnum::Mixed(v) => {
-                                    for l in v {
-                                        addlicense(l, licenses);
-                                    }
-                                }
-                            }
-                        }
-
-                        if let Ok(pkglicense) = serde_json::from_str::<LicenseEnum>(&licensejson) {
-                            addlicense(&pkglicense, &mut licenses);
-                        }
-
-                        let platformslst = serde_json::from_str::<Platform>(&platformsjson);
-                        if let Ok(p) = platformslst {
-                            match p {
-                                Platform::Single(p) => {
-                                    if !platforms.contains(&p) && p != system {
-                                        platforms.push(p);
-                                    }
-                                }
-                                Platform::List(v) => {
-                                    for p in v {
-                                        if !platforms.contains(&p.to_string()) && p != system {
-                                            platforms.push(p.to_string());
-                                        }
-                                    }
-                                }
-                                Platform::ListList(vv) => {
-                                    for v in vv {
-                                        for p in v {
-                                            if !platforms.contains(&p.to_string()) && p != system {
-                                                platforms.push(p.to_string());
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        platforms.sort();
-                        platforms.insert(0, system);
-
-                        if let Ok(m) = serde_json::from_str::<Vec<PkgMaintainer>>(&maintainersjson)
-                        {
-                            for m in m {
-                                maintainers.push(m);
-                            }
-                        }
-
-                        let releases = app_data
-                            .and_then(|ad| ad.releases.clone())
-                            .unwrap_or_else(|| Vec::new());
-
-                        let out = PkgInitModel {
-                            name,
-                            version: if version.is_empty() {
-                                None
-                            } else {
-                                Some(version.to_string())
-                            },
-                            pname,
-                            summary,
-                            description,
-                            icon,
-                            pkg,
-                            screenshots,
-                            launchable,
-                            url,
-                            releases,
-                            position,
-                            broken,
-                            insecure,
-                            unsupported,
-                            unfree,
-                        };
-                        if self.viewstack.visible_child_name()
-                            != Some(gtk::glib::GString::from("search"))
-                        {
-                            self.searching = false;
-                        }
-                        self.busy = false;
-                        self.pkgpage.emit(PkgMsg::Open(Box::new(out)));
-
-                        let page = self.pkgpage.widget();
-                        self.navigation.push(page);
-                    }
-                } else {
-                    error!("No pkgdb!");
-                }
+            AppMsg::OpenPkg(package) => {
+                let package_page = PackagePageModel::builder()
+                    .launch(PackagePageInit {
+                        package,
+                        syspkgs: self.syspkgtype.clone(),
+                        config: self.config.clone(),
+                        app_data: self.appdata.clone(),
+                    })
+                    .forward(sender.input_sender(), identity);
+                self.navigation.push(package_page.widget());
+                self.set_package_page(Some(package_page));
             }
             AppMsg::UpdateInstalledPkgs => {
                 info!("AppMsg::UpdateInstalledPkgs");
@@ -1216,7 +879,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 // let pool = SqlitePool::connect(&self.pkgdb).await.unwrap();
                 debug!("Installed user pkgs: {:?}", self.installeduserpkgs);
                 debug!("Installed system pkgs: {:?}", self.installedsystempkgs);
-                if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", self.pkgdb)).await {
+                let package_db = &PACKAGES_DB_STATE.read().packages_db;
+                if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", package_db)).await {
                     warn!(
                         "UserPkgs::Profile is installeduserpkgs len: {:?}",
                         self.installeduserpkgs.len()
@@ -1272,7 +936,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                 .contains(&(installedpkg.clone(), InstallType::User)),
                             version: version.to_string(),
                         });
-                        if let Some(latest) = &self.nixpkgsdb
+                        let nixpkgs_db = &PACKAGES_DB_STATE.read().nixpkgs_db;
+                        if let Some(latest) = &nixpkgs_db
                             && let Ok(latestpool) =
                                 &SqlitePool::connect(&format!("sqlite://{}", latest)).await
                         {
@@ -1351,7 +1016,8 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                                         .contains(&(installedpkg.clone(), InstallType::System)),
                                     version: version.to_string(),
                                 });
-                                if let Some(current) = &self.systemdb
+                                let system_db = &PACKAGES_DB_STATE.read().system_db;
+                                if let Some(current) = &system_db
                                     && let Ok(currentpool) =
                                         &SqlitePool::connect(&format!("sqlite://{}", current)).await
                                 {
@@ -1461,7 +1127,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 self.set_searchquery(search.to_string());
                 let installeduserpkgs = self.installeduserpkgs.clone();
                 let installedsystempkgs = self.installedsystempkgs.clone();
-                let pkgdb = self.pkgdb.clone();
+                let pkgdb = PACKAGES_DB_STATE.read().packages_db.clone();
                 let appdata = self.appdata.clone();
                 sender.command(move |out, shutdown| {
                     let search = search.clone();
@@ -1565,20 +1231,19 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                 })
             }
             AppMsg::AddInstalledToWorkQueue(work) => {
-                let p = match work.pkgtype {
-                    InstallType::User => work.pname.to_string(),
-                    InstallType::System => work.pkg.to_string(),
+                let p = match work.install_type {
+                    InstallType::User => work.package_name.to_string(),
+                    InstallType::System => work.package.to_string(),
                 };
-                self.installedpagebusy.push((p, work.pkgtype.clone()));
-                self.pkgpage.emit(PkgMsg::AddToQueue(work));
+                self.installedpagebusy.push((p, work.install_type.clone()));
             }
             AppMsg::RemoveInstalledBusy(work) => {
-                let p = match work.pkgtype {
-                    InstallType::User => work.pname.to_string(),
-                    InstallType::System => work.pkg.to_string(),
+                let p = match work.install_type {
+                    InstallType::User => work.package_name.to_string(),
+                    InstallType::System => work.package.to_string(),
                 };
                 self.installedpagebusy
-                    .retain(|(x, y)| x != &p && y != &work.pkgtype);
+                    .retain(|(x, y)| x != &p && y != &work.install_type);
                 self.installedpage.emit(InstalledPageMsg::UnsetBusy(work));
             }
             AppMsg::OpenCategoryPage(category) => {
@@ -1594,7 +1259,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
             }
             AppMsg::LoadCategory(category) => {
                 info!("AppMsg::LoadCategory({:?})", category);
-                let pkgdb = self.pkgdb.clone();
+                let pkgdb = PACKAGES_DB_STATE.read().packages_db.clone();
                 let categoryrec = self.categoryrec.get(&category).unwrap_or(&vec![]).to_vec();
                 let categoryall = self.categoryall.get(&category).unwrap_or(&vec![]).to_vec();
                 let appdata = self.appdata.clone();
@@ -1723,7 +1388,7 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
                         }
                     })
                     .collect();
-                let poolref = self.pkgdb.clone();
+                let poolref = PACKAGES_DB_STATE.read().packages_db.clone();
                 relm4::spawn(async move {
                     let mut unavailableuser = vec![];
                     let mut unavailablesys = vec![];
@@ -1896,7 +1561,6 @@ FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = 
             AppAsyncMsg::SetNetwork(online) => {
                 self.online = online;
                 self.updatepage.emit(UpdatePageMsg::UpdateOnline(online));
-                self.pkgpage.emit(PkgMsg::UpdateOnline(online));
             }
         }
     }
