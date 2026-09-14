@@ -1,24 +1,34 @@
 use gettextrs::gettext;
-use log::*;
+use log::warn;
 use relm4::{
+    ComponentParts, ComponentSender, RelmListBoxExt, RelmWidgetExt, SimpleComponent,
     adw::{self, prelude::*},
-    factory::*,
-    *,
+    component::{AsyncComponent, AsyncComponentController, AsyncController},
+    factory::FactoryVecDeque,
+    gtk,
 };
-use std::collections::HashSet;
+use std::{collections::HashSet, convert::identity};
 
 use crate::ui::{
     installed::components::installed_item::InstalledItem,
-    search::components::search_item::{SearchItem, SearchItemModel},
+    package::package_page::{PackagePageInit, PackagePageModel},
     window::*,
 };
+
+use super::components::search_item::{SearchItem, SearchItemModel};
 
 #[tracker::track]
 #[derive(Debug)]
 pub struct SearchPageModel {
+    navigation: adw::NavigationView,
+
+    system_packages_type: SystemPkgs,
+
     #[tracker::no_eq]
     searchitems: FactoryVecDeque<SearchItemModel>,
-    searchitemtracker: u8,
+
+    #[tracker::no_eq]
+    package_page: Option<AsyncController<PackagePageModel>>,
 }
 
 #[derive(Debug)]
@@ -29,19 +39,18 @@ pub enum SearchPageMsg {
         user_packages: Vec<InstalledItem>,
     },
     OpenRow(usize),
+    OpenPackage(String),
 }
 
 #[relm4::component(pub)]
 impl SimpleComponent for SearchPageModel {
-    type Init = ();
+    type Init = SystemPkgs;
     type Input = SearchPageMsg;
     type Output = AppMsg;
 
     view! {
         gtk::ScrolledWindow {
             set_hscrollbar_policy: gtk::PolicyType::Never,
-            #[track(model.changed(SearchPageModel::searchitemtracker()))]
-            set_vadjustment: gtk::Adjustment::NONE,
             if !model.searchitems.is_empty() {
                 adw::Clamp {
                     gtk::Stack {
@@ -70,7 +79,7 @@ impl SimpleComponent for SearchPageModel {
     }
 
     fn init(
-        (): Self::Init,
+        system_packages_type: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -82,10 +91,12 @@ impl SimpleComponent for SearchPageModel {
         });
 
         let model = SearchPageModel {
+            navigation: adw::NavigationView::new(),
+            system_packages_type,
             searchitems: FactoryVecDeque::builder()
                 .launch(gtk::ListBox::new())
                 .detach(),
-            searchitemtracker: 0,
+            package_page: None,
             tracker: 0,
         };
 
@@ -105,14 +116,23 @@ impl SimpleComponent for SearchPageModel {
                     searchitem_guard.push_back(item);
                 }
                 searchitem_guard.drop();
-                self.update_searchitemtracker(|_| ());
             }
             SearchPageMsg::OpenRow(row) => {
                 let searchitem_guard = self.searchitems.guard();
                 if let Some(item) = searchitem_guard.get(row) {
                     let pkg = &item.item.pkg;
-                    let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                    sender.input(SearchPageMsg::OpenPackage(pkg.to_string()));
                 }
+            }
+            SearchPageMsg::OpenPackage(package) => {
+                let package_page = PackagePageModel::builder()
+                    .launch(PackagePageInit {
+                        package,
+                        syspkgs: self.system_packages_type.clone(),
+                    })
+                    .forward(sender.output_sender(), identity);
+                self.navigation.push(package_page.widget());
+                self.set_package_page(Some(package_page));
             }
             SearchPageMsg::UpdateInstalledPackages {
                 system_packages,

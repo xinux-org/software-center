@@ -1,22 +1,30 @@
-use adw::prelude::*;
+use std::{collections::HashMap, convert::identity};
+
 use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
-use relm4::{factory::*, *};
-use std::{collections::HashMap, convert::identity};
+use relm4::{
+    Component, ComponentParts, ComponentSender, Controller, MessageBroker, RelmListBoxExt,
+    RelmWidgetExt, SimpleComponent, WorkerController,
+    adw::{self, prelude::*},
+    component::{AsyncComponent, AsyncComponentController, AsyncController},
+    factory::FactoryVecDeque,
+    gtk,
+};
 
 use crate::{
     ui::{
-        package::package_page::InstallType,
+        package::package_page::{InstallType, PackagePageInit, PackagePageModel},
         rebuild::rebuild_model::RebuildMsg,
-        update::{
-            components::update_item::{UpdateItem, UpdateItemModel},
-            unavailable_dialog::{UnavailableDialogModel, UnavailableDialogMsg},
-            update_worker::{UpdateAsyncHandler, UpdateAsyncHandlerInit, UpdateAsyncHandlerMsg},
-        },
-        window::*,
+        window::{AppMsg, REBUILD_BROKER, SystemPkgs},
     },
     utils::online::checkonline,
+};
+
+use super::{
+    components::update_item::{UpdateItem, UpdateItemModel},
+    unavailable_dialog::{UnavailableDialogModel, UnavailableDialogMsg},
+    update_worker::{UpdateAsyncHandler, UpdateAsyncHandlerInit, UpdateAsyncHandlerMsg},
 };
 
 pub static UNAVAILABLE_BROKER: MessageBroker<UnavailableDialogMsg> = MessageBroker::new();
@@ -24,6 +32,11 @@ pub static UNAVAILABLE_BROKER: MessageBroker<UnavailableDialogMsg> = MessageBrok
 #[tracker::track]
 #[derive(Debug)]
 pub struct UpdatePageModel {
+    navigation: adw::NavigationView,
+
+    config: NixDataConfig,
+    system_packages_type: SystemPkgs,
+
     #[tracker::no_eq]
     updateuserlist: FactoryVecDeque<UpdateItemModel>,
     #[tracker::no_eq]
@@ -31,11 +44,12 @@ pub struct UpdatePageModel {
     channelupdate: Option<(String, String)>,
     #[tracker::no_eq]
     updateworker: WorkerController<UpdateAsyncHandler>,
-    config: NixDataConfig,
-    systype: SystemPkgs,
-    updatetracker: u8,
     #[tracker::no_eq]
     unavailabledialog: Controller<UnavailableDialogModel>,
+
+    #[tracker::no_eq]
+    package_page: Option<AsyncController<PackagePageModel>>,
+
     online: bool,
 }
 
@@ -45,13 +59,12 @@ pub enum UpdatePageMsg {
     UpdatePkgTypes(SystemPkgs),
     Update(Vec<UpdateItem>, Vec<UpdateItem>),
     OpenRow(usize, InstallType),
+    OpenPackage(String),
     UpdateSystem,
     UpdateSystemRm(Vec<String>),
     UpdateAllUser,
     UpdateAllUserRm(Vec<String>),
     UpdateUser(String),
-    // UpdateChannels,
-    // UpdateSystemAndChannels,
     UpdateAll,
     UpdateAllRm(Vec<String>, Vec<String>),
     DoneWorking,
@@ -81,145 +94,151 @@ impl SimpleComponent for UpdatePageModel {
     type Output = AppMsg;
 
     view! {
-        gtk::ScrolledWindow {
-            set_hscrollbar_policy: gtk::PolicyType::Never,
-            #[track(model.changed(UpdatePageModel::updatetracker()))]
-            set_vadjustment: gtk::Adjustment::NONE,
-            adw::Clamp {
-                #[name(mainstack)]
-                if !model.online {
-                    adw::StatusPage {
-                        set_icon_name: Some("nsc-network-offline-symbolic"),
-                        set_title: &gettext("No internet connection"),
-                        set_description: Some(&gettext("Please connect to the internet to update your system")),
-                        gtk::Button {
-                            add_css_class: "pill",
-                            set_halign: gtk::Align::Center,
-                            adw::ButtonContent {
-                                set_icon_name: "nsc-refresh-symbolic",
-                                set_label: &gettext("Refresh"),
-                            },
-                            connect_clicked[sender] => move |_| {
-                                let _ = sender.output(AppMsg::CheckNetwork);
-                            }
-                        }
-                    }
-                } else if !model.updateuserlist.is_empty() || !model.updatesystemlist.is_empty() {
-                    // model.channelupdate.is_some() ||
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
-                        set_valign: gtk::Align::Start,
-                        set_margin_all: 15,
-                        set_spacing: 15,
-                        gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_hexpand: true,
-                            gtk::Label {
-                                set_halign: gtk::Align::Start,
-                                add_css_class: "title-2",
-                                set_label: &gettext("Updates"),
-                            },
-                            gtk::Button {
-                                add_css_class: "suggested-action",
-                                set_halign: gtk::Align::End,
-                                set_valign: gtk::Align::Center,
-                                set_hexpand: true,
-                                set_label: &gettext("Update Everything"),
-                                connect_clicked[sender] => move |_| {
-                                    sender.input(UpdatePageMsg::UpdateAll);
+        #[name = "navigation"]
+        adw::NavigationView {
+            add = &adw::NavigationPage {
+                set_title: &gettext("Updates"),
+                adw::ToolbarView {
+                    add_top_bar = &adw::HeaderBar {},
+                    gtk::ScrolledWindow {
+                        set_hscrollbar_policy: gtk::PolicyType::Never,
+                        adw::Clamp {
+                            #[name(mainstack)]
+                            if !model.online {
+                                adw::StatusPage {
+                                    set_icon_name: Some("nsc-network-offline-symbolic"),
+                                    set_title: &gettext("No internet connection"),
+                                    set_description: Some(&gettext("Please connect to the internet to update your system")),
+                                    gtk::Button {
+                                        add_css_class: "pill",
+                                        set_halign: gtk::Align::Center,
+                                        adw::ButtonContent {
+                                            set_icon_name: "nsc-refresh-symbolic",
+                                            set_label: &gettext("Refresh"),
+                                        },
+                                        connect_clicked[sender] => move |_| {
+                                            let _ = sender.output(AppMsg::CheckNetwork);
+                                        }
+                                    }
+                                }
+                            } else if !model.updateuserlist.is_empty() || !model.updatesystemlist.is_empty() {
+                                gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_valign: gtk::Align::Start,
+                                    set_margin_all: 15,
+                                    set_spacing: 15,
+                                    gtk::Box {
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_hexpand: true,
+                                        gtk::Label {
+                                            set_halign: gtk::Align::Start,
+                                            add_css_class: "title-2",
+                                            set_label: &gettext("Updates"),
+                                        },
+                                        gtk::Button {
+                                            add_css_class: "suggested-action",
+                                            set_halign: gtk::Align::End,
+                                            set_valign: gtk::Align::Center,
+                                            set_hexpand: true,
+                                            set_label: &gettext("Update Everything"),
+                                            connect_clicked[sender] => move |_| {
+                                                sender.input(UpdatePageMsg::UpdateAll);
+                                            }
+                                        }
+                                    },
+                                    gtk::Box {
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_hexpand: true,
+                                        #[watch]
+                                        set_visible: !model.updateuserlist.is_empty(),
+                                        gtk::Label {
+                                            set_halign: gtk::Align::Start,
+                                            add_css_class: "title-4",
+                                            set_label: &gettext("User (nix profile)")
+                                        },
+                                        gtk::Button {
+                                            add_css_class: "suggested-action",
+                                            set_halign: gtk::Align::End,
+                                            set_valign: gtk::Align::Center,
+                                            set_hexpand: true,
+                                            set_label: &gettext("Update All"),
+                                            connect_clicked[sender] => move |_| {
+                                                sender.input(UpdatePageMsg::UpdateAllUser);
+                                            }
+                                        }
+                                    },
+                                    #[local_ref]
+                                    updateuserlist -> gtk::ListBox {
+                                        set_valign: gtk::Align::Start,
+                                        add_css_class: "boxed-list",
+                                        set_selection_mode: gtk::SelectionMode::None,
+                                        connect_row_activated[sender] => move |listbox, row| {
+                                            if let Some(i) = listbox.index_of_child(row) {
+                                                sender.input(UpdatePageMsg::OpenRow(i as usize, InstallType::User));
+                                            }
+                                        },
+                                        #[watch]
+                                        set_visible: !model.updateuserlist.is_empty(),
+                                    },
+                                    gtk::Box {
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_hexpand: true,
+                                        #[watch]
+                                        set_visible: !model.updatesystemlist.is_empty(),
+                                        gtk::Label {
+                                            set_halign: gtk::Align::Start,
+                                            add_css_class: "title-4",
+                                            set_label: &gettext("System (configuration.nix)"),
+                                        },
+                                        gtk::Button {
+                                            add_css_class: "suggested-action",
+                                            set_halign: gtk::Align::End,
+                                            set_hexpand: true,
+                                            set_valign: gtk::Align::Center,
+                                            set_label: &gettext("Update"),
+                                            connect_clicked[sender] => move |_|{
+                                                sender.input(UpdatePageMsg::UpdateSystem);
+                                            },
+                                        }
+                                    },
+                                    #[local_ref]
+                                    updatesystemlist -> gtk::ListBox {
+                                        set_valign: gtk::Align::Start,
+                                        add_css_class: "boxed-list",
+                                        set_selection_mode: gtk::SelectionMode::None,
+                                        connect_row_activated[sender] => move |listbox, row| {
+                                            if let Some(i) = listbox.index_of_child(row) {
+                                                sender.input(UpdatePageMsg::OpenRow(i as usize, InstallType::System));
+                                            }
+                                        },
+                                        #[watch]
+                                        set_visible: !model.updatesystemlist.is_empty(),
+                                    }
+                                }
+                            } else {
+                                gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_valign: gtk::Align::Center,
+                                    set_halign: gtk::Align::Center,
+                                    set_hexpand: true,
+                                    set_vexpand: true,
+                                    set_spacing: 10,
+                                    gtk::Image {
+                                        add_css_class: "success",
+                                        set_icon_name: Some("emblem-ok-symbolic"),
+                                        set_pixel_size: 256,
+                                    },
+                                    gtk::Label {
+                                        add_css_class: "title-1",
+                                        set_label: &gettext("Everything is up to date!")
+                                    }
                                 }
                             }
                         },
-                        gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_hexpand: true,
-                            #[watch]
-                            set_visible: !model.updateuserlist.is_empty(),
-                            gtk::Label {
-                                set_halign: gtk::Align::Start,
-                                add_css_class: "title-4",
-                                set_label: &gettext("User (nix profile)")
-                            },
-                            gtk::Button {
-                                add_css_class: "suggested-action",
-                                set_halign: gtk::Align::End,
-                                set_valign: gtk::Align::Center,
-                                set_hexpand: true,
-                                set_label: &gettext("Update All"),
-                                connect_clicked[sender] => move |_| {
-                                    sender.input(UpdatePageMsg::UpdateAllUser);
-                                }
-                            }
-                        },
-                        #[local_ref]
-                        updateuserlist -> gtk::ListBox {
-                            set_valign: gtk::Align::Start,
-                            add_css_class: "boxed-list",
-                            set_selection_mode: gtk::SelectionMode::None,
-                            connect_row_activated[sender] => move |listbox, row| {
-                                if let Some(i) = listbox.index_of_child(row) {
-                                    sender.input(UpdatePageMsg::OpenRow(i as usize, InstallType::User));
-                                }
-                            },
-                            #[watch]
-                            set_visible: !model.updateuserlist.is_empty(),
-                        },
-                        gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_hexpand: true,
-                            #[watch]
-                            set_visible: !model.updatesystemlist.is_empty(),
-                            gtk::Label {
-                                set_halign: gtk::Align::Start,
-                                add_css_class: "title-4",
-                                set_label: &gettext("System (configuration.nix)"),
-                            },
-                            gtk::Button {
-                                add_css_class: "suggested-action",
-                                set_halign: gtk::Align::End,
-                                set_hexpand: true,
-                                set_valign: gtk::Align::Center,
-                                set_label: &gettext("Update"),
-                                connect_clicked[sender] => move |_|{
-                                    sender.input(UpdatePageMsg::UpdateSystem);
-                                },
-                            }
-                        },
-                        #[local_ref]
-                        updatesystemlist -> gtk::ListBox {
-                            set_valign: gtk::Align::Start,
-                            add_css_class: "boxed-list",
-                            set_selection_mode: gtk::SelectionMode::None,
-                            connect_row_activated[sender] => move |listbox, row| {
-                                if let Some(i) = listbox.index_of_child(row) {
-                                    sender.input(UpdatePageMsg::OpenRow(i as usize, InstallType::System));
-                                }
-                            },
-                            #[watch]
-                            set_visible: !model.updatesystemlist.is_empty(),
-                        }
-                    }
-                } else {
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
-                        set_valign: gtk::Align::Center,
-                        set_halign: gtk::Align::Center,
-                        set_hexpand: true,
-                        set_vexpand: true,
-                        set_spacing: 10,
-                        gtk::Image {
-                            add_css_class: "success",
-                            set_icon_name: Some("emblem-ok-symbolic"),
-                            set_pixel_size: 256,
-                        },
-                        gtk::Label {
-                            add_css_class: "title-1",
-                            set_label: &gettext("Everything is up to date!")
-                        }
-                    }
-                }
-            }
-        }
+                    },
+                },
+            },
+        },
     }
 
     fn init(
@@ -240,7 +259,10 @@ impl SimpleComponent for UpdatePageModel {
         let config = initparams.config;
         updateworker.emit(UpdateAsyncHandlerMsg::UpdateConfig(config.clone()));
 
-        let model = UpdatePageModel {
+        let mut model = UpdatePageModel {
+            navigation: adw::NavigationView::new(),
+            config,
+            system_packages_type: initparams.systype,
             updateuserlist: FactoryVecDeque::builder()
                 .launch(gtk::ListBox::new())
                 .forward(sender.input_sender(), |_| UpdatePageMsg::Noop),
@@ -248,11 +270,9 @@ impl SimpleComponent for UpdatePageModel {
                 .launch(gtk::ListBox::new())
                 .forward(sender.input_sender(), |_| UpdatePageMsg::Noop),
             channelupdate: None,
-            updatetracker: 0,
             updateworker,
-            config,
-            systype: initparams.systype,
             unavailabledialog,
+            package_page: None,
             online: initparams.online,
             tracker: 0,
         };
@@ -261,8 +281,8 @@ impl SimpleComponent for UpdatePageModel {
         let updatesystemlist = model.updatesystemlist.widget();
 
         let widgets = view_output!();
-        widgets.mainstack.set_hhomogeneous(false);
-        widgets.mainstack.set_vhomogeneous(false);
+
+        model.navigation = widgets.navigation.clone();
 
         ComponentParts { model, widgets }
     }
@@ -276,15 +296,16 @@ impl SimpleComponent for UpdatePageModel {
                     .emit(UpdateAsyncHandlerMsg::UpdateConfig(self.config.clone()));
             }
             UpdatePageMsg::UpdatePkgTypes(systype) => {
-                self.systype = systype;
+                self.system_packages_type = systype;
                 self.updateworker
-                    .emit(UpdateAsyncHandlerMsg::UpdatePkgTypes(self.systype.clone()));
+                    .emit(UpdateAsyncHandlerMsg::UpdatePkgTypes(
+                        self.system_packages_type.clone(),
+                    ));
             }
             UpdatePageMsg::Update(updateuserlist, updatesystemlist) => {
                 info!("UpdatePageMsg::Update");
                 debug!("UPDATEUSERLIST: {:?}", updateuserlist);
                 debug!("UPDATESYSTEMLIST: {:?}", updatesystemlist);
-                self.update_updatetracker(|_| ());
                 let mut updateuserlist_guard = self.updateuserlist.guard();
                 updateuserlist_guard.clear();
                 for updateuser in updateuserlist {
@@ -300,9 +321,9 @@ impl SimpleComponent for UpdatePageModel {
                 InstallType::User => {
                     let updateuserlist_guard = self.updateuserlist.guard();
                     if let Some(item) = updateuserlist_guard.get(row)
-                        && let Some(pkg) = &item.item.pkg
+                        && let Some(package) = &item.item.pkg
                     {
-                        let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                        let _ = sender.input(UpdatePageMsg::OpenPackage(package.to_string()));
                     }
                 }
                 InstallType::System => {
@@ -310,10 +331,20 @@ impl SimpleComponent for UpdatePageModel {
                     if let Some(item) = updatesystemlist_guard.get(row)
                         && let Some(pkg) = &item.item.pkg
                     {
-                        let _ = sender.output(AppMsg::OpenPkg(pkg.to_string()));
+                        let _ = sender.input(UpdatePageMsg::OpenPackage(pkg.to_string()));
                     }
                 }
             },
+            UpdatePageMsg::OpenPackage(package) => {
+                let package_page = PackagePageModel::builder()
+                    .launch(PackagePageInit {
+                        package,
+                        syspkgs: self.system_packages_type.clone(),
+                    })
+                    .forward(sender.output_sender(), identity);
+                self.navigation.push(package_page.widget());
+                self.set_package_page(Some(package_page));
+            }
             UpdatePageMsg::UpdateSystem => {
                 let online = checkonline();
                 if !online {
@@ -321,14 +352,14 @@ impl SimpleComponent for UpdatePageModel {
                     self.online = false;
                     return;
                 }
-                let systype = self.systype.clone();
+                let system_packages_type = self.system_packages_type.clone();
                 let systemconfig = self.config.systemconfig.clone();
                 let workersender = self.updateworker.sender().clone();
                 let output = sender.output_sender().clone();
                 REBUILD_BROKER.send(RebuildMsg::Show);
                 relm4::spawn(async move {
                     let uninstallsys =
-                        match systype {
+                        match system_packages_type {
                             SystemPkgs::Flake => nix_data_xinux::cache::flakes::unavailablepkgs(&[
                                 &systemconfig.unwrap(),
                             ])
@@ -396,14 +427,14 @@ impl SimpleComponent for UpdatePageModel {
                     return;
                 }
                 info!("UpdatePageMsg::UpdateAll");
-                let systype = self.systype.clone();
+                let system_packages_type = self.system_packages_type.clone();
                 let systemconfig = self.config.systemconfig.clone();
                 let workersender = self.updateworker.sender().clone();
                 let output = sender.output_sender().clone();
                 REBUILD_BROKER.send(RebuildMsg::Show);
                 relm4::spawn(async move {
                     let uninstallsys =
-                        match systype {
+                        match system_packages_type {
                             SystemPkgs::Flake => nix_data_xinux::cache::flakes::unavailablepkgs(&[
                                 &systemconfig.unwrap(),
                             ])
