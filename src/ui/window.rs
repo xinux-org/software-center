@@ -281,6 +281,8 @@ impl AsyncComponent for AppModel {
         view_stack = &adw::ViewStack {
             add_titled_with_icon: (model.explore_page.widget(), Some("explore"), &gettext("Explore"), "compass2-symbolic"),
 
+            add_titled_with_icon: (model.search_page.widget(), Some("search"), &gettext("Search"), "edit-find-symbolic"),
+
             add_titled_with_icon: (model.category_audio_page.widget(), Some("audio"), &gettext("Audio"), "headphones-symbolic"),
             add_titled_with_icon: (model.category_development_page.widget(), Some("development"), &gettext("Development"), "code-symbolic"),
             add_titled_with_icon: (model.category_games_page.widget(), Some("gaming"), &gettext("Gaming"), "gamepad-symbolic"),
