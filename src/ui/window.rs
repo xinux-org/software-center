@@ -782,24 +782,23 @@ impl AsyncComponent for AppModel {
 
                 self.busy = false;
             }
-            AppMsg::OpenPkgByScheme(_scheme) => {
-                // TODO: rewrite this logic for new structure
-                // match scheme {
-                //     cli::scheme::Scheme::AppStream { id, alt: _ } => {
-                //         let package = self
-                //             .appdata
-                //             .iter()
-                //             .find(|(_, appdata)| appdata.id == id)
-                //             .map(|(_, appdata)| appdata.package.clone());
-                //         if let Some(package) = package {
-                //             sender.input(AppMsg::OpenPkg(package));
-                //         } else {
-                //             warn!("App could not be found be id: {:?}", package);
-                //         }
-                //     }
-                //     cli::scheme::Scheme::NixPkg(package) => sender.input(AppMsg::OpenPkg(package)),
-                // };
-            }
+            AppMsg::OpenPkgByScheme(scheme) => match scheme {
+                cli::scheme::Scheme::AppStream { id, alt: _ } => {
+                    let package = self
+                        .appdata
+                        .iter()
+                        .find(|(_, appdata)| appdata.id == id)
+                        .map(|(_, appdata)| appdata.package.clone());
+                    if let Some(package) = package {
+                        self.explore_page.emit(ExplorePageMsg::OpenPackage(package));
+                    } else {
+                        warn!("App could not be found be id: {:?}", package);
+                    }
+                }
+                cli::scheme::Scheme::NixPkg(package) => {
+                    self.explore_page.emit(ExplorePageMsg::OpenPackage(package));
+                }
+            },
             AppMsg::UpdateInstalledPkgs => {
                 info!("AppMsg::UpdateInstalledPkgs");
                 let systemconfig = self.config.systemconfig.clone();
