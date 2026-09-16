@@ -221,6 +221,29 @@ impl AsyncComponent for AppModel {
                     None
                 },
 
+            add_breakpoint = adw::Breakpoint::new(
+                adw::BreakpointCondition::new_length(
+                    adw::BreakpointConditionLengthType::MaxWidth,
+                    500.0,
+                    adw::LengthUnit::Px,
+                )
+            ) {
+                add_setters: &[
+                    (&navigation, "collapsed", true),
+                ],
+            },
+            add_breakpoint = adw::Breakpoint::new(
+                adw::BreakpointCondition::new_length(
+                    adw::BreakpointConditionLengthType::MinWidth,
+                    500.0,
+                    adw::LengthUnit::Px,
+                )
+            ) {
+                add_setters: &[
+                    (&navigation, "collapsed", false),
+                ],
+            },
+
             #[name = "navigation"]
             adw::NavigationSplitView {
                 #[wrap(Some)]
@@ -298,6 +321,11 @@ impl AsyncComponent for AppModel {
 
             add_titled_with_icon: (model.installed_page.widget(), Some("installed"), &gettext("Installed"), "library-symbolic"),
             add_titled_with_icon: (model.update_page.widget(), Some("updates"), &gettext("Updates"), "nsc-update-symbolic"),
+
+
+            connect_visible_child_notify[navigation] => move |_| {
+                navigation.set_show_content(true);
+            },
         }
     }
 
