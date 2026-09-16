@@ -109,13 +109,37 @@ impl Component for SearchPageModel {
                                         set_halign: gtk::Align::Fill,
                                         set_valign: gtk::Align::Fill,
                                         set_vexpand: true,
-                                        adw::StatusPage {
-                                            set_hexpand: true,
-                                            set_vexpand: true,
-                                            set_icon_name: Some("edit-find-symbolic"),
-                                            #[watch]
-                                            set_title: &if model.searching { gettext("No apps found") } else { gettext("Type to search") } ,
-                                        }
+                                        if model.searching {
+                                            gtk::Box {
+                                                set_orientation: gtk::Orientation::Vertical,
+                                                set_halign: gtk::Align::Fill,
+                                                set_valign: gtk::Align::Center,
+                                                set_hexpand: true,
+                                                set_vexpand: true,
+                                                set_spacing: 6,
+                                                gtk::Spinner {
+                                                    set_spinning: true,
+                                                    set_width_request: 64,
+                                                    set_height_request: 64,
+                                                    set_margin_bottom: 18,
+                                                },
+                                                gtk::Label {
+                                                    set_label: &gettext("Searching..."),
+                                                    set_wrap: true,
+                                                    set_justify: gtk::Justification::Center,
+                                                    set_margin_bottom: 24,
+                                                    add_css_class: "title-3",
+                                                },
+                                            }
+                                        } else {
+                                            adw::StatusPage {
+                                                set_hexpand: true,
+                                                set_vexpand: true,
+                                                set_icon_name: Some("edit-find-symbolic"),
+                                                #[watch]
+                                                set_title: &if model.search_text.is_empty() { gettext("Type to search") } else { gettext("No apps found") },
+                                            }
+                                        },
                                     }
                                 },
                             }
