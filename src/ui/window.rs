@@ -291,8 +291,8 @@ impl AsyncComponent for AppModel {
             add_titled_with_icon: (model.category_web_page.widget(), Some("web"), &gettext("Web"), "globe-alt2-symbolic"),
             add_titled_with_icon: (model.category_network_page.widget(), Some("network"), &gettext("Network"), "network-server-symbolic"),
             add_titled_with_icon: (model.category_education_page.widget(), Some("education"), &gettext("Education"), "school-symbolic"),
-            add_titled_with_icon: (model.category_science_page.widget(), Some("science"), &gettext("Science"), "action-unavailable-symbolic"),
-            add_titled_with_icon: (model.category_office_page.widget(), Some("office"), &gettext("Office"), "action-unavailable-symbolic"),
+            add_titled_with_icon: (model.category_science_page.widget(), Some("science"), &gettext("Science"), "applications-science-symbolic"),
+            add_titled_with_icon: (model.category_office_page.widget(), Some("office"), &gettext("Office"), "paper-symbolic"),
             add_titled_with_icon: (model.category_system_page.widget(), Some("system"), &gettext("System"), "settings-symbolic"),
             add_titled_with_icon: (model.category_utility_page.widget(), Some("utility"), &gettext("Utility"), "build-alt-symbolic"),
 
