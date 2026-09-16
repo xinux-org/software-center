@@ -55,6 +55,7 @@ impl SimpleComponent for ExplorePageModel {
         #[name = "navigation"]
         adw::NavigationView {
             add = &adw::NavigationPage {
+                set_title: &gettext("Explore"),
                 adw::ToolbarView {
                     add_top_bar = &adw::HeaderBar {},
                     gtk::ScrolledWindow {

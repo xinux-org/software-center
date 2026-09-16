@@ -66,6 +66,7 @@ impl Component for SearchPageModel {
         #[name = "navigation"]
         adw::NavigationView {
             add = &adw::NavigationPage {
+                set_title: &gettext("Search"),
                 adw::ToolbarView {
                     add_top_bar = &adw::HeaderBar {},
                     gtk::ScrolledWindow {
