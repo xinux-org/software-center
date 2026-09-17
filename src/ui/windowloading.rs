@@ -497,7 +497,8 @@ impl Worker for WindowAsyncHandler {
                         }
 
                         cvec.shuffle(&mut rng);
-                        allvec.sort_by_key(|x| x.to_lowercase());
+                        allvec.shuffle(&mut rng);
+                        allvec = allvec.into_iter().take(48).collect();
                         catpicks.insert(category.clone(), cvec);
                         catpkgs.insert(category.clone(), allvec);
                     }
