@@ -7,14 +7,15 @@ use relm4::gtk::pango;
 use relm4::{factory::*, *};
 
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
+
 pub struct CategoryTile {
     pub name: String,
-    pub pkg: String,
-    pub pname: String,
-    pub summary: Option<String>,
+    pub package: String,
+    pub package_name: String,
+    pub summary: String,
     pub icon: Option<String>,
-    pub installeduser: bool,
-    pub installedsystem: bool,
+    pub installed_user: bool,
+    pub installed_system: bool,
 }
 
 #[derive(Debug)]
@@ -48,7 +49,7 @@ impl FactoryComponent for CategoryTile {
                         set_margin_end: 8,
                         set_icon_name: Some("emblem-default-symbolic"),
                         #[watch]
-                        set_visible: self.installeduser,
+                        set_visible: self.installed_user,
                     },
                     gtk::Image {
                         add_css_class: "success",
@@ -59,12 +60,12 @@ impl FactoryComponent for CategoryTile {
                         set_margin_end: 8,
                         set_icon_name: Some("emblem-default-symbolic"),
                         #[watch]
-                        set_visible: self.installedsystem,
+                        set_visible: self.installed_system,
                     }
                 },
                 gtk::Button {
                     add_css_class: "card",
-                    connect_clicked[sender, pkg = self.pkg.clone()] => move |_| {
+                    connect_clicked[sender, pkg = self.package.clone()] => move |_| {
                         sender.output(CategoryTileMsg::Open(pkg.to_string())).unwrap()
                     },
                     set_can_focus: false,
@@ -122,7 +123,7 @@ impl FactoryComponent for CategoryTile {
                                 set_halign: gtk::Align::Start,
                                 add_css_class: "dim-label",
                                 add_css_class: "caption",
-                                set_label: &self.pkg,
+                                set_label: &self.package,
                                 set_ellipsize: pango::EllipsizeMode::End,
                                 set_lines: 1,
                                 set_wrap: true,
@@ -132,8 +133,7 @@ impl FactoryComponent for CategoryTile {
                                 set_halign: gtk::Align::Start,
                                 // add_css_class: "dim-label",
                                 #[watch]
-                                set_visible: self.summary.is_some(),
-                                set_label: &(if let Some(s) = &self.summary { s.to_string() } else { String::default() }),
+                                set_label: &self.summary,
                                 set_ellipsize: pango::EllipsizeMode::End,
                                 set_lines: 2,
                                 set_wrap: true,
@@ -148,25 +148,22 @@ impl FactoryComponent for CategoryTile {
 
     fn init_model(parent: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
         let mut sum = parent.summary;
-        sum = sum.map(|mut s| {
-            s.trim().to_string();
-            while s.contains('\n') {
-                s = s.replace('\n', " ");
-            }
-            while s.contains("  ") {
-                s = s.replace("  ", " ");
-            }
-            s
-        });
+        sum = sum.trim().to_string();
+        while sum.contains('\n') {
+            sum = sum.replace('\n', " ");
+        }
+        while sum.contains("  ") {
+            sum = sum.replace("  ", " ");
+        }
 
         Self {
             name: parent.name,
-            pkg: parent.pkg,
-            pname: parent.pname,
+            package: parent.package,
+            package_name: parent.package_name,
             summary: sum,
             icon: parent.icon,
-            installeduser: parent.installeduser,
-            installedsystem: parent.installedsystem,
+            installed_user: parent.installed_user,
+            installed_system: parent.installed_system,
         }
     }
 }

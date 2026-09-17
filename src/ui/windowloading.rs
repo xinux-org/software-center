@@ -28,6 +28,8 @@ pub struct PackagesDBState {
 
 pub static PACKAGES_DB_STATE: SharedState<PackagesDBState> = SharedState::new();
 
+pub static APPSTREAM_DATA_STATE: SharedState<HashMap<String, AppData>> = SharedState::new();
+
 pub struct WindowAsyncHandler;
 
 #[derive(Debug)]
@@ -151,6 +153,10 @@ impl Worker for WindowAsyncHandler {
                             return;
                         }
                     };
+
+                    *APPSTREAM_DATA_STATE.write() = appdata;
+                    let appdata = APPSTREAM_DATA_STATE.read();
+
                     let desktopenv = env::var("XDG_CURRENT_DESKTOP").unwrap_or_default();
 
                     let mut recpkgs = pkglist
@@ -491,12 +497,13 @@ impl Worker for WindowAsyncHandler {
                         }
 
                         cvec.shuffle(&mut rng);
-                        allvec.sort_by_key(|x| x.to_lowercase());
+                        allvec.shuffle(&mut rng);
+                        allvec = allvec.into_iter().take(48).collect();
                         catpicks.insert(category.clone(), cvec);
                         catpkgs.insert(category.clone(), allvec);
                     }
 
-                    while recpicks.len() < 12 {
+                    while recpicks.len() < 48 {
                         if let Some(p) = recpkgs.pop() {
                             if !recpicks.contains(&p.to_string()) {
                                 recpicks.push(p.to_string());
@@ -507,30 +514,9 @@ impl Worker for WindowAsyncHandler {
                     }
                     recpicks.shuffle(&mut rng);
 
-                    let devpicks = catpicks
-                        .get(&PkgCategory::Development)
-                        .expect("Cannot get reccomended audio pkgs");
-                    let gamespicks = catpicks
-                        .get(&PkgCategory::Games)
-                        .expect("Cannot get reccomended audio pkgs");
-                    let graphicspicks = catpicks
-                        .get(&PkgCategory::Graphics)
-                        .expect("Cannot get reccomended audio pkgs");
-                    let webpicks = catpicks
-                        .get(&PkgCategory::Web)
-                        .expect("Cannot get reccomended audio pkgs");
-                    let videopicks = catpicks
-                        .get(&PkgCategory::Video)
-                        .expect("Cannot get reccomended audio pkgs");
-
                     let _ = sender.output(AppMsg::Initialize(
-                        appdata,
+                        appdata.clone(),
                         recpicks,
-                        devpicks.to_owned(),
-                        gamespicks.to_owned(),
-                        graphicspicks.to_owned(),
-                        webpicks.to_owned(),
-                        videopicks.to_owned(),
                         catpicks,
                         catpkgs,
                     ));

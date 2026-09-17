@@ -18,7 +18,7 @@ use sha256::digest;
 use spdx::Expression;
 use sqlx::SqlitePool;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     convert::identity,
     env,
     error::Error,
@@ -38,12 +38,12 @@ use crate::{
                 InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
             },
         },
-        window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
-        windowloading::PACKAGES_DB_STATE,
+        window::{AppMsg, INSTALLED_PACKAGES_STATE, NIX_DATA_CONFIG_STATE, SystemPkgs},
+        windowloading::{APPSTREAM_DATA_STATE, PACKAGES_DB_STATE},
     },
     utils::{
         online::{checkonline, checkonline_async},
-        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
+        packages::{LicenseEnum, PkgMaintainer, Platform},
         state,
     },
 };
@@ -191,8 +191,6 @@ pub enum PackageAsyncMessage {
 pub struct PackagePageInit {
     pub package: String,
     pub syspkgs: SystemPkgs,
-    pub config: NixDataConfig,
-    pub app_data: HashMap<String, AppData>,
 }
 
 #[relm4::component(pub, async)]
@@ -206,8 +204,6 @@ impl AsyncComponent for PackagePageModel {
         #[root]
         #[name(package_window)]
         adw::NavigationPage {
-
-            #[watch]
             set_title: &model.name,
 
             adw::BreakpointBin {
@@ -903,9 +899,9 @@ impl AsyncComponent for PackagePageModel {
                             }
                         }
                     },
-                    },
                 },
             },
+        },
     }
 
     menu! {
@@ -931,12 +927,16 @@ impl AsyncComponent for PackagePageModel {
             }
         });
 
+        NIX_DATA_CONFIG_STATE.subscribe(sender.input_sender(), |state| {
+            PackageMessage::UpdateConfig(state.clone())
+        });
+
         let install_worker = InstallAsyncHandler::builder()
             .detach_worker(InstallAsyncHandlerInit {
                 syspkgs: init.syspkgs.clone(),
             })
             .forward(sender.input_sender(), identity);
-        let config = init.config;
+        let config = NIX_DATA_CONFIG_STATE.read().clone();
         install_worker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
 
         let online = checkonline_async().await;
@@ -1091,7 +1091,9 @@ impl AsyncComponent for PackagePageModel {
 
                 let mut url = None;
 
-                let app_data = init.app_data.get(&init.package);
+                let appstream_data_state = APPSTREAM_DATA_STATE.read();
+
+                let app_data = appstream_data_state.get(&init.package);
 
                 if let Some(data) = app_data {
                     if let Some(names) = &data.name

@@ -1,22 +1,37 @@
-use adw::prelude::*;
-use gettextrs::gettext;
-use relm4::{factory::*, *};
+use std::convert::identity;
 
-use super::components::installed_item::{InstalledItem, InstalledItemModel, InstalledItemMsg};
+use gettextrs::gettext;
+use relm4::{
+    ComponentParts, ComponentSender, RelmWidgetExt, SimpleComponent,
+    adw::{self, prelude::*},
+    component::{AsyncComponent, AsyncComponentController, AsyncController},
+    factory::FactoryVecDeque,
+    gtk,
+};
+
 use crate::ui::{
-    package::package_page::{InstallType, NotifyPage, PackageAction, WorkPackage},
+    package::package_page::{
+        InstallType, NotifyPage, PackageAction, PackagePageInit, PackagePageModel, WorkPackage,
+    },
     window::{AppMsg, INSTALLED_PACKAGES_STATE, SystemPkgs},
 };
+
+use super::components::installed_item::{InstalledItem, InstalledItemModel, InstalledItemMsg};
 
 #[tracker::track]
 #[derive(Debug)]
 pub struct InstalledPageModel {
+    navigation: adw::NavigationView,
+
+    system_package_type: SystemPkgs,
+
     #[tracker::no_eq]
     installeduserlist: FactoryVecDeque<InstalledItemModel>,
     #[tracker::no_eq]
     installedsystemlist: FactoryVecDeque<InstalledItemModel>,
-    systempkgtype: SystemPkgs,
-    updatetracker: u8,
+
+    #[tracker::no_eq]
+    package_page: Option<AsyncController<PackagePageModel>>,
 }
 
 #[derive(Debug)]
@@ -27,6 +42,7 @@ pub enum InstalledPageMsg {
     },
     UpdatePkgTypes(SystemPkgs),
     OpenRow(usize, InstallType),
+    OpenPackage(String),
     Remove(InstalledItem),
     UnsetBusy(WorkPackage),
 }
@@ -39,87 +55,94 @@ impl SimpleComponent for InstalledPageModel {
     type Widgets = InstalledPageWidgets;
 
     view! {
-        gtk::ScrolledWindow {
-            set_hscrollbar_policy: gtk::PolicyType::Never,
-            #[track(model.changed(InstalledPageModel::updatetracker()))]
-            set_vadjustment: gtk::Adjustment::NONE,
-            if !model.installeduserlist.is_empty() || !model.installedsystemlist.is_empty() {
-                adw::Clamp {
-                    set_maximum_size: 1000,
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
-                        set_valign: gtk::Align::Start,
-                        set_margin_vertical: 15,
-                        set_spacing: 15,
-                        gtk::Label {
-                            #[watch]
-                            set_visible: !model.installeduserlist.is_empty(),
-                            set_halign: gtk::Align::Start,
-                            add_css_class: "title-4",
-                            set_lines: 1,
-                            #[watch]
-                            set_label: &format!(
-                                "{} — {}",
-                                gettext("User (nix profile)"),
-                                model.installeduserlist.len()
-                            ),
-                        },
-                        #[local_ref]
-                        installeduserlist -> gtk::FlowBox {
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Fill,
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_selection_mode: gtk::SelectionMode::None,
-                            set_homogeneous: true,
-                            set_max_children_per_line: 3,
-                            set_min_children_per_line: 1,
-                            set_column_spacing: 10,
-                            set_row_spacing: 10,
-                            connect_child_activated[sender] => move |_, child| {
-                                sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::User))
+        #[name = "navigation"]
+        adw::NavigationView {
+            add = &adw::NavigationPage {
+                set_title: &gettext("Installed"),
+                adw::ToolbarView {
+                    add_top_bar = &adw::HeaderBar {},
+                    gtk::ScrolledWindow {
+                        set_hscrollbar_policy: gtk::PolicyType::Never,
+                        if !model.installeduserlist.is_empty() || !model.installedsystemlist.is_empty() {
+                            adw::Clamp {
+                                set_maximum_size: 1000,
+                                gtk::Box {
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_valign: gtk::Align::Start,
+                                    set_margin_vertical: 15,
+                                    set_spacing: 15,
+                                    gtk::Label {
+                                        #[watch]
+                                        set_visible: !model.installeduserlist.is_empty(),
+                                        set_halign: gtk::Align::Start,
+                                        add_css_class: "title-4",
+                                        set_lines: 1,
+                                        #[watch]
+                                        set_label: &format!(
+                                            "{} — {}",
+                                            gettext("User (nix profile)"),
+                                            model.installeduserlist.len()
+                                        ),
+                                    },
+                                    #[local_ref]
+                                    installeduserlist -> gtk::FlowBox {
+                                        set_halign: gtk::Align::Fill,
+                                        set_valign: gtk::Align::Fill,
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_selection_mode: gtk::SelectionMode::None,
+                                        set_homogeneous: true,
+                                        set_max_children_per_line: 3,
+                                        set_min_children_per_line: 1,
+                                        set_column_spacing: 10,
+                                        set_row_spacing: 10,
+                                        connect_child_activated[sender] => move |_, child| {
+                                            sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::User))
+                                        }
+                                    },
+                                    gtk::Label {
+                                        #[watch]
+                                        set_visible: !model.installedsystemlist.is_empty(),
+                                        set_halign: gtk::Align::Start,
+                                        add_css_class: "title-4",
+                                        set_lines: 1,
+                                        #[watch]
+                                        set_label: &format!(
+                                            "{} — {}",
+                                            gettext("System (configuration.nix)"),
+                                            model.installedsystemlist.len()
+                                        ),
+                                    },
+                                    #[local_ref]
+                                    installedsystemlist -> gtk::FlowBox {
+                                        set_halign: gtk::Align::Fill,
+                                        set_valign: gtk::Align::Fill,
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_selection_mode: gtk::SelectionMode::None,
+                                        set_homogeneous: true,
+                                        set_max_children_per_line: 3,
+                                        set_min_children_per_line: 1,
+                                        set_column_spacing: 10,
+                                        set_row_spacing: 10,
+                                        connect_child_activated[sender] => move |_, child| {
+                                            sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::System))
+                                        }
+                                    },
+                                }
                             }
-                        },
-                        gtk::Label {
-                            #[watch]
-                            set_visible: !model.installedsystemlist.is_empty(),
-                            set_halign: gtk::Align::Start,
-                            add_css_class: "title-4",
-                            set_lines: 1,
-                            #[watch]
-                            set_label: &format!(
-                                "{} — {}",
-                                gettext("System (configuration.nix)"),
-                                model.installedsystemlist.len()
-                            ),
-                        },
-                        #[local_ref]
-                        installedsystemlist -> gtk::FlowBox {
-                            set_halign: gtk::Align::Fill,
-                            set_valign: gtk::Align::Fill,
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_selection_mode: gtk::SelectionMode::None,
-                            set_homogeneous: true,
-                            set_max_children_per_line: 3,
-                            set_min_children_per_line: 1,
-                            set_column_spacing: 10,
-                            set_row_spacing: 10,
-                            connect_child_activated[sender] => move |_, child| {
-                                sender.input(InstalledPageMsg::OpenRow(child.index() as usize, InstallType::System))
+                        } else {
+                            adw::StatusPage {
+                                set_icon_name: Some("library-symbolic"),
+                                set_title: &gettext("No apps found"),
                             }
-                        },
+                        }
                     }
-                }
-            } else {
-                adw::StatusPage {
-                    set_icon_name: Some("library-symbolic"),
-                    set_title: &gettext("No apps found"),
-                }
-            }
-        }
+                },
+            },
+        },
     }
 
     fn init(
-        systempkgtype: Self::Init,
+        system_package_type: Self::Init,
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -130,7 +153,9 @@ impl SimpleComponent for InstalledPageModel {
             }
         });
 
-        let model = InstalledPageModel {
+        let mut model = InstalledPageModel {
+            navigation: adw::NavigationView::new(),
+            system_package_type,
             installeduserlist: FactoryVecDeque::builder()
                 .launch(gtk::FlowBox::new())
                 .forward(
@@ -147,8 +172,7 @@ impl SimpleComponent for InstalledPageModel {
                         InstalledItemMsg::Delete(item) => InstalledPageMsg::Remove(item),
                     },
                 ),
-            updatetracker: 0,
-            systempkgtype,
+            package_page: None,
             tracker: 0,
         };
 
@@ -156,6 +180,8 @@ impl SimpleComponent for InstalledPageModel {
         let installedsystemlist = model.installedsystemlist.widget();
 
         let widgets = view_output!();
+
+        model.navigation = widgets.navigation.clone();
 
         ComponentParts { model, widgets }
     }
@@ -167,8 +193,6 @@ impl SimpleComponent for InstalledPageModel {
                 system_packages,
                 user_packages,
             } => {
-                self.update_updatetracker(|_| ());
-
                 let mut installeduserlist_guard = self.installeduserlist.guard();
                 installeduserlist_guard.clear();
                 for item in user_packages {
@@ -181,21 +205,35 @@ impl SimpleComponent for InstalledPageModel {
                     installedsystemlist_guard.push_back(item);
                 }
             }
-            InstalledPageMsg::UpdatePkgTypes(systempkgtype) => self.systempkgtype = systempkgtype,
+            InstalledPageMsg::UpdatePkgTypes(system_package_type) => {
+                self.set_system_package_type(system_package_type)
+            }
             InstalledPageMsg::OpenRow(row, pkgtype) => match pkgtype {
                 InstallType::User => {
                     let installeduserlist_guard = self.installeduserlist.guard();
                     if let Some(item) = installeduserlist_guard.get(row) {
-                        let _ = sender.output(AppMsg::OpenPkg(item.item.pkg.to_string()));
+                        let _ =
+                            sender.input(InstalledPageMsg::OpenPackage(item.item.pkg.to_string()));
                     }
                 }
                 InstallType::System => {
                     let installedsystemlist_guard = self.installedsystemlist.guard();
                     if let Some(item) = installedsystemlist_guard.get(row) {
-                        let _ = sender.output(AppMsg::OpenPkg(item.item.pkg.to_string()));
+                        let _ =
+                            sender.input(InstalledPageMsg::OpenPackage(item.item.pkg.to_string()));
                     }
                 }
             },
+            InstalledPageMsg::OpenPackage(package) => {
+                let package_page = PackagePageModel::builder()
+                    .launch(PackagePageInit {
+                        package,
+                        syspkgs: self.system_package_type.clone(),
+                    })
+                    .forward(sender.output_sender(), identity);
+                self.navigation.push(package_page.widget());
+                self.set_package_page(Some(package_page));
+            }
             InstalledPageMsg::Remove(item) => {
                 let work = WorkPackage {
                     package: item.pkg,

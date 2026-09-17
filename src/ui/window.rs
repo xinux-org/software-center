@@ -6,11 +6,11 @@ use relm4::{
     SharedState, WorkerController,
     actions::{RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
-    component::{AsyncComponentController, AsyncController},
+    component::AsyncController,
     gtk::{self},
     prelude::{AsyncComponent, AsyncComponentParts},
 };
-use sqlx::{QueryBuilder, Sqlite, SqlitePool};
+use sqlx::{Sqlite, SqlitePool};
 use std::{
     collections::{HashMap, HashSet},
     convert::identity,
@@ -20,11 +20,11 @@ use std::{
 };
 
 use crate::{
-    config,
+    config::{self, PROFILE},
     ui::{
         about::about_page::AboutPageModel,
         category::{
-            category_page::{CategoryPageModel, CategoryPageMsg},
+            category_page::{CategoryPageInit, CategoryPageModel, CategoryPageMsg},
             components::{categories::PkgCategory, category_tile::CategoryTile},
         },
         explore::explore_page::{ExplorePageModel, ExplorePageMsg},
@@ -34,14 +34,11 @@ use crate::{
         },
         package::{
             components::package_tile::PkgTile,
-            package_page::{InstallType, PackagePageInit, PackagePageModel, WorkPackage},
+            package_page::{InstallType, PackagePageModel, WorkPackage},
         },
         preferences::preferences_page::{PreferencesPageModel, PreferencesPageMsg},
         rebuild::rebuild_model::{RebuildModel, RebuildMsg},
-        search::{
-            components::search_item::SearchItem,
-            search_page::{SearchPageModel, SearchPageMsg},
-        },
+        search::search_page::SearchPageModel,
         update::{
             components::update_item::UpdateItem,
             unavailable_dialog::{UnavailableDialogMsg, UnavailableItemModel},
@@ -79,9 +76,11 @@ pub struct InstalledPackagesState {
 
 pub static INSTALLED_PACKAGES_STATE: SharedState<InstalledPackagesState> = SharedState::new();
 
+pub static NIX_DATA_CONFIG_STATE: SharedState<NixDataConfig> = SharedState::new();
+
 #[tracker::track]
 pub struct AppModel {
-    navigation: adw::NavigationView,
+    navigation: adw::NavigationSplitView,
     mainwindow: adw::ApplicationWindow,
     config: NixDataConfig,
     #[tracker::no_eq]
@@ -98,24 +97,48 @@ pub struct AppModel {
     installeduserpkgs: HashMap<String, String>,
     installedsystempkgs: HashSet<String>,
     syspkgtype: SystemPkgs,
-    categoryrec: HashMap<PkgCategory, Vec<String>>,
-    categoryall: HashMap<PkgCategory, Vec<String>>,
+    recommended_apps: Vec<String>,
+    category_apps_recommended: HashMap<PkgCategory, Vec<String>>,
+    category_apps_all: HashMap<PkgCategory, Vec<String>>,
+
     #[tracker::no_eq]
-    searchpage: Controller<SearchPageModel>,
-    #[tracker::no_eq]
-    categorypage: Controller<CategoryPageModel>,
-    searching: bool,
-    searchquery: String,
-    vschild: String,
-    showvsbar: bool,
+    search_page: Controller<SearchPageModel>,
+
     #[tracker::no_eq]
     preferencespage: Controller<PreferencesPageModel>,
     #[tracker::no_eq]
     explore_page: Controller<ExplorePageModel>,
+
     #[tracker::no_eq]
-    installedpage: Controller<InstalledPageModel>,
+    category_audio_page: Controller<CategoryPageModel>,
     #[tracker::no_eq]
-    updatepage: Controller<UpdatePageModel>,
+    category_development_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_games_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_graphics_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_web_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_video_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_education_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_science_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_office_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_network_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_system_page: Controller<CategoryPageModel>,
+    #[tracker::no_eq]
+    category_utility_page: Controller<CategoryPageModel>,
+
+    #[tracker::no_eq]
+    installed_page: Controller<InstalledPageModel>,
+    #[tracker::no_eq]
+    update_page: Controller<UpdatePageModel>,
+
     #[tracker::no_eq]
     package_page: Option<AsyncController<PackagePageModel>>,
     viewstack: adw::ViewStack,
@@ -140,30 +163,16 @@ pub enum AppMsg {
     Initialize(
         HashMap<String, AppData>,
         Vec<String>,
-        // rec apps based on different category below 5 vectors
-        Vec<String>,
-        Vec<String>,
-        Vec<String>,
-        Vec<String>,
-        Vec<String>,
         HashMap<PkgCategory, Vec<String>>,
         HashMap<PkgCategory, Vec<String>>,
     ),
     OpenPkgByScheme(cli::scheme::Scheme),
-    OpenPkg(String),
-    // UpdatePkgs(Option<Vec<String>>),
     UpdateInstalledPkgs,
     UpdateInstalledPage,
-    // UpdateUpdatePkgs,
-    UpdateCategoryPkgs,
-    SetSearch(bool),
-    SetVsBar(bool),
-    Search(String),
     AddInstalledToWorkQueue(WorkPackage),
     RemoveInstalledBusy(WorkPackage),
-    OpenCategoryPage(PkgCategory),
+    LoadRecommended,
     LoadCategory(PkgCategory),
-    UpdateRecPkgs(Vec<String>, Option<PkgCategory>), // if None then itʻs recomended apps
     SetDarkMode(bool),
     GetUnavailableItems(HashMap<String, String>, HashMap<String, String>, UpdateType),
     CheckNetwork,
@@ -183,9 +192,8 @@ pub struct PkgItem {
 
 #[derive(Debug)]
 pub enum AppAsyncMsg {
-    Search(String, Vec<SearchItem>),
-    UpdateRecPkgs(Vec<PkgTile>, Option<PkgCategory>),
     UpdateInstalledPkgs(HashSet<String>, HashMap<String, String>),
+    LoadRecommended(Vec<PkgTile>),
     LoadCategory(PkgCategory, Vec<CategoryTile>, Vec<CategoryTile>),
     SetNetwork(bool),
 }
@@ -207,146 +215,117 @@ impl AsyncComponent for AppModel {
             set_width_request: 360,
             set_height_request: 294,
 
-            // desktop mode
-            add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
-                adw::BreakpointConditionLengthType::MinWidth,
-                610.0,
-                adw::LengthUnit::Sp,
-            )) {
-                add_setter: (&switcher_title, "policy", Some(&adw::ViewSwitcherPolicy::Wide.into())),
+            add_css_class?: if PROFILE == "Devel" {
+                    Some("devel")
+                } else {
+                    None
+                },
+
+            add_breakpoint = adw::Breakpoint::new(
+                adw::BreakpointCondition::new_length(
+                    adw::BreakpointConditionLengthType::MaxWidth,
+                    500.0,
+                    adw::LengthUnit::Px,
+                )
+            ) {
+                add_setters: &[
+                    (&navigation, "collapsed", true),
+                ],
+            },
+            add_breakpoint = adw::Breakpoint::new(
+                adw::BreakpointCondition::new_length(
+                    adw::BreakpointConditionLengthType::MinWidth,
+                    500.0,
+                    adw::LengthUnit::Px,
+                )
+            ) {
+                add_setters: &[
+                    (&navigation, "collapsed", false),
+                ],
             },
 
-            // tablet mode
-            add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
-                adw::BreakpointConditionLengthType::MaxWidth,
-                600.0,
-                adw::LengthUnit::Sp,
-            )) {
-                add_setter: (&switcher_title, "policy", Some(&adw::ViewSwitcherPolicy::Narrow.into())),
-            },
-
-            // mobile mode
-            add_breakpoint = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
-                adw::BreakpointConditionLengthType::MaxWidth,
-                500.0,
-                adw::LengthUnit::Sp,
-            )) {
-                add_setter: (&header_bar, "show-title", Some(&false.into())),
-                add_setter: (&switcher_bar, "reveal", Some(&true.into())),
-            },
-
-            // FIXME: use more idiomatic gtk::Stack to switch pages.
-            // see example: https://git.oss.uzinfocom.uz/xinux/settings/src/branch/main/src/ui/wifi/wifi_panel.rs#L141-L142
-            #[transition(Crossfade)]
-            #[name(main_stack)]
-            if model.busy {
-                gtk::Box {
-                    set_vexpand: true,
-                    set_halign: gtk::Align::Fill,
-                    set_valign: gtk::Align::Fill,
-                    set_orientation: gtk::Orientation::Vertical,
-                    adw::HeaderBar {
-                        add_css_class: "flat",
-                        #[wrap(Some)]
-                        set_title_widget = &gtk::Label {
-                            set_label: &gettext("Nix Software Center")
-                        }
-                    },
-                    gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
-                        set_halign: gtk::Align::Fill,
-                        set_valign: gtk::Align::Center,
-                        set_hexpand: true,
-                        set_vexpand: true,
-                        set_spacing: 6,
-                        gtk::Spinner {
-                            set_spinning: true,
-                            set_width_request: 64,
-                            set_height_request: 64,
-                            set_margin_bottom: 18,
-                        },
-                        gtk::Label {
-                            set_label: &gettext("Refreshing..."),
-                            set_wrap: true,
-                            set_justify: gtk::Justification::Center,
-                            set_margin_bottom: 24,
-                            add_css_class: "title-3",
-                        },
-                    }
-                }
-            } else {
-                #[name = "navigation"]
-                adw::NavigationView {
-                    add = &adw::NavigationPage {
-                        gtk::Box {
-                            set_orientation: gtk::Orientation::Vertical,
-
-                            #[name(header_bar)]
-                            adw::HeaderBar {
-                                pack_start: searchbtn = &gtk::ToggleButton {
-                                    add_css_class: "flat",
-                                    set_icon_name: "system-search-symbolic",
-                                    #[watch]
-                                    #[block_signal(searchtoggle)]
-                                    set_active: model.searching,
-                                    connect_toggled[sender] => move |x| {
-                                        sender.input(AppMsg::SetSearch(x.is_active()))
-                                    } @searchtoggle
-
-                                },
-
-                                #[name(switcher_title)]
-                                #[wrap(Some)]
-                                set_title_widget = &adw::ViewSwitcher {
-                                    set_stack: Some(viewstack),
-                                    #[watch] // when we do wider
-                                    set_policy: adw::ViewSwitcherPolicy::Wide,
-                                },
-
-                                pack_end: menu = &gtk::MenuButton {
-                                    add_css_class: "flat",
-                                    set_icon_name: "open-menu-symbolic",
-                                    #[wrap(Some)]
-                                    set_popover = &gtk::PopoverMenu::from_model(Some(&mainmenu)) {
-                                        add_css_class: "menu"
-                                    }
-                                }
-                            },
-                            gtk::SearchBar {
-                                #[watch]
-                                set_search_mode: model.searching,
-                                #[wrap(Some)]
-                                set_child = &adw::Clamp {
-                                    set_hexpand: true,
-                                    gtk::SearchEntry {
-                                        #[track(model.changed(AppModel::searching()) && model.searching)]
-                                        grab_focus: (),
-                                        #[track(model.changed(AppModel::searching()) && !model.searching)]
-                                        set_text: "",
-                                        connect_search_changed[sender] => move |x| {
-                                            if x.text().len() > 1 {
-                                                sender.input(AppMsg::Search(x.text().to_string()))
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            #[local_ref]
-                            viewstack -> adw::ViewStack {
-                                add: model.explore_page.widget(),
-                                add: model.installedpage.widget(),
-                                add: model.searchpage.widget(),
-                                add: model.updatepage.widget(),
-                            },
-
-                            #[name(switcher_bar)]
-                            adw::ViewSwitcherBar {
-                                set_stack: Some(viewstack),
+            #[name = "navigation"]
+            adw::NavigationSplitView {
+                #[wrap(Some)]
+                set_sidebar = &adw::NavigationPage {
+                    set_title: &gettext("Settings"),
+                    #[wrap(Some)]
+                    set_child = &adw::ToolbarView {
+                        add_top_bar = &adw::HeaderBar {
+                            pack_end = &gtk::MenuButton {
+                                set_icon_name: "open-menu-symbolic",
+                                set_menu_model: Some(&mainmenu),
                             }
                         },
+                        #[wrap(Some)]
+                        set_content = &adw::ViewSwitcherSidebar {
+                            set_stack: Some(&view_stack),
+                        },
                     },
-                }
-            }
+                },
+
+                #[wrap(Some)]
+                set_content = &adw::NavigationPage {
+                    #[wrap(Some)]
+                    set_child = if !model.busy {
+                        adw::ToolbarView {
+                            set_content: Some(&view_stack),
+                        }
+                    } else {
+                        adw::ToolbarView {
+                            add_top_bar = &adw::HeaderBar {},
+                            gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_halign: gtk::Align::Fill,
+                                set_valign: gtk::Align::Center,
+                                set_hexpand: true,
+                                set_vexpand: true,
+                                set_spacing: 6,
+                                gtk::Spinner {
+                                    set_spinning: true,
+                                    set_width_request: 64,
+                                    set_height_request: 64,
+                                    set_margin_bottom: 18,
+                                },
+                                gtk::Label {
+                                    set_label: &gettext("Refreshing..."),
+                                    set_wrap: true,
+                                    set_justify: gtk::Justification::Center,
+                                    set_margin_bottom: 24,
+                                    add_css_class: "title-3",
+                                },
+                            },
+                        }
+                    },
+                },
+            },
+        },
+
+        view_stack = &adw::ViewStack {
+            add_titled_with_icon: (model.explore_page.widget(), Some("explore"), &gettext("Explore"), "compass2-symbolic"),
+
+            add_titled_with_icon: (model.search_page.widget(), Some("search"), &gettext("Search"), "edit-find-symbolic"),
+
+            add_titled_with_icon: (model.category_audio_page.widget(), Some("audio"), &gettext("Audio"), "headphones-symbolic"),
+            add_titled_with_icon: (model.category_development_page.widget(), Some("development"), &gettext("Development"), "code-symbolic"),
+            add_titled_with_icon: (model.category_games_page.widget(), Some("gaming"), &gettext("Gaming"), "gamepad-symbolic"),
+            add_titled_with_icon: (model.category_graphics_page.widget(), Some("graphics"), &gettext("Graphics"), "paintbrush-symbolic"),
+            add_titled_with_icon: (model.category_video_page.widget(), Some("video"), &gettext("Video"), "video-camera-symbolic"),
+            add_titled_with_icon: (model.category_web_page.widget(), Some("web"), &gettext("Web"), "globe-alt2-symbolic"),
+            add_titled_with_icon: (model.category_network_page.widget(), Some("network"), &gettext("Network"), "network-server-symbolic"),
+            add_titled_with_icon: (model.category_education_page.widget(), Some("education"), &gettext("Education"), "school-symbolic"),
+            add_titled_with_icon: (model.category_science_page.widget(), Some("science"), &gettext("Science"), "applications-science-symbolic"),
+            add_titled_with_icon: (model.category_office_page.widget(), Some("office"), &gettext("Office"), "paper-symbolic"),
+            add_titled_with_icon: (model.category_system_page.widget(), Some("system"), &gettext("System"), "settings-symbolic"),
+            add_titled_with_icon: (model.category_utility_page.widget(), Some("utility"), &gettext("Utility"), "build-alt-symbolic"),
+
+            add_titled_with_icon: (model.installed_page.widget(), Some("installed"), &gettext("Installed"), "library-symbolic"),
+            add_titled_with_icon: (model.update_page.widget(), Some("updates"), &gettext("Updates"), "nsc-update-symbolic"),
+
+
+            connect_visible_child_notify[navigation] => move |_| {
+                navigation.set_show_content(true);
+            },
         }
     }
 
@@ -393,6 +372,8 @@ impl AsyncComponent for AppModel {
             )
         };
 
+        *NIX_DATA_CONFIG_STATE.write() = config.clone();
+
         let nixos = Path::new("/etc/nixos").exists();
         let syspkgtype = if config.systemconfig.is_none() || !nixos {
             SystemPkgs::None
@@ -428,19 +409,93 @@ impl AsyncComponent for AppModel {
         let preferencespage = PreferencesPageModel::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
-        let searchpage = SearchPageModel::builder()
-            .launch(())
+
+        let search_page = SearchPageModel::builder()
+            .launch(syspkgtype.clone())
             .forward(sender.input_sender(), identity);
-        let categorypage = CategoryPageModel::builder()
-            .launch(())
-            .forward(sender.input_sender(), identity);
+
         let explore_page = ExplorePageModel::builder()
             .launch(syspkgtype.clone())
             .forward(sender.input_sender(), identity);
-        let installedpage = InstalledPageModel::builder()
+
+        let category_audio_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Audio,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_development_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Development,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_games_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Games,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_graphics_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Graphics,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_web_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Web,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_video_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Video,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_education_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Education,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_science_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Science,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_office_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Office,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_network_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Network,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_system_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::System,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+        let category_utility_page = CategoryPageModel::builder()
+            .launch(CategoryPageInit {
+                category: PkgCategory::Utility,
+                system_packages_type: syspkgtype.clone(),
+            })
+            .detach();
+
+        let installed_page = InstalledPageModel::builder()
             .launch(syspkgtype.clone())
             .forward(sender.input_sender(), identity);
-        let updatepage = UpdatePageModel::builder()
+
+        let update_page = UpdatePageModel::builder()
             .launch(UpdatePageInit {
                 window: root.clone().upcast(),
                 systype: syspkgtype.clone(),
@@ -456,7 +511,7 @@ impl AsyncComponent for AppModel {
             .forward(sender.input_sender(), identity);
 
         let mut model = AppModel {
-            navigation: adw::NavigationView::new(),
+            navigation: adw::NavigationSplitView::new(),
             mainwindow: root.clone(),
             config,
             windowloading,
@@ -466,17 +521,28 @@ impl AsyncComponent for AppModel {
             installeduserpkgs: HashMap::new(),
             installedsystempkgs: HashSet::new(),
             syspkgtype,
-            categoryrec: HashMap::new(),
-            categoryall: HashMap::new(),
-            searchpage,
-            categorypage,
-            searching: false,
-            searchquery: String::default(),
-            vschild: String::default(),
-            showvsbar: false,
+            recommended_apps: Vec::new(),
+            category_apps_recommended: HashMap::new(),
+            category_apps_all: HashMap::new(),
+
+            search_page,
             explore_page,
-            installedpage,
-            updatepage,
+
+            category_audio_page,
+            category_development_page,
+            category_games_page,
+            category_graphics_page,
+            category_web_page,
+            category_video_page,
+            category_education_page,
+            category_science_page,
+            category_office_page,
+            category_network_page,
+            category_system_page,
+            category_utility_page,
+
+            installed_page,
+            update_page,
             package_page: None,
             viewstack: adw::ViewStack::new(),
             installedpagebusy: vec![],
@@ -504,10 +570,14 @@ impl AsyncComponent for AppModel {
                 model.config.clone(),
             ));
         }
-        let viewstack = &model.viewstack;
 
         let widgets = view_output!();
         model.navigation = widgets.navigation.clone();
+
+        widgets
+            .view_stack
+            .page(model.installed_page.widget())
+            .set_starts_section(true);
 
         let mut group = RelmActionGroup::<MenuActionGroup>::new();
 
@@ -531,23 +601,7 @@ impl AsyncComponent for AppModel {
             .main_window
             .insert_action_group("menu", Some(&actions));
 
-        widgets.main_stack.set_vhomogeneous(false);
-        widgets.main_stack.set_hhomogeneous(false);
         widgets.load_window_size();
-        let frontvs = widgets.viewstack.page(model.explore_page.widget());
-        let installedvs = widgets.viewstack.page(model.installedpage.widget());
-        let updatesvs = widgets.viewstack.page(model.updatepage.widget());
-        let searchvs = widgets.viewstack.page(model.searchpage.widget());
-        frontvs.set_title(Some(&gettext("Explore")));
-        installedvs.set_title(Some(&gettext("Installed")));
-        updatesvs.set_title(Some(&gettext("Updates")));
-        frontvs.set_name(Some("explore"));
-        installedvs.set_name(Some("installed"));
-        searchvs.set_name(Some("search"));
-        updatesvs.set_name(Some("updates"));
-        frontvs.set_icon_name(Some("nsc-home-symbolic"));
-        installedvs.set_icon_name(Some("nsc-installed-symbolic"));
-        updatesvs.set_icon_name(Some("nsc-update-symbolic"));
 
         // if model.updates_count > 0 {
         //     updatesvs.set_badge_number(
@@ -593,6 +647,7 @@ impl AsyncComponent for AppModel {
             }
             AppMsg::LoadConfig(config) => {
                 info!("AppMsg::LoadConfig");
+                *NIX_DATA_CONFIG_STATE.write() = config.clone();
                 self.config = config;
                 if let Err(e) = editconfig(self.config.clone()) {
                     warn!("Error editing config: {}", e);
@@ -621,9 +676,9 @@ impl AsyncComponent for AppModel {
                         Err(_) => SystemPkgs::None,
                     }
                 };
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
                 self.windowloading.emit(WindowAsyncHandlerMsg::CheckCache(
                     self.syspkgtype.clone(),
@@ -676,11 +731,11 @@ impl AsyncComponent for AppModel {
                     self.syspkgtype = SystemPkgs::None;
                 }
 
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
-                self.installedpage
+                self.installed_page
                     .emit(InstalledPageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
             }
             AppMsg::UpdateFlake(flake, flakearg) => {
@@ -710,106 +765,50 @@ impl AsyncComponent for AppModel {
                     }
                 }
 
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
-                self.installedpage
+                self.installed_page
                     .emit(InstalledPageMsg::UpdatePkgTypes(self.syspkgtype.clone()));
             }
             AppMsg::Initialize(
-                appdata,
-                recommendedapps,
-                devapps,
-                gameapps,
-                graphickapps,
-                webapps,
-                videoapps,
-                categoryrec,
-                categoryall,
+                app_data,
+                recommended_apps,
+                category_apps_recommended,
+                category_apps_all,
             ) => {
                 info!("AppMsg::Initialize");
-                self.appdata = appdata;
-                self.categoryrec = categoryrec;
-                self.categoryall = categoryall;
+                self.set_appdata(app_data);
+                self.set_recommended_apps(recommended_apps);
+                self.set_category_apps_recommended(category_apps_recommended);
+                self.set_category_apps_all(category_apps_all);
 
-                self.updatepage
+                self.update_page
                     .emit(UpdatePageMsg::UpdateConfig(self.config.clone()));
 
                 sender.input(AppMsg::UpdateInstalledPkgs);
 
-                // TODO: Refactor this in the future
-                println!("recommendedapps\n\n\n\n\n\n\n: {:?}", &recommendedapps);
-                sender.input(AppMsg::UpdateRecPkgs(recommendedapps, None));
-                println!("devapps\n\n\n\n\n\n\n: {:?}", &devapps);
-                sender.input(AppMsg::UpdateRecPkgs(
-                    devapps,
-                    Some(PkgCategory::Development),
-                ));
-                sender.input(AppMsg::UpdateRecPkgs(gameapps, Some(PkgCategory::Games)));
-                sender.input(AppMsg::UpdateRecPkgs(
-                    graphickapps,
-                    Some(PkgCategory::Graphics),
-                ));
-                sender.input(AppMsg::UpdateRecPkgs(webapps, Some(PkgCategory::Web)));
-                sender.input(AppMsg::UpdateRecPkgs(videoapps, Some(PkgCategory::Video)));
+                sender.input(AppMsg::LoadRecommended);
+
+                for category in [
+                    PkgCategory::Audio,
+                    PkgCategory::Development,
+                    PkgCategory::Games,
+                    PkgCategory::Graphics,
+                    PkgCategory::Web,
+                    PkgCategory::Video,
+                    PkgCategory::Education,
+                    PkgCategory::Science,
+                    PkgCategory::Office,
+                    PkgCategory::Network,
+                    PkgCategory::System,
+                    PkgCategory::Utility,
+                ] {
+                    sender.input(AppMsg::LoadCategory(category))
+                }
 
                 self.busy = false;
-            }
-            AppMsg::UpdateRecPkgs(pkgs, pkgs_category) => {
-                info!("AppMsg::UpdateRecPkgs");
-                let appdata: HashMap<String, AppData> = self
-                    .appdata
-                    .iter()
-                    .filter_map(|(k, v)| {
-                        if pkgs.contains(k) {
-                            Some((k.to_string(), v.clone()))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                let installeduser = self.installeduserpkgs.clone();
-                let installedsystem = self.installedsystempkgs.clone();
-                let poolref = PACKAGES_DB_STATE.read().packages_db.clone();
-                sender.oneshot_command(async move {
-                    let mut pkgtiles = vec![];
-                    if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", poolref)).await {
-                        for pkg in pkgs {
-                            if let Some(data) = appdata.get(&pkg) {
-                                let pname: (String,) =
-                                    sqlx::query_as("SELECT pname FROM pkgs WHERE attribute = $1")
-                                        .bind(&pkg)
-                                        .fetch_one(pool)
-                                        .await
-                                        .unwrap();
-                                pkgtiles.push(PkgTile {
-                                    pkg: pkg.to_string(),
-                                    name: if let Some(name) = &data.name {
-                                        name.get("C").unwrap_or(&pname.0).to_string()
-                                    } else {
-                                        pname.0.to_string()
-                                    },
-                                    pname: pname.0.to_string(),
-                                    icon: data
-                                        .icon
-                                        .as_ref()
-                                        .and_then(|x| x.cached.as_ref())
-                                        .map(|x| x[0].name.clone()),
-                                    summary: data
-                                        .summary
-                                        .as_ref()
-                                        .and_then(|x| x.get("C"))
-                                        .map(|x| x.to_string())
-                                        .unwrap_or_default(),
-                                    installeduser: installeduser.contains_key(&pkg),
-                                    installedsystem: installedsystem.contains(&pkg),
-                                })
-                            }
-                        }
-                    }
-                    AppAsyncMsg::UpdateRecPkgs(pkgtiles, pkgs_category)
-                });
             }
             AppMsg::OpenPkgByScheme(scheme) => match scheme {
                 cli::scheme::Scheme::AppStream { id, alt: _ } => {
@@ -819,25 +818,15 @@ impl AsyncComponent for AppModel {
                         .find(|(_, appdata)| appdata.id == id)
                         .map(|(_, appdata)| appdata.package.clone());
                     if let Some(package) = package {
-                        sender.input(AppMsg::OpenPkg(package));
+                        self.explore_page.emit(ExplorePageMsg::OpenPackage(package));
                     } else {
                         warn!("App could not be found be id: {:?}", package);
                     }
                 }
-                cli::scheme::Scheme::NixPkg(package) => sender.input(AppMsg::OpenPkg(package)),
+                cli::scheme::Scheme::NixPkg(package) => {
+                    self.explore_page.emit(ExplorePageMsg::OpenPackage(package));
+                }
             },
-            AppMsg::OpenPkg(package) => {
-                let package_page = PackagePageModel::builder()
-                    .launch(PackagePageInit {
-                        package,
-                        syspkgs: self.syspkgtype.clone(),
-                        config: self.config.clone(),
-                        app_data: self.appdata.clone(),
-                    })
-                    .forward(sender.input_sender(), identity);
-                self.navigation.push(package_page.widget());
-                self.set_package_page(Some(package_page));
-            }
             AppMsg::UpdateInstalledPkgs => {
                 info!("AppMsg::UpdateInstalledPkgs");
                 let systemconfig = self.config.systemconfig.clone();
@@ -1096,139 +1085,11 @@ impl AsyncComponent for AppModel {
                         installed_user_packages: installeduseritems,
                     };
 
-                    self.updatepage
+                    self.update_page
                         .emit(UpdatePageMsg::Update(updateuseritems, updatesystemitems));
                 } else {
                     error!("Could not connect to pkgdb");
                 }
-            }
-            AppMsg::UpdateCategoryPkgs => {
-                self.categorypage.emit(CategoryPageMsg::UpdateInstalled(
-                    self.installeduserpkgs.keys().cloned().collect::<Vec<_>>(),
-                    self.installedsystempkgs.iter().cloned().collect::<Vec<_>>(),
-                ));
-            }
-            AppMsg::SetSearch(show) => {
-                self.set_searching(show);
-                if !show
-                    && let Some(s) = self.viewstack.visible_child_name()
-                    && s == "search"
-                {
-                    self.viewstack.set_visible_child_name("explore");
-                }
-            }
-            AppMsg::SetVsBar(vsbar) => {
-                self.set_showvsbar(vsbar);
-            }
-            AppMsg::Search(search) => {
-                info!("AppMsg::Search");
-                debug!("Searching for: {}", search);
-                self.viewstack.set_visible_child_name("search");
-                self.set_searchquery(search.to_string());
-                let installeduserpkgs = self.installeduserpkgs.clone();
-                let installedsystempkgs = self.installedsystempkgs.clone();
-                let pkgdb = PACKAGES_DB_STATE.read().packages_db.clone();
-                let appdata = self.appdata.clone();
-                sender.command(move |out, shutdown| {
-                    let search = search.clone();
-                    let installeduserpkgs = installeduserpkgs.clone();
-                    let installedsystempkgs = installedsystempkgs;
-                    shutdown.register(async move {
-                        let searchsplit: Vec<String> = search.split(' ').filter(|x| x.len() > 1).map(|x| x.to_string()).collect();
-                        warn!("Searchsplit: {:?}", searchsplit);
-                        if let Ok(pkgpool) = &SqlitePool::connect(&format!("sqlite://{}", pkgdb)).await {
-                            let mut queryb: QueryBuilder<Sqlite> = QueryBuilder::new(
-                                "SELECT pkgs.attribute, pkgs.pname, description, version FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE (",
-                            );
-                            for (i, q) in searchsplit.iter().enumerate() {
-                                if i == searchsplit.len() - 1 {
-                                    queryb
-                                        .push(r#"pkgs.attribute LIKE "#)
-                                        .push_bind(format!("%{}%", q))
-                                        .push(r#" OR description LIKE "#)
-                                        .push_bind(format!("%{}%", q))
-                                        .push(")");
-                                } else {
-                                    queryb
-                                        .push(r#"pkgs.attribute LIKE "#)
-                                        .push_bind(format!("%{}%", q))
-                                        .push(r#" OR description LIKE "#)
-                                        .push_bind(format!("%{}%", q))
-                                        .push(r#") AND ("#);
-                                }
-                            }
-                            queryb.push("ORDER BY LENGTH(pkgs.attribute) ASC");
-                            let q: Vec<(String, String, String, String)> =
-                                queryb.build_query_as().fetch_all(pkgpool).await.unwrap();
-                            let mut outpkgs = Vec::new();
-                            for (i, (attr, pname, desc, _version)) in q.into_iter().enumerate() {
-                                if let Some(data) = appdata.get(&attr) {
-                                    outpkgs.push(SearchItem {
-                                        pkg: attr.to_string(),
-                                        pname: pname.to_string(),
-                                        name: if let Some(name) = &data.name { name.get("C").unwrap_or(&attr).to_string() } else { attr.to_string() },
-                                        summary: if desc.is_empty() { None } else { Some(desc) },
-                                        icon: data
-                                            .icon
-                                            .as_ref()
-                                            .and_then(|x| x.cached.as_ref())
-                                            .map(|x| x[0].name.clone()),
-                                        installeduser: installeduserpkgs.contains_key(&attr),
-                                        installedsystem: installedsystempkgs.contains(&attr),
-                                    })
-                                } else {
-                                    outpkgs.push(SearchItem {
-                                        pkg: attr.to_string(),
-                                        pname: pname.to_string(),
-                                        name: pname.to_string(),
-                                        summary: if desc.is_empty() { None } else { Some(desc) },
-                                        icon: None,
-                                        installeduser: installeduserpkgs.contains_key(&attr),
-                                        installedsystem: installedsystempkgs.contains(&attr),
-                                    });
-                                }
-                                if i >= 200 {
-                                    break;
-                                }
-                            }
-                            outpkgs.sort_by(|a, b| {
-                                let mut aleft = a.name.to_lowercase() + &a.pkg.to_lowercase();
-                                let mut bleft = b.name.to_lowercase() + &b.pkg.to_lowercase();
-                                for q in searchsplit.iter() {
-                                    let q = &q.to_lowercase();
-                                    if aleft.contains(q) {
-                                        aleft = aleft.replace(q, "");
-                                    } else {
-                                        aleft.push_str(q);
-                                    }
-                                    if bleft.contains(q) {
-                                        bleft = bleft.replace(q, "");
-                                    } else {
-                                        bleft.push_str(q);
-                                    }
-                                }
-                                let mut apoints = aleft.len() + 5;
-                                let mut bpoints = bleft.len() + 5;
-                                // for q in searchsplit.iter() {
-                                //     if a.name.contains(q) {
-                                //         apoints -= 1;
-                                //     }
-                                //     if b.name.contains(q) {
-                                //         bpoints -= 1;
-                                //     }
-                                // }
-                                if appdata.contains_key(&a.pkg) {
-                                    apoints -= 5;
-                                }
-                                if appdata.contains_key(&b.pkg) {
-                                    bpoints -= 5;
-                                }
-                                apoints.cmp(&bpoints)
-                            });
-                            let _ = out.send(AppAsyncMsg::Search(search.to_string(), outpkgs));
-                        }
-                    }).drop_on_shutdown()
-                })
             }
             AppMsg::AddInstalledToWorkQueue(work) => {
                 let p = match work.install_type {
@@ -1244,128 +1105,100 @@ impl AsyncComponent for AppModel {
                 };
                 self.installedpagebusy
                     .retain(|(x, y)| x != &p && y != &work.install_type);
-                self.installedpage.emit(InstalledPageMsg::UnsetBusy(work));
+                self.installed_page.emit(InstalledPageMsg::UnsetBusy(work));
             }
-            AppMsg::OpenCategoryPage(category) => {
-                info!("AppMsg::OpenCategoryPage({:?})", category);
+            AppMsg::LoadRecommended => {
+                let packages_db = PACKAGES_DB_STATE.read().packages_db.clone();
 
-                // open category page
-                let page = self.categorypage.widget();
-                self.navigation.push(page);
+                let recommended_apps = self.recommended_apps.clone();
 
-                self.categorypage
-                    .emit(CategoryPageMsg::Loading(category.clone()));
-                sender.input(AppMsg::LoadCategory(category));
+                let app_data = self.appdata.clone();
+                let installed_user = self.installeduserpkgs.clone();
+                let installed_system = self.installedsystempkgs.clone();
+
+                sender.oneshot_command(async move {
+                    let mut package_tiles = vec![];
+
+                    if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{packages_db}")).await
+                    {
+                        for package in recommended_apps {
+                            // TODO: unify CategoryTile and PkgTile structs or improve this logic
+                            let category_tile = make_category_tile(
+                                package.clone(),
+                                &app_data,
+                                pool,
+                                installed_user.contains_key(&package),
+                                installed_system.contains(&package),
+                            )
+                            .await;
+                            let package_tile = PkgTile {
+                                name: category_tile.name,
+                                pkg: category_tile.package,
+                                pname: category_tile.package_name,
+                                summary: category_tile.summary,
+                                icon: category_tile.icon,
+                                installeduser: category_tile.installed_user,
+                                installedsystem: category_tile.installed_system,
+                            };
+
+                            package_tiles.push(package_tile);
+                        }
+                    } else {
+                        error!("Failed to connect to pkgdb");
+                    }
+                    AppAsyncMsg::LoadRecommended(package_tiles)
+                });
             }
             AppMsg::LoadCategory(category) => {
                 info!("AppMsg::LoadCategory({:?})", category);
-                let pkgdb = PACKAGES_DB_STATE.read().packages_db.clone();
-                let categoryrec = self.categoryrec.get(&category).unwrap_or(&vec![]).to_vec();
-                let categoryall = self.categoryall.get(&category).unwrap_or(&vec![]).to_vec();
-                let appdata = self.appdata.clone();
-                let installeduser = self.installeduserpkgs.clone();
-                let installedsystem = self.installedsystempkgs.clone();
+
+                let packages_db = PACKAGES_DB_STATE.read().packages_db.clone();
+
+                let category_apps_recommended = self
+                    .category_apps_recommended
+                    .get(&category)
+                    .map_or_else(std::vec::Vec::new, std::clone::Clone::clone);
+                let category_apps_all = self
+                    .category_apps_all
+                    .get(&category)
+                    .map_or_else(std::vec::Vec::new, std::clone::Clone::clone);
+
+                let app_data = self.appdata.clone();
+                let installed_user = self.installeduserpkgs.clone();
+                let installed_system = self.installedsystempkgs.clone();
 
                 sender.oneshot_command(async move {
                     let mut catrec = vec![];
                     let mut catall = vec![];
-                    if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{}", pkgdb)).await {
-                        for pkg in categoryrec {
-                            if let Some(data) = appdata.get(&pkg) {
-                                let pname: (String,) =
-                                sqlx::query_as("SELECT pname FROM pkgs WHERE attribute = $1")
-                                    .bind(&pkg)
-                                    .fetch_one(pool)
-                                    .await
-                                    .unwrap();
-                                catrec.push(CategoryTile {
-                                    pkg: pkg.to_string(),
-                                    name: if let Some(name) = &data.name {
-                                        name.get("C").unwrap_or(&pname.0).to_string()
-                                    } else {
-                                        pname.0.to_string()
-                                    },
-                                    pname: pname.0,
-                                    icon: data
-                                        .icon
-                                        .as_ref()
-                                        .and_then(|x| x.cached.as_ref())
-                                        .map(|x| x[0].name.clone()),
-                                    summary: data
-                                        .summary
-                                        .as_ref()
-                                        .and_then(|x| x.get("C"))
-                                        .map(|x| x.to_string()),
-                                    installeduser: installeduser.contains_key(&pkg),
-                                    installedsystem: installedsystem.contains(&pkg),
-                                })
-                            } else {
-                                let (pname, description): (String, String) =
-                                sqlx::query_as("SELECT pname, description FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1")
-                                    .bind(&pkg)
-                                    .fetch_one(pool)
-                                    .await
-                                    .unwrap();
-                                catrec.push(CategoryTile {
-                                    pkg: pkg.to_string(),
-                                    name: pname.to_string(),
-                                    pname: pname.to_string(),
-                                    icon: None,
-                                    summary: if description.is_empty() { None } else { Some(description) },
-                                    installeduser: installeduser.contains_key(&pkg),
-                                    installedsystem: installedsystem.contains(&pkg),
-                                })
-                            }
+
+                    if let Ok(pool) = &SqlitePool::connect(&format!("sqlite://{packages_db}")).await
+                    {
+                        for package in category_apps_recommended {
+                            catrec.push(
+                                make_category_tile(
+                                    package.clone(),
+                                    &app_data,
+                                    pool,
+                                    installed_user.contains_key(&package),
+                                    installed_system.contains(&package),
+                                )
+                                .await,
+                            );
                         }
-                        for pkg in categoryall {
-                            if let Some(data) = appdata.get(&pkg) {
-                                let pname: (String,) =
-                                sqlx::query_as("SELECT pname FROM pkgs WHERE attribute = $1")
-                                    .bind(&pkg)
-                                    .fetch_one(pool)
-                                    .await
-                                    .unwrap();
-                                catall.push(CategoryTile {
-                                    pkg: pkg.to_string(),
-                                    name: if let Some(name) = &data.name {
-                                        name.get("C").unwrap_or(&pname.0).to_string()
-                                    } else {
-                                        pname.0.to_string()
-                                    },
-                                    pname: pname.0,
-                                    icon: data
-                                        .icon
-                                        .as_ref()
-                                        .and_then(|x| x.cached.as_ref())
-                                        .map(|x| x[0].name.clone()),
-                                    summary: data
-                                        .summary
-                                        .as_ref()
-                                        .and_then(|x| x.get("C"))
-                                        .map(|x| x.to_string()),
-                                    installeduser: installeduser.contains_key(&pkg),
-                                    installedsystem: installedsystem.contains(&pkg),
-                                })
-                            } else {
-                                let (pname, description): (String, String) =
-                                sqlx::query_as("SELECT pname, description FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1")
-                                    .bind(&pkg)
-                                    .fetch_one(pool)
-                                    .await
-                                    .unwrap();
-                                catall.push(CategoryTile {
-                                    pkg: pkg.to_string(),
-                                    name: pname.to_string(),
-                                    pname: pname.to_string(),
-                                    icon: None,
-                                    summary: if description.is_empty() { None } else { Some(description) },
-                                    installeduser: installeduser.contains_key(&pkg),
-                                    installedsystem: installedsystem.contains(&pkg),
-                                })
-                            }
+                        for package in category_apps_all {
+                            catall.push(
+                                make_category_tile(
+                                    package.clone(),
+                                    &app_data,
+                                    pool,
+                                    installed_user.contains_key(&package),
+                                    installed_system.contains(&package),
+                                )
+                                .await,
+                            );
                         }
                     } else {
-                        error!("Failed to connect to pkgdb")
+                        error!("Failed to connect to pkgdb");
                     }
                     AppAsyncMsg::LoadCategory(category, catrec, catall)
                 });
@@ -1528,18 +1361,6 @@ impl AsyncComponent for AppModel {
         _root: &Self::Root,
     ) {
         match msg {
-            AppAsyncMsg::Search(search, pkgitems) => {
-                if search == self.searchquery {
-                    self.searchpage.emit(SearchPageMsg::Search(pkgitems))
-                }
-            }
-            AppAsyncMsg::UpdateRecPkgs(pkgtiles, pkg_category) => {
-                self.explore_page
-                    .emit(ExplorePageMsg::UpdateRecommendedPackages(
-                        pkgtiles,
-                        pkg_category,
-                    ));
-            }
             AppAsyncMsg::UpdateInstalledPkgs(installedsystempkgs, installeduserpkgs) => {
                 // TODO: maybe create macro to update installed pkgs
                 info!("AppAsyncMsg::UpdateInstalledPkgs");
@@ -1554,13 +1375,31 @@ impl AsyncComponent for AppModel {
                 sender.input(AppMsg::UpdateInstalledPage);
                 info!("DONE AppAsyncMsg::UpdateInstalledPkgs");
             }
-            AppAsyncMsg::LoadCategory(category, catrec, catall) => {
-                self.categorypage
-                    .emit(CategoryPageMsg::Open(category, catrec, catall));
+            AppAsyncMsg::LoadRecommended(recommended_apps) => {
+                self.explore_page
+                    .emit(ExplorePageMsg::UpdateRecommendedPackages(recommended_apps));
+            }
+            AppAsyncMsg::LoadCategory(category, recommended_apps, all_apps) => {
+                match category {
+                    PkgCategory::Audio => &self.category_audio_page,
+                    PkgCategory::Development => &self.category_development_page,
+                    PkgCategory::Games => &self.category_games_page,
+                    PkgCategory::Graphics => &self.category_graphics_page,
+                    PkgCategory::Web => &self.category_web_page,
+                    PkgCategory::Video => &self.category_video_page,
+                    PkgCategory::Education => &self.category_education_page,
+                    PkgCategory::Science => &self.category_science_page,
+                    PkgCategory::Office => &self.category_office_page,
+                    PkgCategory::Network => &self.category_network_page,
+                    PkgCategory::System => &self.category_system_page,
+                    PkgCategory::Utility => &self.category_utility_page,
+                }
+                .sender()
+                .emit(CategoryPageMsg::UpdatePackages(recommended_apps, all_apps));
             }
             AppAsyncMsg::SetNetwork(online) => {
                 self.online = online;
-                self.updatepage.emit(UpdatePageMsg::UpdateOnline(online));
+                self.update_page.emit(UpdatePageMsg::UpdateOnline(online));
             }
         }
     }
@@ -1594,6 +1433,68 @@ impl AppWidgets {
 
         if is_maximized {
             self.main_window.maximize();
+        }
+    }
+}
+
+async fn make_category_tile(
+    package: String,
+    app_data: &HashMap<String, AppData>,
+    pool: &sqlx::Pool<Sqlite>,
+    installed_user: bool,
+    installed_system: bool,
+) -> CategoryTile {
+    if let Some(data) = app_data.get(&package) {
+        let (package_name,): (String,) =
+            sqlx::query_as("SELECT pname FROM pkgs WHERE attribute = $1")
+                .bind(&package)
+                .fetch_one(pool)
+                .await
+                .unwrap_or_default();
+
+        let name = data
+            .name
+            .as_ref()
+            .and_then(|names| names.get("C"))
+            .map_or_else(|| package_name.clone(), std::clone::Clone::clone);
+
+        let icon = data
+            .icon
+            .as_ref()
+            .and_then(|icons| icons.cached.as_ref())
+            .and_then(|icon| icon.first())
+            .map(|icon| icon.name.clone());
+
+        let summary = data
+            .summary
+            .as_ref()
+            .and_then(|summaries| summaries.get("C"))
+            .map_or_else(String::default, std::clone::Clone::clone);
+
+        CategoryTile {
+            name,
+            package,
+            package_name,
+            summary,
+            icon,
+            installed_user,
+            installed_system,
+        }
+    } else {
+        let (package_name, summary): (String, String) = sqlx::query_as("SELECT pname, description FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1")
+            .bind(&package)
+            .fetch_one(pool)
+            .await
+            .unwrap();
+
+        CategoryTile {
+            name: package_name.clone(),
+            package,
+            package_name,
+            summary,
+            icon: None,
+            installed_user,
+            installed_system,
         }
     }
 }
