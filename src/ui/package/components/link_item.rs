@@ -13,7 +13,7 @@ pub struct LinkItem {
     link: String,
 }
 
-#[derive(Debug, Assoc)]
+#[derive(Debug, Clone, Assoc)]
 #[func(pub const fn icon(&self) -> Option<&'static str>)]
 pub enum LinkType {
     #[assoc(icon = "globe-symbolic")]
@@ -38,7 +38,7 @@ pub enum LinkType {
     NixSource,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LinkItemInit {
     pub link_type: LinkType,
     pub link: String,

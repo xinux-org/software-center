@@ -43,7 +43,7 @@ use crate::{
     },
     utils::{
         online::{checkonline, checkonline_async},
-        packages::{LicenseEnum, PkgMaintainer, Platform},
+        packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         state,
     },
 };
@@ -66,6 +66,10 @@ pub struct PackagePageModel {
     summary: Option<String>,
     description: Option<String>,
     version: Option<String>,
+
+    #[tracker::no_eq]
+    urls: Vec<LinkItemInit>,
+    screenshot_urls: Vec<String>,
 
     position: String,
 
@@ -161,6 +165,7 @@ pub enum PackageMessage {
         system_packages: Vec<InstalledItem>,
         user_packages: Vec<InstalledItem>,
     },
+    UpdateAppData(Option<AppData>),
     LoadScreenshot(String, usize, String),
     SetError(String, usize),
     SetCarouselPage(CarouselPage),
@@ -931,6 +936,16 @@ impl AsyncComponent for PackagePageModel {
             PackageMessage::UpdateConfig(state.clone())
         });
 
+        let package_ = init.package.clone();
+        APPSTREAM_DATA_STATE.subscribe(sender.input_sender(), move |state| {
+            let app_data = state
+                .iter()
+                .find(|(package, _app_data)| package == &&package_)
+                .map(|(_package, app_data)| app_data.clone());
+
+            PackageMessage::UpdateAppData(app_data)
+        });
+
         let install_worker = InstallAsyncHandler::builder()
             .detach_worker(InstallAsyncHandlerInit {
                 syspkgs: init.syspkgs.clone(),
@@ -979,6 +994,9 @@ impl AsyncComponent for PackagePageModel {
             summary: None,
             description: None,
             version: None,
+
+            urls: vec![],
+            screenshot_urls: vec![],
 
             position: String::default(),
 
@@ -1089,239 +1107,12 @@ impl AsyncComponent for PackagePageModel {
                 let mut platforms = vec![];
                 let mut maintainers = vec![];
 
-                let mut url = None;
-
                 let appstream_data_state = APPSTREAM_DATA_STATE.read();
 
                 let app_data = appstream_data_state.get(&init.package);
 
                 if let Some(data) = app_data {
-                    if let Some(names) = &data.name
-                        && let Some(name) = names.get("C")
-                    {
-                        model.name = name.to_string();
-                    }
-
-                    if let Some(summaries) = &data.summary
-                        && let Some(summary) = summaries.get("C")
-                    {
-                        model.summary = Some(summary.to_string());
-                    }
-
-                    if let Some(descriptions) = &data.description
-                        && let Some(description) = descriptions.get("C")
-                    {
-                        model.description = Some(html_to_pango(description));
-                    }
-
-                    model.icon = data
-                        .icon
-                        .as_ref()
-                        .and_then(|icon_list| icon_list.cached.as_ref())
-                        .and_then(|icons| {
-                            let mut icons = icons.clone();
-                            icons.sort_by_key(|icon| icon.height);
-                            icons.last().cloned()
-                        })
-                        .map(|icon| {
-                            format!(
-                                "{}/icons/nixos/{}x{}/{}",
-                                APPINFO, icon.width, icon.height, icon.name
-                            )
-                        })
-                        .map(|icon_path| gtk::Image::from_file(icon_path))
-                        .unwrap_or_else(|| gtk::Image::from_icon_name("package-x-generic"));
-
-                    if let Some(app_screenshots) = &data.screenshots {
-                        let mut screenshot_urls = vec![];
-
-                        for screenshot in app_screenshots {
-                            if let Some(image) = &screenshot.sourceimage {
-                                if !screenshot_urls.contains(&image.url) {
-                                    if screenshot.default.unwrap_or_default() {
-                                        screenshot_urls.insert(0, image.url.clone());
-                                    } else {
-                                        screenshot_urls.push(image.url.clone());
-                                    }
-                                } else if screenshot.default.unwrap_or_default()
-                                    && let Some(index) =
-                                        screenshot_urls.iter().position(|x| *x == image.url)
-                                {
-                                    screenshot_urls.remove(index);
-                                    screenshot_urls.insert(0, image.url.clone());
-                                }
-                            }
-                        }
-
-                        let screenshots = screenshot_urls.iter().map(|_url| ());
-                        model.screenshots =
-                            FactoryVecDeque::from_iter(screenshots, adw::Carousel::new());
-
-                        let mut headers = reqwest::header::HeaderMap::new();
-                        headers.insert(
-                            reqwest::header::ACCEPT,
-                            reqwest::header::HeaderValue::from_static("image/*"),
-                        );
-
-                        let client = reqwest::Client::builder()
-                            .default_headers(headers)
-                            .user_agent("nix-software-center")
-                            .build()
-                            .unwrap();
-
-                        for (i, url) in screenshot_urls.clone().into_iter().enumerate() {
-                            if let Ok(home) = env::var("HOME") {
-                                let cache_dir = format!("{}/.cache/nix-software-center", home);
-                                let sha = digest(&url);
-                                let screenshot_path = format!("{}/screenshots/{}", cache_dir, sha);
-                                let package = init.package.clone();
-                                let client = client.clone();
-
-                                sender.command(move |out, shutdown| {
-                                    let url = url.clone();
-                                    let home = home.clone();
-
-                                    shutdown
-                                        .register(async move {
-                                            tokio::time::sleep(Duration::from_millis(5)).await;
-                                            if Path::new(&format!("{}.png", screenshot_path)).exists() {
-                                                out.send(PackageAsyncMessage::LoadScreenshot(package, i, format!("{}.png", screenshot_path)));
-                                            } else {
-                                                match client.get(&url).send().await {
-                                                    Ok(response) => {
-                                                        if response.status().is_success() {
-                                                            if !Path::new(&format!(
-                                                                "{}/.cache/nix-software-center/screenshots",
-                                                                home
-                                                            ))
-                                                            .exists()
-                                                            {
-                                                                match fs::create_dir_all(format!(
-                                                                    "{}/.cache/nix-software-center/screenshots",
-                                                                    home
-                                                                )) {
-                                                                    Ok(_) => {}
-                                                                    Err(_) => {
-                                                                        out.send(PackageAsyncMessage::SetError(package, i));
-                                                                        return;
-                                                                    }
-                                                                }
-                                                            }
-                                                            if let Ok(mut file) = File::create(&screenshot_path) {
-                                                                if let Ok(b) = response.bytes().await {
-                                                                    let mut content =  Cursor::new(b);
-                                                                    if std::io::copy(&mut content, &mut file).is_ok() {
-                                                                        fn openimg(scrnpath: &str) -> Result<(), Box<dyn Error>> {
-                                                                            let img = if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::Png) {
-                                                                                x
-                                                                            } else if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::Jpeg) {
-                                                                                x
-                                                                            } else if let Ok(x) = image::load(BufReader::new(File::open(scrnpath)?), image::ImageFormat::WebP) {
-                                                                                x
-                                                                            } else {
-                                                                                let imgdata = BufReader::new(File::open(scrnpath)?);
-                                                                                let format = image::guess_format(imgdata.buffer())?;
-                                                                                image::load(imgdata, format)?
-                                                                            };
-                                                                            let scaled = img.resize(640, 360, FilterType::Lanczos3);
-                                                                            let mut output = File::create(format!("{}.png", scrnpath))?;
-                                                                            scaled.write_to(&mut output, ImageFormat::Png)?;
-                                                                            if let Err(e) = fs::remove_file(scrnpath) {
-                                                                                warn!("{}", e);
-                                                                            }
-                                                                            Ok(())
-                                                                        }
-
-                                                                        match openimg(&screenshot_path) {
-                                                                            Ok(_) => {
-                                                                                out.send(PackageAsyncMessage::LoadScreenshot(
-                                                                                    package, i, format!("{}.png", screenshot_path),
-                                                                                ));
-                                                                            }
-                                                                            Err(_) => {
-                                                                                if let Err(e) = fs::remove_file(&screenshot_path) {
-                                                                                    warn!("{}", e);
-                                                                                }
-                                                                                out.send(PackageAsyncMessage::SetError(package, i));
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            } else {
-                                                                out.send(PackageAsyncMessage::SetError(package, i));
-                                                                warn!("Error: {}", response.status());
-                                                            }
-                                                        } else {
-                                                            out.send(PackageAsyncMessage::SetError(package, i));
-                                                            warn!("Error: {}", response.status());
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        out.send(PackageAsyncMessage::SetError(package, i));
-                                                        warn!("Error: {}", e);
-                                                    }
-                                                }
-                                            }
-                                        })
-                                        .drop_on_shutdown()
-                                })
-                            }
-                        }
-
-                        if screenshot_urls.len() <= 1 {
-                            model.carousel_page = CarouselPage::Single;
-                        } else {
-                            model.carousel_page = CarouselPage::First;
-                        }
-                    }
-
-                    model.launchable = if let Some(l) = data.launchable.as_ref()
-                        && let Some(d) = l.desktopid.first()
-                    {
-                        Some(Launch::GtkApp(d.clone()))
-                    } else if model.installed_user_packages.contains(&model.package)
-                        && let Ok(o) = Command::new("command")
-                            .arg("-v")
-                            .arg(&model.package_name)
-                            .output()
-                        && o.status.success()
-                    {
-                        Some(Launch::TerminalApp(model.package_name.to_string()))
-                    } else {
-                        None
-                    };
-
-                    url = data.url.clone();
-
-                    if let Some(releases) = data.releases.as_ref() {
-                        let releases = releases
-                            .iter()
-                            .map(|release| ReleaseItemInit {
-                                version: release.version.clone(),
-                                date: release.date,
-                                description: release
-                                    .description
-                                    .as_ref()
-                                    .and_then(|descriptions| descriptions.get("C"))
-                                    .map(|description| html_to_pango(description)),
-                                url: release.url.as_ref().and_then(|url| url.details.clone()),
-                                installed: false,
-                            })
-                            .collect::<Vec<_>>();
-
-                        if let Some(release) = releases.first() {
-                            model.latest_release = FactoryVecDeque::from_iter(
-                                vec![release.clone()],
-                                adw::PreferencesGroup::new(),
-                            );
-                        }
-
-                        if releases.len() > 0 {
-                            let connector =
-                                ReleasesDialog::builder().launch(ReleasesInit { releases });
-                            model.releases_dialog = Some(connector);
-                        }
-                    }
+                    apply_appstream_data(&mut model, &sender, data);
                 }
 
                 if let Ok(pkglicense) = serde_json::from_str::<LicenseEnum>(&licensejson) {
@@ -1366,62 +1157,9 @@ impl AsyncComponent for PackagePageModel {
                 {
                     let mut links_guard = model.links.guard();
 
-                    if let Some(url) = url {
-                        url.homepage.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Website,
-                                link: link,
-                            });
-                        });
-                        url.bugtracker.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::IssueTracker,
-                                link: link,
-                            });
-                        });
-                        url.faq.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::FAQ,
-                                link: link,
-                            });
-                        });
-                        url.help.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Help,
-                                link: link,
-                            });
-                        });
-                        url.donation.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Donate,
-                                link: link,
-                            });
-                        });
-                        url.translate.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Translate,
-                                link: link,
-                            });
-                        });
-                        url.contact.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Contact,
-                                link: link,
-                            });
-                        });
-                        url.vcs_browser.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Source,
-                                link: link,
-                            });
-                        });
-                        url.contribute.map(|link| {
-                            links_guard.push_back(LinkItemInit {
-                                link_type: LinkType::Contribute,
-                                link: link,
-                            });
-                        });
-                    }
+                    model.urls.iter().for_each(|link| {
+                        links_guard.push_back(link.clone());
+                    });
 
                     links_guard.push_back(LinkItemInit {
                         link_type: LinkType::NixSource,
@@ -1544,6 +1282,11 @@ impl AsyncComponent for PackagePageModel {
                     InstallType::System => self.installed_system_packages.clone(),
                     InstallType::User => self.installed_user_packages.clone(),
                 });
+            }
+            PackageMessage::UpdateAppData(app_data) => {
+                if let Some(app_data) = app_data {
+                    apply_appstream_data(self, &sender, &app_data);
+                }
             }
             PackageMessage::LoadScreenshot(pkg, i, u) => {
                 info!("PkgMsg::LoadScreenshot {}", u);
@@ -1930,6 +1673,328 @@ fn html_to_pango(text: &str) -> String {
     text = text.strip_prefix('\n').unwrap_or(&text).to_string();
 
     text
+}
+
+fn apply_appstream_data(
+    model: &mut PackagePageModel,
+    sender: &AsyncComponentSender<PackagePageModel>,
+    data: &AppData,
+) {
+    if let Some(names) = &data.name
+        && let Some(name) = names.get("C")
+    {
+        model.name = name.clone();
+    }
+
+    if let Some(summaries) = &data.summary
+        && let Some(summary) = summaries.get("C")
+    {
+        model.summary = Some(summary.clone());
+    }
+
+    if let Some(descriptions) = &data.description
+        && let Some(description) = descriptions.get("C")
+    {
+        model.description = Some(html_to_pango(description));
+    }
+
+    model.icon = data
+        .icon
+        .as_ref()
+        .and_then(|icon_list| icon_list.cached.as_ref())
+        .and_then(|icons| {
+            let mut icons = icons.clone();
+            icons.sort_by_key(|icon| icon.height);
+            icons.last().cloned()
+        })
+        .map(|icon| {
+            format!(
+                "{}/icons/nixos/{}x{}/{}",
+                APPINFO, icon.width, icon.height, icon.name
+            )
+        })
+        .map_or_else(
+            || gtk::Image::from_icon_name("package-x-generic"),
+            gtk::Image::from_file,
+        );
+
+    if let Some(app_screenshots) = &data.screenshots {
+        let mut screenshot_urls = vec![];
+
+        for screenshot in app_screenshots {
+            if let Some(image) = &screenshot.sourceimage {
+                if !screenshot_urls.contains(&image.url) {
+                    if screenshot.default.unwrap_or_default() {
+                        screenshot_urls.insert(0, image.url.clone());
+                    } else {
+                        screenshot_urls.push(image.url.clone());
+                    }
+                } else if screenshot.default.unwrap_or_default()
+                    && let Some(index) = screenshot_urls.iter().position(|x| *x == image.url)
+                {
+                    screenshot_urls.remove(index);
+                    screenshot_urls.insert(0, image.url.clone());
+                }
+            }
+        }
+
+        if screenshot_urls.len() <= 1 {
+            model.carousel_page = CarouselPage::Single;
+        } else {
+            model.carousel_page = CarouselPage::First;
+        }
+
+        load_screenshots(sender, &model.package, screenshot_urls.clone());
+
+        model.screenshot_urls = screenshot_urls;
+
+        let mut screenshots = FactoryVecDeque::builder()
+            .launch(adw::Carousel::new())
+            .detach();
+        {
+            let mut guard = screenshots.guard();
+            model.screenshot_urls.iter().for_each(|_| {
+                guard.push_back(());
+            });
+        }
+        model.screenshots = screenshots;
+    }
+
+    model.launchable = if let Some(l) = data.launchable.as_ref()
+        && let Some(d) = l.desktopid.first()
+    {
+        Some(Launch::GtkApp(d.clone()))
+    } else if model.installed_user_packages.contains(&model.package)
+        && let Ok(o) = Command::new("command")
+            .arg("-v")
+            .arg(&model.package_name)
+            .output()
+        && o.status.success()
+    {
+        Some(Launch::TerminalApp(model.package_name.clone()))
+    } else {
+        None
+    };
+
+    let mut urls = vec![];
+
+    if let Some(url) = data.url.clone() {
+        if let Some(link) = url.homepage {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Website,
+                link,
+            });
+        }
+        if let Some(link) = url.bugtracker {
+            urls.push(LinkItemInit {
+                link_type: LinkType::IssueTracker,
+                link,
+            });
+        }
+        if let Some(link) = url.faq {
+            urls.push(LinkItemInit {
+                link_type: LinkType::FAQ,
+                link,
+            });
+        }
+        if let Some(link) = url.help {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Help,
+                link,
+            });
+        }
+        if let Some(link) = url.donation {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Donate,
+                link,
+            });
+        }
+        if let Some(link) = url.translate {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Translate,
+                link,
+            });
+        }
+        if let Some(link) = url.contact {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Contact,
+                link,
+            });
+        }
+        if let Some(link) = url.vcs_browser {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Source,
+                link,
+            });
+        }
+        if let Some(link) = url.contribute {
+            urls.push(LinkItemInit {
+                link_type: LinkType::Contribute,
+                link,
+            });
+        }
+    }
+
+    model.urls = urls;
+
+    if let Some(releases) = data.releases.as_ref() {
+        let releases = releases
+            .iter()
+            .map(|release| ReleaseItemInit {
+                version: release.version.clone(),
+                date: release.date,
+                description: release
+                    .description
+                    .as_ref()
+                    .and_then(|descriptions| descriptions.get("C"))
+                    .map(|description| html_to_pango(description)),
+                url: release.url.as_ref().and_then(|url| url.details.clone()),
+                installed: false,
+            })
+            .collect::<Vec<_>>();
+
+        if let Some(release) = releases.first() {
+            model.latest_release =
+                FactoryVecDeque::from_iter(vec![release.clone()], adw::PreferencesGroup::new());
+        }
+
+        if !releases.is_empty() {
+            let connector = ReleasesDialog::builder().launch(ReleasesInit { releases });
+            model.releases_dialog = Some(connector);
+        }
+    }
+}
+
+fn load_screenshots(
+    sender: &AsyncComponentSender<PackagePageModel>,
+    package: &str,
+    screenshot_urls: Vec<String>,
+) {
+    debug!("Loading screenshots for package '{package}'");
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::ACCEPT,
+        reqwest::header::HeaderValue::from_static("image/*"),
+    );
+
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .user_agent("nix-software-center")
+        .build()
+        .unwrap();
+
+    if let Ok(home) = env::var("HOME") {
+        let cache_dir = format!("{home}/.cache/nix-software-center/screenshots");
+
+        for (i, url) in screenshot_urls.into_iter().enumerate() {
+            let sha = digest(&url);
+
+            let client = client.clone();
+            let package = package.to_string();
+            let cache_dir = cache_dir.clone();
+
+            sender.command(move |output_sender, shutdown| {
+                shutdown
+                    .register(async move {
+                        let path = format!("{cache_dir}/{sha}.png");
+                        if Path::new(&path).exists() {
+                            output_sender
+                                .send(PackageAsyncMessage::LoadScreenshot(package, i, path));
+                        } else {
+                            if let Ok(path) = load_screenshot(&client, url, cache_dir, sha).await {
+                                output_sender
+                                    .send(PackageAsyncMessage::LoadScreenshot(package, i, path));
+                            } else {
+                                output_sender.send(PackageAsyncMessage::SetError(package, i));
+                            }
+                        }
+                    })
+                    .drop_on_shutdown()
+            });
+        }
+    }
+}
+
+async fn load_screenshot(
+    client: &reqwest::Client,
+    url: String,
+    output_directory: String,
+    sha: String,
+) -> anyhow::Result<String> {
+    debug!("Loading screenshot '{url}'");
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    let path = format!("{output_directory}/{sha}.png");
+    if Path::new(&format!("{path}.png")).exists() {
+        Ok(path)
+    } else {
+        download_screenshot(client, url, output_directory, sha).await?;
+        Ok(path)
+    }
+}
+
+async fn download_screenshot(
+    client: &reqwest::Client,
+    url: String,
+    output_directory: String,
+    sha: String,
+) -> anyhow::Result<String> {
+    debug!("Downloading screenshot '{url}'");
+    let path = format!("{output_directory}/{sha}.png");
+    let path_temp = format!("{output_directory}/{sha}");
+
+    let response = client.get(&url).send().await?;
+
+    if !response.status().is_success() {
+        anyhow::bail!("Screenshot could not be downloaded");
+    }
+
+    if !Path::new(&output_directory).exists() {
+        fs::create_dir_all(output_directory)?;
+    }
+
+    let mut file = File::create(&path_temp)?;
+    let bytes = response.bytes().await?;
+    let mut content = Cursor::new(bytes);
+    std::io::copy(&mut content, &mut file)?;
+
+    normalize_screenshot(&path_temp, &path)?;
+
+    Ok(path)
+}
+
+fn normalize_screenshot(old_path: &str, new_path: &str) -> anyhow::Result<()> {
+    debug!("Normalizing screenshot '{old_path}'");
+    let img = image::load(
+        BufReader::new(File::open(old_path)?),
+        image::ImageFormat::Png,
+    )
+    .or_else(|_| {
+        image::load(
+            BufReader::new(File::open(old_path)?),
+            image::ImageFormat::Jpeg,
+        )
+    })
+    .or_else(|_| {
+        image::load(
+            BufReader::new(File::open(old_path)?),
+            image::ImageFormat::WebP,
+        )
+    })
+    .or_else(|_| {
+        let image_data = BufReader::new(File::open(old_path)?);
+        let format = image::guess_format(image_data.buffer())?;
+        image::load(image_data, format)
+    })?;
+
+    let scaled = img.resize(640, 360, FilterType::Lanczos3);
+    let mut output = File::create(new_path)?;
+    scaled.write_to(&mut output, ImageFormat::Png)?;
+
+    if let Err(e) = fs::remove_file(old_path) {
+        warn!("Could not delete file {}: {}", old_path, e);
+    }
+
+    Ok(())
 }
 
 relm4::new_action_group!(ModeActionGroup, "install_type");
