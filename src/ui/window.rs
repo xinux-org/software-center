@@ -1481,7 +1481,11 @@ async fn make_category_tile(
             installed_system,
         }
     } else {
-        let (package_name, summary): (String, String) = sqlx::query_as("SELECT pname, description FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1").bind(&package).fetch_one(pool).await.unwrap();
+        let (package_name, summary): (String, String) = sqlx::query_as("SELECT pname, description FROM pkgs JOIN meta ON (pkgs.attribute = meta.attribute) WHERE pkgs.attribute = $1")
+            .bind(&package)
+            .fetch_one(pool)
+            .await
+            .unwrap();
 
         CategoryTile {
             name: package_name.clone(),
