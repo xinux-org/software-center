@@ -1005,7 +1005,7 @@ impl AsyncComponent for PackagePageModel {
             unsupported: false,
             unfree: false,
 
-            icon: gtk::Image::new(),
+            icon: gtk::Image::from_icon_name("package-x-generic"),
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
                 .detach(),
