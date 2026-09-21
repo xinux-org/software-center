@@ -1005,7 +1005,7 @@ impl AsyncComponent for PackagePageModel {
             unsupported: false,
             unfree: false,
 
-            icon: gtk::Image::new(),
+            icon: gtk::Image::from_icon_name("package-x-generic"),
             screenshots: FactoryVecDeque::builder()
                 .launch(adw::Carousel::new())
                 .detach(),
@@ -1698,25 +1698,27 @@ fn apply_appstream_data(
         model.description = Some(html_to_pango(description));
     }
 
-    model.icon = data
-        .icon
-        .as_ref()
-        .and_then(|icon_list| icon_list.cached.as_ref())
-        .and_then(|icons| {
-            let mut icons = icons.clone();
-            icons.sort_by_key(|icon| icon.height);
-            icons.last().cloned()
-        })
-        .map(|icon| {
-            format!(
+    model.update_icon(|icon| {
+        let app_icon = data
+            .icon
+            .as_ref()
+            .and_then(|icon_list| icon_list.cached.as_ref())
+            .and_then(|icons| {
+                let mut icons = icons.clone();
+                icons.sort_by_key(|icon| icon.height);
+                icons.last().cloned()
+            });
+
+        icon.clear();
+        if let Some(app_icon) = app_icon {
+            icon.set_from_file(Some(format!(
                 "{}/icons/nixos/{}x{}/{}",
-                APPINFO, icon.width, icon.height, icon.name
-            )
-        })
-        .map_or_else(
-            || gtk::Image::from_icon_name("package-x-generic"),
-            gtk::Image::from_file,
-        );
+                APPINFO, app_icon.width, app_icon.height, app_icon.name
+            )));
+        } else {
+            icon.set_icon_name(Some("package-x-generic"));
+        }
+    });
 
     if let Some(app_screenshots) = &data.screenshots {
         let mut screenshot_urls = vec![];
@@ -1744,20 +1746,17 @@ fn apply_appstream_data(
             model.carousel_page = CarouselPage::First;
         }
 
-        load_screenshots(sender, &model.package, screenshot_urls.clone());
+        model.screenshot_urls = screenshot_urls.clone();
 
-        model.screenshot_urls = screenshot_urls;
-
-        let mut screenshots = FactoryVecDeque::builder()
-            .launch(adw::Carousel::new())
-            .detach();
-        {
+        model.update_screenshots(|screenshots| {
             let mut guard = screenshots.guard();
-            model.screenshot_urls.iter().for_each(|_| {
+            guard.clear();
+            for _ in &screenshot_urls {
                 guard.push_back(());
-            });
-        }
-        model.screenshots = screenshots;
+            }
+        });
+
+        load_screenshots(sender, &model.package, screenshot_urls.clone());
     }
 
     model.launchable = if let Some(l) = data.launchable.as_ref()
