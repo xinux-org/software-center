@@ -2,7 +2,7 @@ use gettextrs::gettext;
 use log::debug;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    ComponentParts, ComponentSender, SimpleComponent,
+    Component, ComponentController, ComponentParts, ComponentSender, SimpleComponent,
     adw::{self, prelude::*},
     component::{AsyncComponent, AsyncComponentController, AsyncController},
     factory::FactoryVecDeque,
@@ -11,6 +11,10 @@ use relm4::{
 use std::{collections::HashSet, convert::identity};
 
 use crate::ui::{
+    explore::components::{
+        carousel::{CarouselInit, CarouselModel},
+        carousel_tile::{CarouselTileInit, CarouselTileModel},
+    },
     installed::components::installed_item::InstalledItem,
     package::{
         components::package_tile::{PkgTile, PkgTileMsg},
@@ -70,6 +74,10 @@ impl SimpleComponent for ExplorePageModel {
                                 set_valign: gtk::Align::Start,
                                 set_margin_top: 15,
                                 set_spacing: 4,
+
+                                #[local_ref]
+                                carousel -> gtk::Box {},
+
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
                                     add_css_class: "title-1",
@@ -131,6 +139,10 @@ impl SimpleComponent for ExplorePageModel {
         };
 
         let recommended_box = model.recommended_apps.widget();
+
+        let carousel = CarouselModel::builder().launch(CarouselInit {}).detach();
+
+        let carousel = carousel.widget();
 
         let widgets = view_output!();
 
