@@ -37,9 +37,8 @@ impl Component for CarouselModel {
             // set_visible: !model.screenshots.is_empty(),
             gtk::Overlay {
                 set_valign: gtk::Align::Start,
-                // #[local_ref]
-                // tiles_carousel ->
-                adw::Carousel {
+                #[local_ref]
+                tiles_carousel -> adw::Carousel {
                     set_valign: gtk::Align::Fill,
                     set_hexpand: true,
                     set_vexpand: true,
@@ -151,13 +150,9 @@ impl Component for CarouselModel {
 
         let model = CarouselModel { tiles };
 
-        log::error!("carousel factory: {:?}", model.tiles);
+        log::error!("carousel factory: {:?}", model.tiles.len());
 
         let tiles_carousel = model.tiles.widget();
-
-        let tile1 = CarouselTileModel::builder()
-            .launch(CarouselTileInit {})
-            .detach();
 
         let widgets = view_output!();
         ComponentParts { model, widgets }
@@ -167,13 +162,3 @@ impl Component for CarouselModel {
         match message {}
     }
 }
-
-// async fn load_screenshots() {
-//     let urls: Vec<String> = vec![];
-//
-//     download_screenshots(&urls).await;
-// }
-//
-// async fn download_screenshots(urls: &[String]) {
-//     for url in urls {}
-// }
