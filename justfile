@@ -28,7 +28,7 @@ install: build
 
 # Build, install, and run the app
 run: install
-    RUST_LOG={{ bin }}=DEBUG \
+    RUST_LOG=DEBUG \
     ~/.local/bin/{{ bin }}
 
 # Clean build directory

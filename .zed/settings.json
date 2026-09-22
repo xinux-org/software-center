@@ -13,9 +13,14 @@
             ".blueprint",
             "builddir",
             "build",
-          ]
-        }
+          ],
+        },
+        "checkOnSave": true,
+        "check": {
+          "command": "clippy",
+          "extraArgs": ["--", "-W", "clippy::pedantic"],
+        },
       },
-    }
-  }
+    },
+  },
 }
