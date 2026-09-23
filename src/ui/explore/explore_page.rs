@@ -11,6 +11,7 @@ use relm4::{
 use std::{collections::HashSet, convert::identity};
 
 use crate::ui::{
+    explore::components::carousel::CarouselInput,
     installed::components::installed_item::InstalledItem,
     package::{
         components::package_tile::{PkgTile, PkgTileMsg},
@@ -192,11 +193,16 @@ impl SimpleComponent for ExplorePageModel {
             }
 
             ExplorePageMsg::UpdateRecommendedPackages(pkgtiles) => {
+                // let packages = pkgtiles.iter().map(|tile| tile.pkg.clone()).collect();
+
                 let mut guard = self.recommended_apps.guard();
                 guard.clear();
-                for tile in pkgtiles {
+                for tile in &pkgtiles {
                     guard.push_back(tile.clone());
                 }
+
+                self.featured_carousel
+                    .emit(CarouselInput::SetPackages(pkgtiles));
             }
         }
     }
