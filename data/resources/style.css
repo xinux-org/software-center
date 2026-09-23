@@ -25,3 +25,7 @@ label.badge {
 button.round {
     border-radius: 9999px;
 }
+
+box.rounded {
+    border-radius: 12px;
+}

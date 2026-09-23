@@ -1,11 +1,7 @@
 use relm4::{
     FactorySender, RelmWidgetExt, adw,
     factory::{DynamicIndex, FactoryComponent},
-    gtk::{
-        self,
-        pango::EllipsizeMode,
-        prelude::{BoxExt, OrientableExt, WidgetExt},
-    },
+    gtk::{self, pango::EllipsizeMode, prelude::*},
 };
 
 #[derive(Debug)]
@@ -29,13 +25,14 @@ impl FactoryComponent for CarouselTileModel {
     type ParentWidget = adw::Carousel;
     type Input = CarouselTileInput;
     type Output = CarouselTileOutput;
-    type Init = CarouselTileInit;
+    type Init = ();
     type CommandOutput = ();
 
     view! {
         #[root]
         gtk::Box {
             inline_css: "background-color: #114b91;",
+            set_hexpand: true,
             gtk::Box {
                 set_halign: gtk::Align::Center,
                 set_hexpand: true,
@@ -69,6 +66,7 @@ impl FactoryComponent for CarouselTileModel {
                     set_width_request: 620,
                     set_orientation: gtk::Orientation::Vertical,
                     gtk::Picture {
+                        set_margin_top: 40,
                         #[watch]
                         set_filename: Some(&self.screenshot),
                     },
@@ -83,11 +81,7 @@ impl FactoryComponent for CarouselTileModel {
             name: "Bazaar".to_string(),
             summary: "Discover and install apps".to_string(),
             icon: "/nix/store/lqirp0agcqwmh52f3mjq6081ci2z8g68-nix-software-center-0.2.0/share/app-info/icons/nixos/128x128/bazaar_io.github.kolunmi.Bazaar.png".to_string(),
-            screenshot: "/nix/store/lqirp0agcqwmh52f3mjq6081ci2z8g68-nix-software-center-0.2.0/share/app-info/icons/nixos/128x128/bazaar_io.github.kolunmi.Bazaar.png".to_string(),
+            screenshot: "/home/dior/.cache/nix-software-center/screenshots/61aceea0fb1ce01fe449f1d6bd075da021c2e0300e6fcfad40d156b293e1619d_croppped.png".to_string(),
         }
-    }
-
-    fn update(&mut self, message: Self::Input, _sender: FactorySender<Self>) {
-        match message {}
     }
 }
