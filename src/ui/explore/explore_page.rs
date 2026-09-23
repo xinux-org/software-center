@@ -2,7 +2,7 @@ use gettextrs::gettext;
 use log::debug;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    ComponentParts, ComponentSender, SimpleComponent,
+    Component, ComponentController, ComponentParts, ComponentSender, Controller, SimpleComponent,
     adw::{self, prelude::*},
     component::{AsyncComponent, AsyncComponentController, AsyncController},
     factory::FactoryVecDeque,
@@ -11,6 +11,7 @@ use relm4::{
 use std::{collections::HashSet, convert::identity};
 
 use crate::ui::{
+    explore::components::carousel::CarouselInput,
     installed::components::installed_item::InstalledItem,
     package::{
         components::package_tile::{PkgTile, PkgTileMsg},
@@ -18,6 +19,8 @@ use crate::ui::{
     },
     window::{AppMsg, INSTALLED_PACKAGES_STATE, NIX_DATA_CONFIG_STATE, SystemPkgs},
 };
+
+use super::components::carousel::CarouselModel;
 
 #[tracker::track]
 #[derive(Debug)]
@@ -29,6 +32,9 @@ pub struct ExplorePageModel {
 
     #[tracker::no_eq]
     recommended_apps: FactoryVecDeque<PkgTile>,
+
+    #[tracker::no_eq]
+    featured_carousel: Controller<CarouselModel>,
 
     #[tracker::no_eq]
     package_page: Option<AsyncController<PackagePageModel>>,
@@ -70,6 +76,10 @@ impl SimpleComponent for ExplorePageModel {
                                 set_valign: gtk::Align::Start,
                                 set_margin_top: 15,
                                 set_spacing: 4,
+
+                                #[local_ref]
+                                featured_carousel -> gtk::Box {},
+
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
                                     add_css_class: "title-1",
@@ -113,6 +123,8 @@ impl SimpleComponent for ExplorePageModel {
 
         let config = NIX_DATA_CONFIG_STATE.read().clone();
 
+        let featured_carousel = CarouselModel::builder().launch(()).detach();
+
         let mut model = ExplorePageModel {
             navigation: adw::NavigationView::new(),
 
@@ -125,12 +137,16 @@ impl SimpleComponent for ExplorePageModel {
                     PkgTileMsg::Open(x) => ExplorePageMsg::OpenPackage(x),
                 }),
 
+            featured_carousel,
+
             package_page: None,
 
             tracker: 0,
         };
 
         let recommended_box = model.recommended_apps.widget();
+
+        let featured_carousel = model.featured_carousel.widget();
 
         let widgets = view_output!();
 
@@ -179,9 +195,12 @@ impl SimpleComponent for ExplorePageModel {
             ExplorePageMsg::UpdateRecommendedPackages(pkgtiles) => {
                 let mut guard = self.recommended_apps.guard();
                 guard.clear();
-                for tile in pkgtiles {
+                for tile in &pkgtiles {
                     guard.push_back(tile.clone());
                 }
+
+                self.featured_carousel
+                    .emit(CarouselInput::SetPackages(pkgtiles));
             }
         }
     }
