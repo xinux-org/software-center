@@ -9,10 +9,16 @@ use crate::ui::explore::components::carousel_tile::CarouselTileModel;
 #[derive(Debug)]
 pub struct CarouselModel {
     tiles: FactoryVecDeque<CarouselTileModel>,
+
+    active_page: u32,
 }
 
 #[derive(Debug)]
-pub enum CarouselInput {}
+pub enum CarouselInput {
+    PageChanged(u32),
+    PreviousPage,
+    NextPage,
+}
 
 #[derive(Debug)]
 pub enum CarouselOutput {}
@@ -39,25 +45,14 @@ impl Component for CarouselModel {
                 set_valign: gtk::Align::Start,
                 #[local_ref]
                 tiles_factory -> adw::Carousel {
-                    // connect_page_changed[sender] => move |x, _| {
-                    //     let n = adw::Carousel::n_pages(x);
-                    //     let i = adw::Carousel::position(x) as u32;
-                    //     if i == 0 && n == 1 {
-                    //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Single));
-                    //     } else if i == 0 {
-                    //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::First));
-                    //     } else if i == n - 1 {
-                    //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Last));
-                    //     } else {
-                    //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Middle));
-                    //     }
-                    // },
+                    connect_page_changed[sender] => move |_carousel, page| {
+                        sender.input(CarouselInput::PageChanged(page));
+                    },
                 },
                 add_overlay = &gtk::Revealer {
                     set_transition_type: gtk::RevealerTransitionType::Crossfade,
-                    // #[watch]
-                    // set_reveal_child: model.carousel_page != CarouselPage::First && model.carousel_page != CarouselPage::Single,
-                    set_reveal_child: true,
+                    #[watch]
+                    set_reveal_child: !model.tiles.is_empty(),
                     set_halign: gtk::Align::Start,
                     set_valign: gtk::Align::Fill,
                     gtk::Button {
@@ -67,25 +62,15 @@ impl Component for CarouselModel {
                         set_halign: gtk::Align::Fill,
                         set_valign: gtk::Align::Fill,
                         set_icon_name: "go-previous-symbolic",
-                        // connect_clicked[sender, scrnfactory] => move |_| {
-                        //     let i = adw::Carousel::position(&scrnfactory) as u32;
-                        //     if i > 0 {
-                        //         let w = scrnfactory.nth_page(i-1);
-                        //         scrnfactory.scroll_to(&w, true);
-                        //     }
-                        //     if i == 1 {
-                        //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::First));
-                        //     } else if i > 0 {
-                        //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Middle));
-                        //     }
-                        // }
-                    }
+                        connect_clicked[sender] => move |_| {
+                            sender.input(CarouselInput::PreviousPage);
+                        },
+                    },
                 },
                 add_overlay = &gtk::Revealer {
                     set_transition_type: gtk::RevealerTransitionType::Crossfade,
-                    // #[watch]
-                    // set_reveal_child: model.carousel_page != CarouselPage::Last && model.carousel_page != CarouselPage::Single,
-                    set_reveal_child: true,
+                    #[watch]
+                    set_reveal_child: !model.tiles.is_empty(),
                     set_halign: gtk::Align::End,
                     set_valign: gtk::Align::Fill,
                     gtk::Button {
@@ -95,23 +80,11 @@ impl Component for CarouselModel {
                         set_halign: gtk::Align::Fill,
                         set_valign: gtk::Align::Fill,
                         set_icon_name: "go-next-symbolic",
-                        // connect_clicked[sender, scrnfactory] => move |_| {
-                        //     let i = adw::Carousel::position(&scrnfactory) as u32;
-                        //     if i < scrnfactory.n_pages() -1 {
-                        //         let w = scrnfactory.nth_page(i+1);
-                        //         scrnfactory.scroll_to(&w, true);
-                        //     }
-                        //     let n = scrnfactory.n_pages();
-                        //     if i == n - 2 {
-                        //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Last));
-                        //     } else if i <= n - 2 {
-                        //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Middle));
-                        //     } else {
-                        //         sender.input(PackageMessage::SetCarouselPage(CarouselPage::Last));
-                        //     }
-                        // }
-                    }
-                }
+                        connect_clicked[sender] => move |_| {
+                            sender.input(CarouselInput::NextPage);
+                        },
+                    },
+                },
             },
         },
     }
@@ -119,7 +92,7 @@ impl Component for CarouselModel {
     fn init(
         _init: Self::Init,
         root: Self::Root,
-        _sender: ComponentSender<Self>,
+        sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let mut tiles = FactoryVecDeque::builder()
             .launch(adw::Carousel::new())
@@ -132,12 +105,47 @@ impl Component for CarouselModel {
         guard.push_back(());
         guard.drop();
 
-        let model = Self { tiles };
+        let model = Self {
+            tiles,
+            active_page: 0,
+        };
 
         let tiles_factory = model.tiles.widget();
 
         let widgets = view_output!();
 
         ComponentParts { model, widgets }
+    }
+
+    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>, _root: &Self::Root) {
+        match message {
+            CarouselInput::PageChanged(page) => {
+                self.active_page = page;
+            }
+            CarouselInput::PreviousPage => {
+                let pages = self.tiles.len() as u32;
+                let carousel = self.tiles.widget();
+
+                if self.active_page == 0 && pages >= 1 {
+                    let widget = carousel.nth_page(pages - 1);
+                    carousel.scroll_to(&widget, true);
+                } else {
+                    let widget = carousel.nth_page(self.active_page - 1);
+                    carousel.scroll_to(&widget, true);
+                }
+            }
+            CarouselInput::NextPage => {
+                let pages = self.tiles.len() as u32;
+                let carousel = self.tiles.widget();
+
+                if self.active_page >= pages - 1 {
+                    let widget = carousel.nth_page(0);
+                    carousel.scroll_to(&widget, true);
+                } else {
+                    let widget = carousel.nth_page(self.active_page + 1);
+                    carousel.scroll_to(&widget, true);
+                }
+            }
+        }
     }
 }
