@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-17 14:18+0500\n"
+"POT-Creation-Date: 2026-09-21 16:57+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,7 +22,7 @@ msgstr ""
 msgid "Software Center"
 msgstr ""
 
-#: src/ui/about/about_page.rs:23 src/ui/window.rs:267
+#: src/ui/about/about_page.rs:23
 msgid "Nix Software Center"
 msgstr ""
 
@@ -98,236 +98,237 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: src/ui/window.rs:284
+#: src/ui/window.rs:251
+msgid "Settings"
+msgstr ""
+
+#: src/ui/window.rs:291
 msgid "Refreshing..."
 msgstr ""
 
-#: src/ui/window.rs:367
-msgid "Categories"
-msgstr ""
-
-#: src/ui/window.rs:390 src/ui/category/category_page.rs:97
-msgid "Recommended"
-msgstr ""
-
-#: src/ui/window.rs:411 src/ui/category/category_page.rs:52
-#: src/ui/category/components/categories.rs:78
-msgid "Development"
-msgstr ""
-
-#: src/ui/window.rs:432
-msgid "Game"
-msgstr ""
-
-#: src/ui/window.rs:453
-msgid "Graphic"
-msgstr ""
-
-#: src/ui/window.rs:474 src/ui/category/category_page.rs:55
-#: src/ui/category/components/categories.rs:81
-msgid "Web"
-msgstr ""
-
-#: src/ui/window.rs:495 src/ui/category/category_page.rs:56
-#: src/ui/category/components/categories.rs:82
-msgid "Video"
-msgstr ""
-
-#: src/ui/window.rs:534
-msgid "Preferences"
-msgstr ""
-
-#: src/ui/window.rs:535
-msgid "About"
-msgstr ""
-
-#: src/ui/window.rs:772
+#: src/ui/window.rs:305
 msgid "Explore"
 msgstr ""
 
-#: src/ui/window.rs:773 src/ui/package/package_page.rs:417
-#: src/ui/package/package_page.rs:654
-#: src/ui/package/components/release_item.rs:59
-msgid "Installed"
+#: src/ui/window.rs:307 src/ui/search/search_page.rs:69
+msgid "Search"
 msgstr ""
 
-#: src/ui/window.rs:774 src/ui/window.rs:1654 src/ui/update/update_page.rs:120
-msgid "Updates"
-msgstr ""
-
-#: src/ui/window.rs:1625
-msgid "NixOS System"
-msgstr ""
-
-#: src/ui/window.rs:1629
-msgid "NixOS internal packages and modules"
-msgstr ""
-
-#: src/ui/windowloading.rs:103 src/ui/windowloading.rs:121
-msgid "Malformed package database"
-msgstr ""
-
-#: src/ui/windowloading.rs:133
-msgid "Error retrieving appstream data"
-msgstr ""
-
-#: src/ui/windowloading.rs:537
-msgid "Error retrieving NixOS package database"
-msgstr ""
-
-#: src/ui/windowloading.rs:549
-msgid "Error retrieving nixpkgs package database"
-msgstr ""
-
-#: src/ui/windowloading.rs:599
-msgid "Retry"
-msgstr ""
-
-#: src/ui/windowloading.rs:602
-msgid "Quit"
-msgstr ""
-
-#: src/ui/category/category_page.rs:51
+#: src/ui/window.rs:309 src/ui/category/category_page.rs:75
 #: src/ui/category/components/categories.rs:77
 msgid "Audio"
 msgstr ""
 
-#: src/ui/category/category_page.rs:53
-#: src/ui/category/components/categories.rs:79
-msgid "Games"
+#: src/ui/window.rs:310 src/ui/category/category_page.rs:76
+#: src/ui/category/components/categories.rs:78
+msgid "Development"
 msgstr ""
 
-#: src/ui/category/category_page.rs:54
+#: src/ui/window.rs:311
+msgid "Gaming"
+msgstr ""
+
+#: src/ui/window.rs:312 src/ui/category/category_page.rs:78
 #: src/ui/category/components/categories.rs:80
 msgid "Graphics"
 msgstr ""
 
-#: src/ui/category/category_page.rs:57
-#: src/ui/category/components/categories.rs:83
-msgid "Education"
+#: src/ui/window.rs:313 src/ui/category/category_page.rs:80
+#: src/ui/category/components/categories.rs:82
+msgid "Video"
 msgstr ""
 
-#: src/ui/category/category_page.rs:58
-#: src/ui/category/components/categories.rs:84
-msgid "Science"
+#: src/ui/window.rs:314 src/ui/category/category_page.rs:79
+#: src/ui/category/components/categories.rs:81
+msgid "Web"
 msgstr ""
 
-#: src/ui/category/category_page.rs:59
-#: src/ui/category/components/categories.rs:85
-msgid "Office"
-msgstr ""
-
-#: src/ui/category/category_page.rs:60
+#: src/ui/window.rs:315 src/ui/category/category_page.rs:84
 #: src/ui/category/components/categories.rs:86
 msgid "Network"
 msgstr ""
 
-#: src/ui/category/category_page.rs:61
+#: src/ui/window.rs:316 src/ui/category/category_page.rs:81
+#: src/ui/category/components/categories.rs:83
+msgid "Education"
+msgstr ""
+
+#: src/ui/window.rs:317 src/ui/category/category_page.rs:82
+#: src/ui/category/components/categories.rs:84
+msgid "Science"
+msgstr ""
+
+#: src/ui/window.rs:318 src/ui/category/category_page.rs:83
+#: src/ui/category/components/categories.rs:85
+msgid "Office"
+msgstr ""
+
+#: src/ui/window.rs:319 src/ui/category/category_page.rs:85
 #: src/ui/category/components/categories.rs:87
 msgid "System"
 msgstr ""
 
-#: src/ui/category/category_page.rs:62
+#: src/ui/window.rs:320 src/ui/category/category_page.rs:86
 #: src/ui/category/components/categories.rs:88
 msgid "Utility"
 msgstr ""
 
-#: src/ui/category/category_page.rs:118
+#: src/ui/window.rs:322 src/ui/installed/installed_page.rs:61
+#: src/ui/package/package_page.rs:409 src/ui/package/package_page.rs:646
+#: src/ui/package/components/release_item.rs:59
+msgid "Installed"
+msgstr ""
+
+#: src/ui/window.rs:323 src/ui/window.rs:1077 src/ui/update/update_page.rs:100
+#: src/ui/update/update_page.rs:136
+msgid "Updates"
+msgstr ""
+
+#: src/ui/window.rs:334
+msgid "Preferences"
+msgstr ""
+
+#: src/ui/window.rs:335
+msgid "About"
+msgstr ""
+
+#: src/ui/window.rs:1048
+msgid "NixOS System"
+msgstr ""
+
+#: src/ui/window.rs:1052
+msgid "NixOS internal packages and modules"
+msgstr ""
+
+#: src/ui/windowloading.rs:120 src/ui/windowloading.rs:138
+msgid "Malformed package database"
+msgstr ""
+
+#: src/ui/windowloading.rs:150
+msgid "Error retrieving appstream data"
+msgstr ""
+
+#: src/ui/windowloading.rs:535
+msgid "Error retrieving NixOS package database"
+msgstr ""
+
+#: src/ui/windowloading.rs:547
+msgid "Error retrieving nixpkgs package database"
+msgstr ""
+
+#: src/ui/windowloading.rs:597
+msgid "Retry"
+msgstr ""
+
+#: src/ui/windowloading.rs:600
+msgid "Quit"
+msgstr ""
+
+#: src/ui/category/category_page.rs:77
+#: src/ui/category/components/categories.rs:79
+msgid "Games"
+msgstr ""
+
+#: src/ui/category/category_page.rs:120
+msgid "Recommended"
+msgstr ""
+
+#: src/ui/category/category_page.rs:141
 msgid "Other"
 msgstr ""
 
-#: src/ui/installed/installed_page.rs:60 src/ui/package/package_page.rs:274
-#: src/ui/package/package_page.rs:922 src/ui/update/update_page.rs:141
+#: src/ui/installed/installed_page.rs:83 src/ui/package/package_page.rs:266
+#: src/ui/package/package_page.rs:914 src/ui/update/update_page.rs:157
 msgid "User (nix profile)"
 msgstr ""
 
-#: src/ui/installed/installed_page.rs:88 src/ui/package/package_page.rs:275
-#: src/ui/package/package_page.rs:923 src/ui/update/update_page.rs:175
+#: src/ui/installed/installed_page.rs:111 src/ui/package/package_page.rs:267
+#: src/ui/package/package_page.rs:915 src/ui/update/update_page.rs:191
 msgid "System (configuration.nix)"
 msgstr ""
 
-#: src/ui/installed/installed_page.rs:112 src/ui/search/search_page.rs:63
+#: src/ui/installed/installed_page.rs:135 src/ui/search/search_page.rs:140
 msgid "No apps found"
 msgstr ""
 
-#: src/ui/package/package_page.rs:356
+#: src/ui/package/package_page.rs:348
 msgid "Unknown"
 msgstr ""
 
-#: src/ui/package/package_page.rs:389 src/ui/package/package_page.rs:633
+#: src/ui/package/package_page.rs:381 src/ui/package/package_page.rs:625
 msgid "Installing..."
 msgstr ""
 
-#: src/ui/package/package_page.rs:417 src/ui/package/package_page.rs:654
+#: src/ui/package/package_page.rs:409 src/ui/package/package_page.rs:646
 msgid "Open"
 msgstr ""
 
-#: src/ui/package/package_page.rs:447 src/ui/package/package_page.rs:681
+#: src/ui/package/package_page.rs:439 src/ui/package/package_page.rs:673
 msgid "Offline"
 msgstr ""
 
-#: src/ui/package/package_page.rs:474 src/ui/package/package_page.rs:701
+#: src/ui/package/package_page.rs:466 src/ui/package/package_page.rs:693
 msgid "Install"
 msgstr ""
 
-#: src/ui/package/package_page.rs:529
+#: src/ui/package/package_page.rs:521
 msgid "Proprietary"
 msgstr ""
 
-#: src/ui/package/package_page.rs:529
+#: src/ui/package/package_page.rs:521
 msgid "Free Software"
 msgstr ""
 
-#: src/ui/package/package_page.rs:558
+#: src/ui/package/package_page.rs:550
 msgid "Broken"
 msgstr ""
 
-#: src/ui/package/package_page.rs:558
+#: src/ui/package/package_page.rs:550
 msgid "Not Broken"
 msgstr ""
 
-#: src/ui/package/package_page.rs:587
+#: src/ui/package/package_page.rs:579
 msgid "Insecure"
 msgstr ""
 
-#: src/ui/package/package_page.rs:587
+#: src/ui/package/package_page.rs:579
 msgid "Secure"
 msgstr ""
 
-#: src/ui/package/package_page.rs:616
+#: src/ui/package/package_page.rs:608
 msgid "Unsupported"
 msgstr ""
 
-#: src/ui/package/package_page.rs:616
+#: src/ui/package/package_page.rs:608
 msgid "Supported"
 msgstr ""
 
-#: src/ui/package/package_page.rs:639 src/ui/update/unavailable_dialog.rs:74
+#: src/ui/package/package_page.rs:631 src/ui/update/unavailable_dialog.rs:74
 msgid "Cancel"
 msgstr ""
 
-#: src/ui/package/package_page.rs:665
+#: src/ui/package/package_page.rs:657
 msgid "Delete"
 msgstr ""
 
-#: src/ui/package/package_page.rs:709
+#: src/ui/package/package_page.rs:701
 msgid "More"
 msgstr ""
 
-#: src/ui/package/package_page.rs:877
+#: src/ui/package/package_page.rs:869
 #: src/ui/package/components/releases_dialog.rs:32
 msgid "Version History"
 msgstr ""
 
-#: src/ui/package/package_page.rs:896
+#: src/ui/package/package_page.rs:888
 msgid "Links"
 msgstr ""
 
-#: src/ui/package/package_page.rs:926
+#: src/ui/package/package_page.rs:918
 msgid "Run without installing"
 msgstr ""
 
-#: src/ui/package/package_page.rs:927
+#: src/ui/package/package_page.rs:919
 msgid "Open interactive shell"
 msgstr ""
 
@@ -409,31 +410,43 @@ msgid_plural "%d years ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/update/update_page.rs:93
+#: src/ui/search/search_page.rs:84
+msgid "Search apps"
+msgstr ""
+
+#: src/ui/search/search_page.rs:127
+msgid "Searching..."
+msgstr ""
+
+#: src/ui/search/search_page.rs:140
+msgid "Type to search"
+msgstr ""
+
+#: src/ui/update/update_page.rs:110
 msgid "No internet connection"
 msgstr ""
 
-#: src/ui/update/update_page.rs:94
+#: src/ui/update/update_page.rs:111
 msgid "Please connect to the internet to update your system"
 msgstr ""
 
-#: src/ui/update/update_page.rs:100
+#: src/ui/update/update_page.rs:117
 msgid "Refresh"
 msgstr ""
 
-#: src/ui/update/update_page.rs:127
+#: src/ui/update/update_page.rs:143
 msgid "Update Everything"
 msgstr ""
 
-#: src/ui/update/update_page.rs:148
+#: src/ui/update/update_page.rs:164
 msgid "Update All"
 msgstr ""
 
-#: src/ui/update/update_page.rs:182
+#: src/ui/update/update_page.rs:198
 msgid "Update"
 msgstr ""
 
-#: src/ui/update/update_page.rs:217
+#: src/ui/update/update_page.rs:233
 msgid "Everything is up to date!"
 msgstr ""
 
