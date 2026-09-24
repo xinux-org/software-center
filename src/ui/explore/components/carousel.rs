@@ -7,10 +7,12 @@ use relm4::{
     gtk::{self, prelude::*},
 };
 
-use crate::ui::{
-    explore::components::carousel_tile::{CarouselTileInit, CarouselTileModel},
-    package::components::package_tile::PkgTile,
-    windowloading::APPSTREAM_DATA_STATE,
+use crate::{
+    ui::{
+        explore::components::carousel_tile::{CarouselTileInit, CarouselTileModel},
+        windowloading::APPSTREAM_DATA_STATE,
+    },
+    utils::packages::{AppData, BrandingColorScheme},
 };
 
 #[derive(Debug)]
@@ -22,7 +24,7 @@ pub struct CarouselModel {
 
 #[derive(Debug)]
 pub enum CarouselInput {
-    SetPackages(Vec<PkgTile>),
+    UpdateTiles(Vec<CarouselTileInit>),
     PageChanged(u32),
     PreviousPage,
     NextPage,
@@ -97,9 +99,20 @@ impl Component for CarouselModel {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let tiles = FactoryVecDeque::builder()
-            .launch(adw::Carousel::new())
-            .detach();
+        APPSTREAM_DATA_STATE.subscribe(sender.input_sender(), move |state| {
+            let tiles = get_random_tiles(state, 5);
+            CarouselInput::UpdateTiles(tiles)
+        });
+
+        let mut tiles = vec![];
+
+        let appstream_data = APPSTREAM_DATA_STATE.read();
+
+        if !appstream_data.is_empty() {
+            tiles = get_random_tiles(&appstream_data, 5);
+        }
+
+        let tiles = FactoryVecDeque::from_iter(tiles, adw::Carousel::new());
 
         let model = Self {
             tiles,
@@ -115,48 +128,10 @@ impl Component for CarouselModel {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>, _root: &Self::Root) {
         match message {
-            CarouselInput::SetPackages(package_tiles) => {
-                let appstream_data = APPSTREAM_DATA_STATE.read();
-
-                let mut screenshots = HashMap::new();
-
-                for package_tile in package_tiles {
-                    if let Some(app_data) = appstream_data.get(&package_tile.pkg)
-                        && app_data.icon.is_some()
-                        && let Some(app_screenshots) = app_data.screenshots.as_ref()
-                        && let Some(screenshot) = app_screenshots
-                            .iter()
-                            .find(|screenshot| screenshot.default.unwrap_or_default())
-                            .or_else(|| app_screenshots.first())
-                        && let Some(source_image) = screenshot.sourceimage.as_ref()
-                    {
-                        screenshots.insert(
-                            package_tile.pkg.clone(),
-                            (package_tile, source_image.url.clone()),
-                        );
-                    }
-                }
-
-                let mut featured = screenshots.into_iter().collect::<Vec<_>>();
-                let mut rng = rand::rng();
-                featured.shuffle(&mut rng);
-                let featured = featured.into_iter().take(5).collect::<Vec<_>>();
-
-                let carousel_tiles =
-                    featured
-                        .into_iter()
-                        .map(
-                            |(package, (package_tile, screenshot_url))| CarouselTileInit {
-                                package,
-                                name: package_tile.name,
-                                summary: package_tile.summary,
-                                icon: package_tile.icon.unwrap_or_default(),
-                                screenshot: screenshot_url,
-                            },
-                        );
-
+            CarouselInput::UpdateTiles(tiles) => {
                 let mut guard = self.tiles.guard();
-                for tile in carousel_tiles {
+                guard.clear();
+                for tile in tiles {
                     guard.push_back(tile);
                 }
             }
@@ -189,4 +164,76 @@ impl Component for CarouselModel {
             }
         }
     }
+}
+
+fn get_random_tiles(
+    appstream_data: &HashMap<String, AppData>,
+    amount: usize,
+) -> Vec<CarouselTileInit> {
+    use rand::seq::IteratorRandom;
+
+    let mut rng = rand::rng();
+
+    let mut tiles = appstream_data
+        .iter()
+        .filter_map(|(package, app_data)| {
+            let name = app_data.name.as_ref()?.get("C")?.clone();
+
+            let summary = app_data.summary.as_ref()?.get("C")?.clone();
+
+            let icon = app_data
+                .icon
+                .as_ref()?
+                .cached
+                .as_ref()?
+                .first()?
+                .name
+                .clone();
+
+            let screenshot = app_data
+                .screenshots
+                .as_ref()?
+                .iter()
+                .find(|screenshot| screenshot.default.unwrap_or_default())
+                .cloned()?
+                .sourceimage?
+                .url;
+
+            let colors = app_data.branding.clone()?.colors;
+            let color_dark = colors
+                .iter()
+                .find(|color| {
+                    color
+                        .scheme_preference
+                        .as_ref()
+                        .is_some_and(|scheme| scheme == &BrandingColorScheme::Dark)
+                })?
+                .value
+                .clone();
+
+            let color_light = colors
+                .iter()
+                .find(|color| {
+                    color
+                        .scheme_preference
+                        .as_ref()
+                        .is_some_and(|scheme| scheme == &BrandingColorScheme::Light)
+                })?
+                .value
+                .clone();
+
+            Some(CarouselTileInit {
+                package: package.clone(),
+                name,
+                summary,
+                icon,
+                screenshot,
+                color_dark,
+                color_light,
+            })
+        })
+        .sample(&mut rng, amount);
+    tiles.shuffle(&mut rng);
+
+    tiles
 }

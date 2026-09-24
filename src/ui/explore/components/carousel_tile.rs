@@ -23,23 +23,30 @@ pub struct CarouselTileModel {
     icon: String,
     screenshot: Option<String>,
     error: bool,
+    color_dark: String,
+    color_light: String,
+    css: String,
 }
 
 #[derive(Debug)]
 pub enum CarouselTileOutput {}
 
+#[derive(Debug)]
 pub struct CarouselTileInit {
     pub package: String,
     pub name: String,
     pub summary: String,
     pub icon: String,
     pub screenshot: String,
+    pub color_dark: String,
+    pub color_light: String,
 }
 
 #[derive(Debug)]
 pub enum CarouselTileCommandOutput {
     SetScreenshot(String),
     SetError,
+    SetDarkMode(bool),
 }
 
 #[relm4::factory(pub)]
@@ -53,7 +60,8 @@ impl FactoryComponent for CarouselTileModel {
     view! {
         #[root]
         gtk::Box {
-            inline_css: "background-color: #114b91;", // TODO: set from appstream data
+            #[watch]
+            inline_css: &self.css,
             set_hexpand: true,
             gtk::Box {
                 set_halign: gtk::Align::Center,
@@ -157,6 +165,9 @@ impl FactoryComponent for CarouselTileModel {
             icon: format!("{}/icons/nixos/128x128/{}", APPINFO, init.icon),
             screenshot: None,
             error: false,
+            color_dark: init.color_dark,
+            color_light: init.color_light,
+            css: "background-color: #114b91;".to_string(),
 
             tracker: 0,
         }
@@ -166,6 +177,14 @@ impl FactoryComponent for CarouselTileModel {
         match message {
             CarouselTileCommandOutput::SetScreenshot(path) => self.set_screenshot(Some(path)),
             CarouselTileCommandOutput::SetError => self.set_error(true),
+            CarouselTileCommandOutput::SetDarkMode(is_dark) => {
+                let color = if is_dark {
+                    &self.color_dark
+                } else {
+                    &self.color_light
+                };
+                self.set_css(format!("background-color: {color};"));
+            }
         }
     }
 }

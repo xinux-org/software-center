@@ -83,6 +83,8 @@ pub struct AppData {
     pub categories: Option<Vec<String>>,
     #[serde(rename = "Releases")]
     pub releases: Option<Vec<AppRelease>>,
+    #[serde(rename = "Branding")]
+    pub branding: Option<Branding>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -173,6 +175,34 @@ pub enum ReleaseType {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct ReleaseUrl {
     pub details: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct Branding {
+    pub colors: Vec<BrandingColor>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub struct BrandingColor {
+    #[serde(default, rename = "type")]
+    pub color_type: BrandingColorType,
+    #[serde(rename = "scheme-preference")]
+    pub scheme_preference: Option<BrandingColorScheme>,
+    pub value: String,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum BrandingColorType {
+    #[default]
+    Primary,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum BrandingColorScheme {
+    Light,
+    Dark,
 }
 
 pub fn appsteamdata() -> Result<HashMap<String, AppData>> {
