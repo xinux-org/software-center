@@ -20,6 +20,7 @@ Relates to #(issue number)
 
 ## Checklist
 
+- [ ] updated CHANGELOG.md
 - [ ] My code follows the project's style guidelines
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] My changes generate no new issue, error or problem
