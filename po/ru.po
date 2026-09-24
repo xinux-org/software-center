@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: unnamed project\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-21 16:57+0500\n"
+"POT-Creation-Date: 2026-09-24 12:07+0500\n"
 "PO-Revision-Date: 2026-08-17 15:07+0500\n"
 "Last-Translator: Baxrom Raxmatov\n"
 "Language-Team: Russian\n"
@@ -109,7 +109,7 @@ msgstr ""
 msgid "Refreshing..."
 msgstr "Обновление…"
 
-#: src/ui/window.rs:305
+#: src/ui/window.rs:305 src/ui/explore/explore_page.rs:58
 msgid "Explore"
 msgstr "Исследовать"
 
@@ -234,7 +234,7 @@ msgstr "Выйти"
 msgid "Games"
 msgstr "Игры"
 
-#: src/ui/category/category_page.rs:120
+#: src/ui/category/category_page.rs:120 src/ui/explore/explore_page.rs:76
 msgid "Recommended"
 msgstr "Рекомендуется"
 

@@ -12,6 +12,8 @@ src/ui/category/components/categories.rs
 src/ui/category/components/category_tile.rs
 src/ui/category/components/categories.rs
 
+src/ui/explore/explore_page.rs
+
 src/ui/installed/components.rs
 src/ui/installed/components/installed_item.rs
 src/ui/installed/installed_page.rs
@@ -35,4 +37,3 @@ src/ui/update/unavailable_dialog.rs
 src/ui/update/update_worker.rs
 src/ui/update/components.rs
 src/ui/update/components/update_item.rs
-

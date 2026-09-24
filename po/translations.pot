@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-21 16:57+0500\n"
+"POT-Creation-Date: 2026-09-24 12:07+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -106,7 +106,7 @@ msgstr ""
 msgid "Refreshing..."
 msgstr ""
 
-#: src/ui/window.rs:305
+#: src/ui/window.rs:305 src/ui/explore/explore_page.rs:58
 msgid "Explore"
 msgstr ""
 
@@ -229,7 +229,7 @@ msgstr ""
 msgid "Games"
 msgstr ""
 
-#: src/ui/category/category_page.rs:120
+#: src/ui/category/category_page.rs:120 src/ui/explore/explore_page.rs:76
 msgid "Recommended"
 msgstr ""
 
