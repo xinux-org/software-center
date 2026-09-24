@@ -105,7 +105,7 @@ msgstr "Sozlamalar"
 
 #: src/ui/window.rs:291
 msgid "Refreshing..."
-msgstr "Yangilanmoqda.."
+msgstr "Yangilanmoqda..."
 
 #: src/ui/window.rs:305 src/ui/explore/explore_page.rs:58
 msgid "Explore"
