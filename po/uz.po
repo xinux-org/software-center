@@ -101,7 +101,7 @@ msgstr "Davom etish"
 
 #: src/ui/window.rs:251
 msgid "Settings"
-msgstr ""
+msgstr "Sozlamalar"
 
 #: src/ui/window.rs:291
 msgid "Refreshing..."
@@ -112,10 +112,8 @@ msgid "Explore"
 msgstr "Kezish"
 
 #: src/ui/window.rs:307 src/ui/search/search_page.rs:69
-#, fuzzy
-#| msgid "search"
 msgid "Search"
-msgstr "qidirish"
+msgstr "Qidirish"
 
 #: src/ui/window.rs:309 src/ui/category/category_page.rs:75
 #: src/ui/category/components/categories.rs:77
@@ -129,7 +127,7 @@ msgstr "Ishlab chiqish"
 
 #: src/ui/window.rs:311
 msgid "Gaming"
-msgstr ""
+msgstr "Oʻyin"
 
 #: src/ui/window.rs:312 src/ui/category/category_page.rs:78
 #: src/ui/category/components/categories.rs:80
@@ -415,19 +413,15 @@ msgstr[1] "%d yil oldin"
 
 #: src/ui/search/search_page.rs:84
 msgid "Search apps"
-msgstr ""
+msgstr "Dasturlarni qidirish"
 
 #: src/ui/search/search_page.rs:127
-#, fuzzy
-#| msgid "Refreshing..."
 msgid "Searching..."
-msgstr "Yangilanmoqda.."
+msgstr "Qidiruvda..."
 
 #: src/ui/search/search_page.rs:140
-#, fuzzy
-#| msgid "search"
 msgid "Type to search"
-msgstr "qidirish"
+msgstr "Qidirish uchun yozing"
 
 #: src/ui/update/update_page.rs:110
 msgid "No internet connection"
