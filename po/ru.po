@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: unnamed project\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-09-24 12:07+0500\n"
-"PO-Revision-Date: 2026-08-17 15:07+0500\n"
+"PO-Revision-Date: 2026-09-24 12:25+0500\n"
 "Last-Translator: Baxrom Raxmatov\n"
 "Language-Team: Russian\n"
 "Language: ru\n"
@@ -103,7 +103,7 @@ msgstr "Продолжить"
 
 #: src/ui/window.rs:251
 msgid "Settings"
-msgstr ""
+msgstr "Настройки"
 
 #: src/ui/window.rs:291
 msgid "Refreshing..."
@@ -114,10 +114,8 @@ msgid "Explore"
 msgstr "Исследовать"
 
 #: src/ui/window.rs:307 src/ui/search/search_page.rs:69
-#, fuzzy
-#| msgid "search"
 msgid "Search"
-msgstr "поиск"
+msgstr "Поиск"
 
 #: src/ui/window.rs:309 src/ui/category/category_page.rs:75
 #: src/ui/category/components/categories.rs:77
@@ -131,7 +129,7 @@ msgstr "Развитие"
 
 #: src/ui/window.rs:311
 msgid "Gaming"
-msgstr ""
+msgstr "Игры"
 
 #: src/ui/window.rs:312 src/ui/category/category_page.rs:78
 #: src/ui/category/components/categories.rs:80
@@ -278,7 +276,7 @@ msgstr "Установить"
 
 #: src/ui/package/package_page.rs:521
 msgid "Proprietary"
-msgstr "частный"
+msgstr "Частный"
 
 #: src/ui/package/package_page.rs:521
 msgid "Free Software"
@@ -420,19 +418,15 @@ msgstr[2] ""
 
 #: src/ui/search/search_page.rs:84
 msgid "Search apps"
-msgstr ""
+msgstr "Поиск приложений"
 
 #: src/ui/search/search_page.rs:127
-#, fuzzy
-#| msgid "Refreshing..."
 msgid "Searching..."
-msgstr "Обновление…"
+msgstr "Идет поиск..."
 
 #: src/ui/search/search_page.rs:140
-#, fuzzy
-#| msgid "search"
 msgid "Type to search"
-msgstr "поиск"
+msgstr "Введите текст для поиска"
 
 #: src/ui/update/update_page.rs:110
 msgid "No internet connection"
