@@ -41,6 +41,7 @@ impl Component for CarouselModel {
         #[root]
         gtk::Box {
             add_css_class: "rounded",
+            add_css_class: "frame",
             set_orientation: gtk::Orientation::Vertical,
             set_valign: gtk::Align::Start,
             set_overflow: gtk::Overflow::Hidden,

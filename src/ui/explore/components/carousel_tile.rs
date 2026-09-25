@@ -43,16 +43,20 @@ pub struct CarouselTileInit {
 }
 
 #[derive(Debug)]
+pub enum CarouselTileInput {
+    SetDarkMode(bool),
+}
+
+#[derive(Debug)]
 pub enum CarouselTileCommandOutput {
     SetScreenshot(String),
     SetError,
-    SetDarkMode(bool),
 }
 
 #[relm4::factory(pub)]
 impl FactoryComponent for CarouselTileModel {
     type ParentWidget = adw::Carousel;
-    type Input = ();
+    type Input = CarouselTileInput;
     type Output = CarouselTileOutput;
     type Init = CarouselTileInit;
     type CommandOutput = CarouselTileCommandOutput;
@@ -136,6 +140,15 @@ impl FactoryComponent for CarouselTileModel {
             .build()
             .unwrap();
 
+        {
+            let sender = sender.clone();
+            adw::StyleManager::default().connect_dark_notify(move |style_manager| {
+                sender.input(CarouselTileInput::SetDarkMode(style_manager.is_dark()));
+            });
+        }
+
+        let is_dark = adw::StyleManager::default().is_dark();
+
         if let Ok(home) = std::env::var("HOME") {
             let cache_dir = format!("{home}/.cache/nix-software-center/screenshots");
 
@@ -159,6 +172,13 @@ impl FactoryComponent for CarouselTileModel {
             });
         }
 
+        let color = if is_dark {
+            &init.color_dark
+        } else {
+            &init.color_light
+        };
+        let css = format!("background-color: {color};");
+
         Self {
             name: init.name,
             summary: init.summary,
@@ -167,17 +187,15 @@ impl FactoryComponent for CarouselTileModel {
             error: false,
             color_dark: init.color_dark,
             color_light: init.color_light,
-            css: "background-color: #114b91;".to_string(),
+            css,
 
             tracker: 0,
         }
     }
 
-    fn update_cmd(&mut self, message: Self::CommandOutput, _sender: FactorySender<Self>) {
+    fn update(&mut self, message: Self::Input, _sender: FactorySender<Self>) {
         match message {
-            CarouselTileCommandOutput::SetScreenshot(path) => self.set_screenshot(Some(path)),
-            CarouselTileCommandOutput::SetError => self.set_error(true),
-            CarouselTileCommandOutput::SetDarkMode(is_dark) => {
+            CarouselTileInput::SetDarkMode(is_dark) => {
                 let color = if is_dark {
                     &self.color_dark
                 } else {
@@ -185,6 +203,13 @@ impl FactoryComponent for CarouselTileModel {
                 };
                 self.set_css(format!("background-color: {color};"));
             }
+        }
+    }
+
+    fn update_cmd(&mut self, message: Self::CommandOutput, _sender: FactorySender<Self>) {
+        match message {
+            CarouselTileCommandOutput::SetScreenshot(path) => self.set_screenshot(Some(path)),
+            CarouselTileCommandOutput::SetError => self.set_error(true),
         }
     }
 }
