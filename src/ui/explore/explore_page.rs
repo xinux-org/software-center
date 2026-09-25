@@ -19,7 +19,7 @@ use crate::ui::{
     window::{AppMsg, INSTALLED_PACKAGES_STATE, NIX_DATA_CONFIG_STATE, SystemPkgs},
 };
 
-use super::components::carousel::CarouselModel;
+use super::components::carousel::{CarouselModel, CarouselOutput};
 
 #[tracker::track]
 #[derive(Debug)]
@@ -122,7 +122,12 @@ impl SimpleComponent for ExplorePageModel {
 
         let config = NIX_DATA_CONFIG_STATE.read().clone();
 
-        let featured_carousel = CarouselModel::builder().launch(()).detach();
+        let featured_carousel =
+            CarouselModel::builder()
+                .launch(())
+                .forward(sender.input_sender(), |message| match message {
+                    CarouselOutput::OpenPackage(package) => ExplorePageMsg::OpenPackage(package),
+                });
 
         let mut model = ExplorePageModel {
             navigation: adw::NavigationView::new(),

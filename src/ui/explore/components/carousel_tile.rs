@@ -9,7 +9,7 @@ use image::{ImageFormat, imageops::FilterType};
 use log::{debug, warn};
 use relm4::{
     FactorySender, RelmWidgetExt, adw,
-    factory::{DynamicIndex, FactoryComponent},
+    factory::{DynamicIndex, FactoryComponent, FactoryView},
     gtk::{self, pango::EllipsizeMode, prelude::*},
 };
 
@@ -18,6 +18,7 @@ use crate::APPINFO;
 #[tracker::track]
 #[derive(Debug)]
 pub struct CarouselTileModel {
+    package: String,
     name: String,
     summary: String,
     icon: String,
@@ -29,7 +30,9 @@ pub struct CarouselTileModel {
 }
 
 #[derive(Debug)]
-pub enum CarouselTileOutput {}
+pub enum CarouselTileOutput {
+    OpenPackagePage(String),
+}
 
 #[derive(Debug)]
 pub struct CarouselTileInit {
@@ -45,6 +48,7 @@ pub struct CarouselTileInit {
 #[derive(Debug)]
 pub enum CarouselTileInput {
     SetDarkMode(bool),
+    OpenPackagePage,
 }
 
 #[derive(Debug)]
@@ -63,6 +67,7 @@ impl FactoryComponent for CarouselTileModel {
 
     view! {
         #[root]
+        #[name = "root_box"]
         gtk::Box {
             #[watch]
             inline_css: &self.css,
@@ -180,6 +185,7 @@ impl FactoryComponent for CarouselTileModel {
         let css = format!("background-color: {color};");
 
         Self {
+            package: init.package,
             name: init.name,
             summary: init.summary,
             icon: format!("{}/icons/nixos/128x128/{}", APPINFO, init.icon),
@@ -193,7 +199,26 @@ impl FactoryComponent for CarouselTileModel {
         }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: FactorySender<Self>) {
+    fn init_widgets(
+        &mut self,
+        _index: &Self::Index,
+        root: Self::Root,
+        _returned_widget: &<Self::ParentWidget as FactoryView>::ReturnedWidget,
+        sender: FactorySender<Self>,
+    ) -> Self::Widgets {
+        let widgets = view_output!();
+
+        let gesture = gtk::GestureClick::new();
+        gesture.connect_released(move |gesture, _, _, _| {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+            sender.input(CarouselTileInput::OpenPackagePage);
+        });
+        widgets.root_box.add_controller(gesture);
+
+        widgets
+    }
+
+    fn update(&mut self, message: Self::Input, sender: FactorySender<Self>) {
         match message {
             CarouselTileInput::SetDarkMode(is_dark) => {
                 let color = if is_dark {
@@ -202,6 +227,9 @@ impl FactoryComponent for CarouselTileModel {
                     &self.color_light
                 };
                 self.set_css(format!("background-color: {color};"));
+            }
+            CarouselTileInput::OpenPackagePage => {
+                sender.output(CarouselTileOutput::OpenPackagePage(self.package.clone()));
             }
         }
     }

@@ -9,7 +9,9 @@ use relm4::{
 
 use crate::{
     ui::{
-        explore::components::carousel_tile::{CarouselTileInit, CarouselTileModel},
+        explore::components::carousel_tile::{
+            CarouselTileInit, CarouselTileModel, CarouselTileOutput,
+        },
         windowloading::APPSTREAM_DATA_STATE,
     },
     utils::packages::{AppData, BrandingColorScheme},
@@ -30,11 +32,16 @@ pub enum CarouselInput {
     NextPage,
 }
 
+#[derive(Debug)]
+pub enum CarouselOutput {
+    OpenPackage(String),
+}
+
 #[relm4::component(pub)]
 impl Component for CarouselModel {
     type CommandOutput = ();
     type Input = CarouselInput;
-    type Output = ();
+    type Output = CarouselOutput;
     type Init = ();
 
     view! {
@@ -119,10 +126,23 @@ impl Component for CarouselModel {
             tiles = get_random_tiles(&appstream_data, 5);
         }
 
-        let tiles = FactoryVecDeque::from_iter(tiles, adw::Carousel::new());
+        let mut tiles_factory = FactoryVecDeque::<CarouselTileModel>::builder()
+            .launch_default()
+            .forward(sender.output_sender(), |message| match message {
+                CarouselTileOutput::OpenPackagePage(package) => {
+                    CarouselOutput::OpenPackage(package)
+                }
+            });
+
+        {
+            let mut guard = tiles_factory.guard();
+            for tile in tiles {
+                guard.push_back(tile);
+            }
+        }
 
         let model = Self {
-            tiles,
+            tiles: tiles_factory,
             active_page: 0,
         };
 
