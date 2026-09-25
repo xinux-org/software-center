@@ -63,10 +63,13 @@ impl Component for CarouselModel {
                     set_valign: gtk::Align::Fill,
                     gtk::Button {
                         set_can_focus: false,
-                        set_width_request: 60,
+                        set_margin_start: 15,
+                        set_height_request: 40,
+                        set_width_request: 40,
                         add_css_class: "flat",
-                        set_halign: gtk::Align::Fill,
-                        set_valign: gtk::Align::Fill,
+                        add_css_class: "circular",
+                        set_halign: gtk::Align::Start,
+                        set_valign: gtk::Align::Center,
                         set_icon_name: "go-previous-symbolic",
                         connect_clicked[sender] => move |_| {
                             sender.input(CarouselInput::PreviousPage);
@@ -81,10 +84,13 @@ impl Component for CarouselModel {
                     set_valign: gtk::Align::Fill,
                     gtk::Button {
                         set_can_focus: false,
-                        set_width_request: 60,
+                        set_margin_end: 15,
+                        set_height_request: 40,
+                        set_width_request: 40,
                         add_css_class: "flat",
-                        set_halign: gtk::Align::Fill,
-                        set_valign: gtk::Align::Fill,
+                        add_css_class: "circular",
+                        set_halign: gtk::Align::End,
+                        set_valign: gtk::Align::Center,
                         set_icon_name: "go-next-symbolic",
                         connect_clicked[sender] => move |_| {
                             sender.input(CarouselInput::NextPage);
