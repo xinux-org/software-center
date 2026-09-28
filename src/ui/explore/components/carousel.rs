@@ -51,6 +51,7 @@ impl Component for CarouselModel {
             add_css_class: "frame",
             set_orientation: gtk::Orientation::Vertical,
             set_valign: gtk::Align::Start,
+            set_margin_bottom: 12,
             set_overflow: gtk::Overflow::Hidden,
             #[watch]
             set_visible: !model.tiles.is_empty(),
