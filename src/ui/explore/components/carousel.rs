@@ -4,7 +4,7 @@ use rand::seq::SliceRandom;
 use relm4::{
     Component, ComponentParts, ComponentSender, adw,
     factory::FactoryVecDeque,
-    gtk::{self, prelude::*},
+    gtk::{self, glib, prelude::*},
 };
 
 use crate::{
@@ -149,6 +149,12 @@ impl Component for CarouselModel {
         let tiles_factory = model.tiles.widget();
 
         let widgets = view_output!();
+
+        let sender = sender.clone();
+        glib::timeout_add_seconds_local(10, move || {
+            sender.input(CarouselInput::NextPage);
+            glib::ControlFlow::Continue
+        });
 
         ComponentParts { model, widgets }
     }
