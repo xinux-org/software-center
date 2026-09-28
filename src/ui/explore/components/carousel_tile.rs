@@ -67,7 +67,6 @@ impl FactoryComponent for CarouselTileModel {
 
     view! {
         #[root]
-        #[name = "root_box"]
         gtk::Box {
             #[watch]
             inline_css: &self.css,
@@ -213,7 +212,7 @@ impl FactoryComponent for CarouselTileModel {
             gesture.set_state(gtk::EventSequenceState::Claimed);
             sender.input(CarouselTileInput::OpenPackagePage);
         });
-        widgets.root_box.add_controller(gesture);
+        root.add_controller(gesture);
 
         widgets
     }
