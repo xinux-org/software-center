@@ -8,7 +8,8 @@ use std::{
 use image::{ImageFormat, imageops::FilterType};
 use log::{debug, warn};
 use relm4::{
-    FactorySender, RelmWidgetExt, adw,
+    FactorySender, RelmWidgetExt,
+    adw::{self, prelude::BreakpointBinExt},
     factory::{DynamicIndex, FactoryComponent, FactoryView},
     gtk::{self, pango::EllipsizeMode, prelude::*},
 };
@@ -71,64 +72,91 @@ impl FactoryComponent for CarouselTileModel {
             #[watch]
             inline_css: &self.css,
             set_hexpand: true,
-            gtk::Box {
-                set_halign: gtk::Align::Center,
-                set_hexpand: true,
-                set_spacing: 128,
+            adw::BreakpointBin {
+                add_breakpoint = adw::Breakpoint::new(
+                    adw::BreakpointCondition::new_length(
+                        adw::BreakpointConditionLengthType::MaxWidth,
+                        1000.0,
+                        adw::LengthUnit::Px,
+                    )
+                ) {
+                    add_setters: &[
+                        (&screenshot, "visible", false),
+                    ],
+                },
+                add_breakpoint = adw::Breakpoint::new(
+                    adw::BreakpointCondition::new_length(
+                        adw::BreakpointConditionLengthType::MinWidth,
+                        1000.0,
+                        adw::LengthUnit::Px,
+                    )
+                ) {
+                    add_setters: &[
+                        (&screenshot, "visible", true),
+                    ],
+                },
+                set_height_request: 280,
+
                 gtk::Box {
-                    set_orientation: gtk::Orientation::Vertical,
-                    set_valign: gtk::Align::Center,
-                    set_spacing: 12,
-                    set_margin_vertical: 50,
-                    gtk::Image {
-                        #[watch]
-                        set_from_file: Some(&self.icon),
-                        set_pixel_size: 128,
-                    },
+                    set_halign: gtk::Align::Center,
+                    set_hexpand: true,
+                    set_spacing: 128,
                     gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
-                        gtk::Label {
+                        set_valign: gtk::Align::Center,
+                        set_spacing: 12,
+                        set_margin_vertical: 50,
+                        gtk::Image {
                             #[watch]
-                            set_label: &self.name,
-                            add_css_class: "title-1",
+                            set_from_file: Some(&self.icon),
+                            set_pixel_size: 128,
                         },
-                        gtk::Label {
-                            #[watch]
-                            set_label: &self.summary,
-                            set_ellipsize: EllipsizeMode::End,
-                            add_css_class: "caption",
+                        gtk::Box {
+                            set_orientation: gtk::Orientation::Vertical,
+                            gtk::Label {
+                                #[watch]
+                                set_label: &self.name,
+                                add_css_class: "title-1",
+                            },
+                            gtk::Label {
+                                #[watch]
+                                set_label: &self.summary,
+                                set_ellipsize: EllipsizeMode::End,
+                                add_css_class: "caption",
+                            },
+                        },
+                    },
+                    #[name = "screenshot"]
+                    gtk::Box {
+                        set_width_request: 620,
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_valign: gtk::Align::Fill,
+                        if self.screenshot.is_some() {
+                            gtk::Box {
+                                set_valign: gtk::Align::End,
+                                set_halign: gtk::Align::Center,
+                                set_vexpand: true,
+                                gtk::Picture {
+                                    set_margin_top: 40,
+                                    #[watch]
+                                    set_filename: Some(self.screenshot.as_deref().unwrap_or_default()),
+                                },
+                            }
+                        } else if !self.error {
+                            gtk::Spinner {
+                                set_spinning: true,
+                            }
+                        } else{
+                            gtk::Image {
+                                add_css_class: "error",
+                                set_pixel_size: 128,
+                                set_icon_name: Some("dialog-error-symbolic"),
+                            }
                         },
                     },
                 },
-                gtk::Box {
-                    set_width_request: 620,
-                    set_orientation: gtk::Orientation::Vertical,
-                    set_valign: gtk::Align::Fill,
-                    if self.screenshot.is_some() {
-                        gtk::Box {
-                            set_valign: gtk::Align::End,
-                            set_halign: gtk::Align::Center,
-                            set_vexpand: true,
-                            gtk::Picture {
-                                set_margin_top: 40,
-                                #[watch]
-                                set_filename: Some(self.screenshot.as_deref().unwrap_or_default()),
-                            },
-                        }
-                    } else if !self.error {
-                        gtk::Spinner {
-                            set_spinning: true,
-                        }
-                    } else{
-                        gtk::Image {
-                            add_css_class: "error",
-                            set_pixel_size: 128,
-                            set_icon_name: Some("dialog-error-symbolic"),
-                        }
-                    }
-                },
-            }
-        }
+            },
+        },
     }
 
     fn init_model(init: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
