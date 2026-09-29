@@ -2,6 +2,7 @@
 
 - features
   - [#65](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/65): feat: implement featured apps carousel on explorer page
+  - [#66](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/66): feat: add shortcuts
 
 ## [0.4.0] - 2026-09-24 (GMT+5)
 
