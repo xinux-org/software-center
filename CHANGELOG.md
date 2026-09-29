@@ -1,3 +1,8 @@
+## Unreleased
+
+- features
+  - [#65](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/65): feat: implement featured apps carousel on explorer page
+
 ## [0.4.0] - 2026-09-24 (GMT+5)
 
 <!--start release-notes-assistant-->
