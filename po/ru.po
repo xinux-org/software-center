@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: unnamed project\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-17 14:18+0500\n"
-"PO-Revision-Date: 2026-08-17 15:07+0500\n"
+"POT-Creation-Date: 2026-09-24 12:07+0500\n"
+"PO-Revision-Date: 2026-09-24 12:25+0500\n"
 "Last-Translator: Baxrom Raxmatov\n"
 "Language-Team: Russian\n"
 "Language: ru\n"
@@ -21,7 +21,7 @@ msgstr ""
 msgid "Software Center"
 msgstr "Центр программного обеспечения"
 
-#: src/ui/about/about_page.rs:23 src/ui/window.rs:267
+#: src/ui/about/about_page.rs:23
 msgid "Nix Software Center"
 msgstr "Центр программного обеспечения Nix"
 
@@ -101,236 +101,237 @@ msgstr ""
 msgid "Continue"
 msgstr "Продолжить"
 
-#: src/ui/window.rs:284
+#: src/ui/window.rs:251
+msgid "Settings"
+msgstr "Настройки"
+
+#: src/ui/window.rs:291
 msgid "Refreshing..."
 msgstr "Обновление…"
 
-#: src/ui/window.rs:367
-msgid "Categories"
-msgstr "Категории"
-
-#: src/ui/window.rs:390 src/ui/category/category_page.rs:97
-msgid "Recommended"
-msgstr "Рекомендуется"
-
-#: src/ui/window.rs:411 src/ui/category/category_page.rs:52
-#: src/ui/category/components/categories.rs:78
-msgid "Development"
-msgstr "Развитие"
-
-#: src/ui/window.rs:432
-msgid "Game"
-msgstr "Игры"
-
-#: src/ui/window.rs:453
-msgid "Graphic"
-msgstr "Графика"
-
-#: src/ui/window.rs:474 src/ui/category/category_page.rs:55
-#: src/ui/category/components/categories.rs:81
-msgid "Web"
-msgstr "Веб"
-
-#: src/ui/window.rs:495 src/ui/category/category_page.rs:56
-#: src/ui/category/components/categories.rs:82
-msgid "Video"
-msgstr "Видео"
-
-#: src/ui/window.rs:534
-msgid "Preferences"
-msgstr "Параметры"
-
-#: src/ui/window.rs:535
-msgid "About"
-msgstr "О нас"
-
-#: src/ui/window.rs:772
+#: src/ui/window.rs:305 src/ui/explore/explore_page.rs:58
 msgid "Explore"
 msgstr "Исследовать"
 
-#: src/ui/window.rs:773 src/ui/package/package_page.rs:417
-#: src/ui/package/package_page.rs:654
-#: src/ui/package/components/release_item.rs:59
-msgid "Installed"
-msgstr "Установлено"
+#: src/ui/window.rs:307 src/ui/search/search_page.rs:69
+msgid "Search"
+msgstr "Поиск"
 
-#: src/ui/window.rs:774 src/ui/window.rs:1654 src/ui/update/update_page.rs:120
-msgid "Updates"
-msgstr "Обновления"
-
-#: src/ui/window.rs:1625
-msgid "NixOS System"
-msgstr "Система NixOS"
-
-#: src/ui/window.rs:1629
-msgid "NixOS internal packages and modules"
-msgstr "внутренние пакеты и модули NixOS"
-
-#: src/ui/windowloading.rs:103 src/ui/windowloading.rs:121
-msgid "Malformed package database"
-msgstr "Некорректно сформированная база данных пакетов"
-
-#: src/ui/windowloading.rs:133
-msgid "Error retrieving appstream data"
-msgstr "Ошибка при получении данных из потока приложений"
-
-#: src/ui/windowloading.rs:537
-msgid "Error retrieving NixOS package database"
-msgstr "Ошибка при получении базы данных пакетов NixOS"
-
-#: src/ui/windowloading.rs:549
-msgid "Error retrieving nixpkgs package database"
-msgstr "Ошибка при получении базы данных пакетов nixpkgs"
-
-#: src/ui/windowloading.rs:599
-msgid "Retry"
-msgstr "Повторить"
-
-#: src/ui/windowloading.rs:602
-msgid "Quit"
-msgstr "Выйти"
-
-#: src/ui/category/category_page.rs:51
+#: src/ui/window.rs:309 src/ui/category/category_page.rs:75
 #: src/ui/category/components/categories.rs:77
 msgid "Audio"
 msgstr "Аудио"
 
-#: src/ui/category/category_page.rs:53
-#: src/ui/category/components/categories.rs:79
-msgid "Games"
+#: src/ui/window.rs:310 src/ui/category/category_page.rs:76
+#: src/ui/category/components/categories.rs:78
+msgid "Development"
+msgstr "Развитие"
+
+#: src/ui/window.rs:311
+msgid "Gaming"
 msgstr "Игры"
 
-#: src/ui/category/category_page.rs:54
+#: src/ui/window.rs:312 src/ui/category/category_page.rs:78
 #: src/ui/category/components/categories.rs:80
 msgid "Graphics"
 msgstr "Графика"
 
-#: src/ui/category/category_page.rs:57
-#: src/ui/category/components/categories.rs:83
-msgid "Education"
-msgstr "Образование"
+#: src/ui/window.rs:313 src/ui/category/category_page.rs:80
+#: src/ui/category/components/categories.rs:82
+msgid "Video"
+msgstr "Видео"
 
-#: src/ui/category/category_page.rs:58
-#: src/ui/category/components/categories.rs:84
-msgid "Science"
-msgstr "Наука"
+#: src/ui/window.rs:314 src/ui/category/category_page.rs:79
+#: src/ui/category/components/categories.rs:81
+msgid "Web"
+msgstr "Веб"
 
-#: src/ui/category/category_page.rs:59
-#: src/ui/category/components/categories.rs:85
-msgid "Office"
-msgstr "Офис"
-
-#: src/ui/category/category_page.rs:60
+#: src/ui/window.rs:315 src/ui/category/category_page.rs:84
 #: src/ui/category/components/categories.rs:86
 msgid "Network"
 msgstr "Сеть"
 
-#: src/ui/category/category_page.rs:61
+#: src/ui/window.rs:316 src/ui/category/category_page.rs:81
+#: src/ui/category/components/categories.rs:83
+msgid "Education"
+msgstr "Образование"
+
+#: src/ui/window.rs:317 src/ui/category/category_page.rs:82
+#: src/ui/category/components/categories.rs:84
+msgid "Science"
+msgstr "Наука"
+
+#: src/ui/window.rs:318 src/ui/category/category_page.rs:83
+#: src/ui/category/components/categories.rs:85
+msgid "Office"
+msgstr "Офис"
+
+#: src/ui/window.rs:319 src/ui/category/category_page.rs:85
 #: src/ui/category/components/categories.rs:87
 msgid "System"
 msgstr "Система"
 
-#: src/ui/category/category_page.rs:62
+#: src/ui/window.rs:320 src/ui/category/category_page.rs:86
 #: src/ui/category/components/categories.rs:88
 msgid "Utility"
 msgstr "Утилита"
 
-#: src/ui/category/category_page.rs:118
+#: src/ui/window.rs:322 src/ui/installed/installed_page.rs:61
+#: src/ui/package/package_page.rs:409 src/ui/package/package_page.rs:646
+#: src/ui/package/components/release_item.rs:59
+msgid "Installed"
+msgstr "Установлено"
+
+#: src/ui/window.rs:323 src/ui/window.rs:1077 src/ui/update/update_page.rs:100
+#: src/ui/update/update_page.rs:136
+msgid "Updates"
+msgstr "Обновления"
+
+#: src/ui/window.rs:334
+msgid "Preferences"
+msgstr "Параметры"
+
+#: src/ui/window.rs:335
+msgid "About"
+msgstr "О нас"
+
+#: src/ui/window.rs:1048
+msgid "NixOS System"
+msgstr "Система NixOS"
+
+#: src/ui/window.rs:1052
+msgid "NixOS internal packages and modules"
+msgstr "внутренние пакеты и модули NixOS"
+
+#: src/ui/windowloading.rs:120 src/ui/windowloading.rs:138
+msgid "Malformed package database"
+msgstr "Некорректно сформированная база данных пакетов"
+
+#: src/ui/windowloading.rs:150
+msgid "Error retrieving appstream data"
+msgstr "Ошибка при получении данных из потока приложений"
+
+#: src/ui/windowloading.rs:535
+msgid "Error retrieving NixOS package database"
+msgstr "Ошибка при получении базы данных пакетов NixOS"
+
+#: src/ui/windowloading.rs:547
+msgid "Error retrieving nixpkgs package database"
+msgstr "Ошибка при получении базы данных пакетов nixpkgs"
+
+#: src/ui/windowloading.rs:597
+msgid "Retry"
+msgstr "Повторить"
+
+#: src/ui/windowloading.rs:600
+msgid "Quit"
+msgstr "Выйти"
+
+#: src/ui/category/category_page.rs:77
+#: src/ui/category/components/categories.rs:79
+msgid "Games"
+msgstr "Игры"
+
+#: src/ui/category/category_page.rs:120 src/ui/explore/explore_page.rs:76
+msgid "Recommended"
+msgstr "Рекомендуется"
+
+#: src/ui/category/category_page.rs:141
 msgid "Other"
 msgstr "Другое"
 
-#: src/ui/installed/installed_page.rs:60 src/ui/package/package_page.rs:274
-#: src/ui/package/package_page.rs:922 src/ui/update/update_page.rs:141
+#: src/ui/installed/installed_page.rs:83 src/ui/package/package_page.rs:266
+#: src/ui/package/package_page.rs:914 src/ui/update/update_page.rs:157
 msgid "User (nix profile)"
 msgstr "Пользователь (nix profile)"
 
-#: src/ui/installed/installed_page.rs:88 src/ui/package/package_page.rs:275
-#: src/ui/package/package_page.rs:923 src/ui/update/update_page.rs:175
+#: src/ui/installed/installed_page.rs:111 src/ui/package/package_page.rs:267
+#: src/ui/package/package_page.rs:915 src/ui/update/update_page.rs:191
 msgid "System (configuration.nix)"
 msgstr "Система (configuration.nix)"
 
-#: src/ui/installed/installed_page.rs:112 src/ui/search/search_page.rs:63
+#: src/ui/installed/installed_page.rs:135 src/ui/search/search_page.rs:140
 msgid "No apps found"
 msgstr "Приложения не найдены"
 
-#: src/ui/package/package_page.rs:356
+#: src/ui/package/package_page.rs:348
 msgid "Unknown"
 msgstr "Неизвестно"
 
-#: src/ui/package/package_page.rs:389 src/ui/package/package_page.rs:633
+#: src/ui/package/package_page.rs:381 src/ui/package/package_page.rs:625
 msgid "Installing..."
 msgstr "Установка…"
 
-#: src/ui/package/package_page.rs:417 src/ui/package/package_page.rs:654
+#: src/ui/package/package_page.rs:409 src/ui/package/package_page.rs:646
 msgid "Open"
 msgstr "Открыть"
 
-#: src/ui/package/package_page.rs:447 src/ui/package/package_page.rs:681
+#: src/ui/package/package_page.rs:439 src/ui/package/package_page.rs:673
 msgid "Offline"
 msgstr "Офлайн"
 
-#: src/ui/package/package_page.rs:474 src/ui/package/package_page.rs:701
+#: src/ui/package/package_page.rs:466 src/ui/package/package_page.rs:693
 msgid "Install"
 msgstr "Установить"
 
-#: src/ui/package/package_page.rs:529
+#: src/ui/package/package_page.rs:521
 msgid "Proprietary"
-msgstr "частный"
+msgstr "Частный"
 
-#: src/ui/package/package_page.rs:529
+#: src/ui/package/package_page.rs:521
 msgid "Free Software"
 msgstr "Свободное программное обеспечение"
 
-#: src/ui/package/package_page.rs:558
+#: src/ui/package/package_page.rs:550
 msgid "Broken"
 msgstr "Сломанный"
 
-#: src/ui/package/package_page.rs:558
+#: src/ui/package/package_page.rs:550
 msgid "Not Broken"
 msgstr "Не сломано"
 
-#: src/ui/package/package_page.rs:587
+#: src/ui/package/package_page.rs:579
 msgid "Insecure"
 msgstr "Небезопасный"
 
-#: src/ui/package/package_page.rs:587
+#: src/ui/package/package_page.rs:579
 msgid "Secure"
 msgstr "Безопасный"
 
-#: src/ui/package/package_page.rs:616
+#: src/ui/package/package_page.rs:608
 msgid "Unsupported"
 msgstr "Не поддерживается"
 
-#: src/ui/package/package_page.rs:616
+#: src/ui/package/package_page.rs:608
 msgid "Supported"
 msgstr "Поддерживается"
 
-#: src/ui/package/package_page.rs:639 src/ui/update/unavailable_dialog.rs:74
+#: src/ui/package/package_page.rs:631 src/ui/update/unavailable_dialog.rs:74
 msgid "Cancel"
 msgstr "Отменить"
 
-#: src/ui/package/package_page.rs:665
+#: src/ui/package/package_page.rs:657
 msgid "Delete"
 msgstr "Удалить"
 
-#: src/ui/package/package_page.rs:709
+#: src/ui/package/package_page.rs:701
 msgid "More"
 msgstr "Больше"
 
-#: src/ui/package/package_page.rs:877
+#: src/ui/package/package_page.rs:869
 #: src/ui/package/components/releases_dialog.rs:32
 msgid "Version History"
 msgstr "История версий"
 
-#: src/ui/package/package_page.rs:896
+#: src/ui/package/package_page.rs:888
 msgid "Links"
 msgstr "Ссылки"
 
-#: src/ui/package/package_page.rs:926
+#: src/ui/package/package_page.rs:918
 msgid "Run without installing"
 msgstr "Запустить без установки"
 
-#: src/ui/package/package_page.rs:927
+#: src/ui/package/package_page.rs:919
 msgid "Open interactive shell"
 msgstr "Открытая интерактивная оболочка"
 
@@ -415,31 +416,43 @@ msgstr[0] "%d год назад"
 msgstr[1] ""
 msgstr[2] ""
 
-#: src/ui/update/update_page.rs:93
+#: src/ui/search/search_page.rs:84
+msgid "Search apps"
+msgstr "Поиск приложений"
+
+#: src/ui/search/search_page.rs:127
+msgid "Searching..."
+msgstr "Идет поиск..."
+
+#: src/ui/search/search_page.rs:140
+msgid "Type to search"
+msgstr "Введите текст для поиска"
+
+#: src/ui/update/update_page.rs:110
 msgid "No internet connection"
 msgstr "Нет подключения к Интернету"
 
-#: src/ui/update/update_page.rs:94
+#: src/ui/update/update_page.rs:111
 msgid "Please connect to the internet to update your system"
 msgstr "Подключитесь к интернету для обновления системы"
 
-#: src/ui/update/update_page.rs:100
+#: src/ui/update/update_page.rs:117
 msgid "Refresh"
 msgstr "Обновить"
 
-#: src/ui/update/update_page.rs:127
+#: src/ui/update/update_page.rs:143
 msgid "Update Everything"
 msgstr "Обновить всё"
 
-#: src/ui/update/update_page.rs:148
+#: src/ui/update/update_page.rs:164
 msgid "Update All"
 msgstr "Обновить все"
 
-#: src/ui/update/update_page.rs:182
+#: src/ui/update/update_page.rs:198
 msgid "Update"
 msgstr "Обновление"
 
-#: src/ui/update/update_page.rs:217
+#: src/ui/update/update_page.rs:233
 msgid "Everything is up to date!"
 msgstr "Всё актуально!"
 
@@ -458,6 +471,15 @@ msgstr "Пользовательские пакеты"
 #: src/ui/update/unavailable_dialog.rs:66
 msgid "System Packages"
 msgstr "Системные пакеты"
+
+#~ msgid "Categories"
+#~ msgstr "Категории"
+
+#~ msgid "Game"
+#~ msgstr "Игры"
+
+#~ msgid "Graphic"
+#~ msgstr "Графика"
 
 #~ msgid "User (nix-env)"
 #~ msgstr "Пользователь (nix-env)"
@@ -488,9 +510,6 @@ msgstr "Системные пакеты"
 
 #~ msgid "installed"
 #~ msgstr "yстановлено"
-
-#~ msgid "search"
-#~ msgstr "поиск"
 
 #~ msgid "updates"
 #~ msgstr "обновления"
