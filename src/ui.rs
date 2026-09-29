@@ -6,6 +6,7 @@ pub mod package;
 mod preferences;
 mod rebuild;
 mod search;
+mod shortcuts;
 mod update;
 mod welcome;
 pub mod window;
