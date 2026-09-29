@@ -2,7 +2,7 @@ use gettextrs::gettext;
 use log::debug;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    ComponentParts, ComponentSender, SimpleComponent,
+    Component, ComponentController, ComponentParts, ComponentSender, Controller, SimpleComponent,
     adw::{self, prelude::*},
     component::{AsyncComponent, AsyncComponentController, AsyncController},
     factory::FactoryVecDeque,
@@ -19,6 +19,8 @@ use crate::ui::{
     window::{AppMsg, INSTALLED_PACKAGES_STATE, NIX_DATA_CONFIG_STATE, SystemPkgs},
 };
 
+use super::components::carousel::{CarouselModel, CarouselOutput};
+
 #[tracker::track]
 #[derive(Debug)]
 pub struct ExplorePageModel {
@@ -29,6 +31,9 @@ pub struct ExplorePageModel {
 
     #[tracker::no_eq]
     recommended_apps: FactoryVecDeque<PkgTile>,
+
+    #[tracker::no_eq]
+    featured_carousel: Controller<CarouselModel>,
 
     #[tracker::no_eq]
     package_page: Option<AsyncController<PackagePageModel>>,
@@ -70,6 +75,10 @@ impl SimpleComponent for ExplorePageModel {
                                 set_valign: gtk::Align::Start,
                                 set_margin_top: 15,
                                 set_spacing: 4,
+
+                                #[local_ref]
+                                featured_carousel -> gtk::Box {},
+
                                 gtk::Label {
                                     set_halign: gtk::Align::Start,
                                     add_css_class: "title-1",
@@ -113,6 +122,13 @@ impl SimpleComponent for ExplorePageModel {
 
         let config = NIX_DATA_CONFIG_STATE.read().clone();
 
+        let featured_carousel =
+            CarouselModel::builder()
+                .launch(())
+                .forward(sender.input_sender(), |message| match message {
+                    CarouselOutput::OpenPackage(package) => ExplorePageMsg::OpenPackage(package),
+                });
+
         let mut model = ExplorePageModel {
             navigation: adw::NavigationView::new(),
 
@@ -125,12 +141,16 @@ impl SimpleComponent for ExplorePageModel {
                     PkgTileMsg::Open(x) => ExplorePageMsg::OpenPackage(x),
                 }),
 
+            featured_carousel,
+
             package_page: None,
 
             tracker: 0,
         };
 
         let recommended_box = model.recommended_apps.widget();
+
+        let featured_carousel = model.featured_carousel.widget();
 
         let widgets = view_output!();
 
@@ -180,7 +200,7 @@ impl SimpleComponent for ExplorePageModel {
                 let mut guard = self.recommended_apps.guard();
                 guard.clear();
                 for tile in pkgtiles {
-                    guard.push_back(tile.clone());
+                    guard.push_back(tile);
                 }
             }
         }
