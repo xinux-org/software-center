@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::HashMap;
 
 use rand::seq::SliceRandom;
@@ -173,6 +174,11 @@ impl Component for CarouselModel {
                 self.active_page = page;
             }
             CarouselInput::PreviousPage => {
+                if self.tiles.is_empty() {
+                    debug!("CarouselInput::PreviousPage: skipping because empty factory");
+                    return;
+                }
+
                 let pages = self.tiles.len() as u32;
                 let carousel = self.tiles.widget();
 
@@ -185,6 +191,11 @@ impl Component for CarouselModel {
                 }
             }
             CarouselInput::NextPage => {
+                if self.tiles.is_empty() {
+                    debug!("CarouselInput::NextPage: skipping because empty factory");
+                    return;
+                }
+
                 let pages = self.tiles.len() as u32;
                 let carousel = self.tiles.widget();
 
