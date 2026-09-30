@@ -231,7 +231,7 @@ msgstr "Navigatsiya"
 
 #: src/ui/shortcuts.rs:31
 msgid "Explore Page"
-msgstr "Kezish p"
+msgstr "Kezish"
 
 #: src/ui/shortcuts.rs:35
 msgid "Installed Page"
@@ -246,8 +246,6 @@ msgid "General"
 msgstr "Umumiy"
 
 #: src/ui/shortcuts.rs:50
-#, fuzzy
-#| msgid "Open Shortcuts"
 msgid "Shortcuts"
 msgstr "Klaviatura yorliqlari"
 
