@@ -338,6 +338,7 @@ impl AsyncComponent for AppModel {
     menu! {
         mainmenu: {
             &gettext("Preferences") => PreferencesAction,
+            &gettext("Shortcuts") => ShortcutsAction,
             &gettext("About") => AboutAction,
         }
     }
@@ -601,8 +602,16 @@ impl AsyncComponent for AppModel {
             })
         };
 
+        let shortcuts_action = {
+            RelmAction::<ShortcutsAction>::new_stateless(move |_| {
+                ShortcutsDialog::builder().launch(()).detach();
+            })
+        };
+
         group.add_action(aboutpage);
         group.add_action(prefernecespage_action);
+        group.add_action(shortcuts_action);
+
         let actions = group.into_action_group();
         widgets
             .main_window
@@ -639,15 +648,9 @@ impl AsyncComponent for AppModel {
                 sender.input(AppMsg::Quit);
             })
         };
-        let shortcuts_action = {
-            RelmAction::<ShortcutsAction>::new_stateless(move |_| {
-                ShortcutsDialog::builder().launch(()).detach();
-            })
-        };
 
         let mut window_actions = RelmActionGroup::<WindowActionGroup>::new();
         window_actions.add_action(quit_action);
-        window_actions.add_action(shortcuts_action);
         window_actions.register_for_widget(&widgets.main_window);
 
         let app = root.application().unwrap();
@@ -1564,6 +1567,7 @@ async fn make_category_tile(
 
 relm4::new_action_group!(MenuActionGroup, "menu");
 relm4::new_stateless_action!(AboutAction, MenuActionGroup, "about");
+relm4::new_stateless_action!(ShortcutsAction, MenuActionGroup, "shortcuts");
 relm4::new_stateless_action!(PreferencesAction, MenuActionGroup, "preferences");
 
 relm4::new_action_group!(NavigationActionGroup, "navigation");
@@ -1573,4 +1577,3 @@ relm4::new_stateless_action!(OpenSearchPageAction, NavigationActionGroup, "searc
 
 relm4::new_action_group!(WindowActionGroup, "window");
 relm4::new_stateless_action!(QuitAction, WindowActionGroup, "quit");
-relm4::new_stateless_action!(ShortcutsAction, WindowActionGroup, "shortcuts");
