@@ -25,7 +25,7 @@ let
 in
 stdenv.mkDerivation {
   pname = "nix-software-center";
-  version = "0.4.0";
+  version = "0.5.0";
 
   src = [ ../.. ];
 
