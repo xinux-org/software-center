@@ -4,10 +4,11 @@ use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
     self, AsyncComponentSender, Component, ComponentController, Controller, MessageBroker, Sender,
     SharedState, WorkerController,
-    actions::{RelmAction, RelmActionGroup},
+    actions::{AccelsPlus, RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     component::AsyncController,
     gtk::{self},
+    main_application,
     prelude::{AsyncComponent, AsyncComponentParts},
 };
 use sqlx::{Sqlite, SqlitePool};
@@ -39,6 +40,7 @@ use crate::{
         preferences::preferences_page::{PreferencesPageModel, PreferencesPageMsg},
         rebuild::rebuild_model::{RebuildModel, RebuildMsg},
         search::search_page::SearchPageModel,
+        shortcuts::ShortcutsDialog,
         update::{
             components::update_item::UpdateItem,
             unavailable_dialog::{UnavailableDialogMsg, UnavailableItemModel},
@@ -177,6 +179,10 @@ pub enum AppMsg {
     GetUnavailableItems(HashMap<String, String>, HashMap<String, String>, UpdateType),
     CheckNetwork,
     ShowPreferences,
+    OpenExplorePage,
+    OpenInstalledPage,
+    OpenSearchPage,
+    Quit,
     Noop,
 }
 
@@ -332,6 +338,7 @@ impl AsyncComponent for AppModel {
     menu! {
         mainmenu: {
             &gettext("Preferences") => PreferencesAction,
+            &gettext("Shortcuts") => ShortcutsAction,
             &gettext("About") => AboutAction,
         }
     }
@@ -573,9 +580,10 @@ impl AsyncComponent for AppModel {
 
         let widgets = view_output!();
         model.navigation = widgets.navigation.clone();
+        model.viewstack = widgets.view_stack.clone();
 
-        widgets
-            .view_stack
+        model
+            .viewstack
             .page(model.installed_page.widget())
             .set_starts_section(true);
 
@@ -594,12 +602,66 @@ impl AsyncComponent for AppModel {
             })
         };
 
+        let shortcuts_action = {
+            RelmAction::<ShortcutsAction>::new_stateless(move |_| {
+                ShortcutsDialog::builder().launch(()).detach();
+            })
+        };
+
         group.add_action(aboutpage);
         group.add_action(prefernecespage_action);
+        group.add_action(shortcuts_action);
+
         let actions = group.into_action_group();
         widgets
             .main_window
             .insert_action_group("menu", Some(&actions));
+
+        let open_explore_page_action = {
+            let sender = sender.clone();
+            RelmAction::<OpenExplorePageAction>::new_stateless(move |_| {
+                sender.input(AppMsg::OpenExplorePage);
+            })
+        };
+        let open_installed_page_action = {
+            let sender = sender.clone();
+            RelmAction::<OpenInstalledPageAction>::new_stateless(move |_| {
+                sender.input(AppMsg::OpenInstalledPage);
+            })
+        };
+        let open_search_page_action = {
+            let sender = sender.clone();
+            RelmAction::<OpenSearchPageAction>::new_stateless(move |_| {
+                sender.input(AppMsg::OpenSearchPage);
+            })
+        };
+
+        let mut navigation_actions = RelmActionGroup::<NavigationActionGroup>::new();
+        navigation_actions.add_action(open_explore_page_action);
+        navigation_actions.add_action(open_installed_page_action);
+        navigation_actions.add_action(open_search_page_action);
+        navigation_actions.register_for_widget(&widgets.main_window);
+
+        let quit_action = {
+            let sender = sender.clone();
+            RelmAction::<QuitAction>::new_stateless(move |_| {
+                sender.input(AppMsg::Quit);
+            })
+        };
+
+        let mut window_actions = RelmActionGroup::<WindowActionGroup>::new();
+        window_actions.add_action(quit_action);
+        window_actions.register_for_widget(&widgets.main_window);
+
+        let app = root.application().unwrap();
+
+        app.set_accelerators_for_action::<OpenExplorePageAction>(&["<Ctrl>e"]);
+        app.set_accelerators_for_action::<OpenInstalledPageAction>(&["<Ctrl>d"]);
+        app.set_accelerators_for_action::<OpenSearchPageAction>(&["<Ctrl>f"]);
+
+        app.set_accelerators_for_action::<QuitAction>(&["<Ctrl>q"]);
+        app.set_accelerators_for_action::<PreferencesAction>(&["<Ctrl>comma"]);
+        app.set_accelerators_for_action::<ShortcutsAction>(&["<Ctrl>question"]);
 
         widgets.load_window_size();
 
@@ -1350,6 +1412,10 @@ impl AsyncComponent for AppModel {
                     AppAsyncMsg::SetNetwork(online)
                 });
             }
+            AppMsg::OpenExplorePage => self.viewstack.set_visible_child_name("explore"),
+            AppMsg::OpenInstalledPage => self.viewstack.set_visible_child_name("installed"),
+            AppMsg::OpenSearchPage => self.viewstack.set_visible_child_name("search"),
+            AppMsg::Quit => main_application().quit(),
             AppMsg::Noop => {}
         }
     }
@@ -1501,4 +1567,13 @@ async fn make_category_tile(
 
 relm4::new_action_group!(MenuActionGroup, "menu");
 relm4::new_stateless_action!(AboutAction, MenuActionGroup, "about");
+relm4::new_stateless_action!(ShortcutsAction, MenuActionGroup, "shortcuts");
 relm4::new_stateless_action!(PreferencesAction, MenuActionGroup, "preferences");
+
+relm4::new_action_group!(NavigationActionGroup, "navigation");
+relm4::new_stateless_action!(OpenExplorePageAction, NavigationActionGroup, "explore");
+relm4::new_stateless_action!(OpenInstalledPageAction, NavigationActionGroup, "installed");
+relm4::new_stateless_action!(OpenSearchPageAction, NavigationActionGroup, "search");
+
+relm4::new_action_group!(WindowActionGroup, "window");
+relm4::new_stateless_action!(QuitAction, WindowActionGroup, "quit");

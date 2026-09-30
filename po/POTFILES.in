@@ -5,6 +5,7 @@ src/ui/rebuild/rebuild_model.rs
 src/ui/welcome/welcome_page.rs
 src/ui/window.rs
 src/ui/windowloading.rs
+src/ui/shortcuts.rs
 
 src/ui/category/category_page.rs
 src/ui/category/components.rs

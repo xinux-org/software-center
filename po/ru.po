@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: unnamed project\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 12:07+0500\n"
-"PO-Revision-Date: 2026-09-24 12:25+0500\n"
+"POT-Creation-Date: 2026-09-30 11:05+0500\n"
+"PO-Revision-Date: 2026-09-30 11:07+0500\n"
 "Last-Translator: Baxrom Raxmatov\n"
 "Language-Team: Russian\n"
 "Language: ru\n"
@@ -101,105 +101,105 @@ msgstr ""
 msgid "Continue"
 msgstr "Продолжить"
 
-#: src/ui/window.rs:251
+#: src/ui/window.rs:257
 msgid "Settings"
 msgstr "Настройки"
 
-#: src/ui/window.rs:291
+#: src/ui/window.rs:297
 msgid "Refreshing..."
 msgstr "Обновление…"
 
-#: src/ui/window.rs:305 src/ui/explore/explore_page.rs:58
+#: src/ui/window.rs:311 src/ui/explore/explore_page.rs:63
 msgid "Explore"
 msgstr "Исследовать"
 
-#: src/ui/window.rs:307 src/ui/search/search_page.rs:69
+#: src/ui/window.rs:313 src/ui/search/search_page.rs:69
 msgid "Search"
 msgstr "Поиск"
 
-#: src/ui/window.rs:309 src/ui/category/category_page.rs:75
+#: src/ui/window.rs:315 src/ui/category/category_page.rs:75
 #: src/ui/category/components/categories.rs:77
 msgid "Audio"
 msgstr "Аудио"
 
-#: src/ui/window.rs:310 src/ui/category/category_page.rs:76
+#: src/ui/window.rs:316 src/ui/category/category_page.rs:76
 #: src/ui/category/components/categories.rs:78
 msgid "Development"
 msgstr "Развитие"
 
-#: src/ui/window.rs:311
+#: src/ui/window.rs:317
 msgid "Gaming"
 msgstr "Игры"
 
-#: src/ui/window.rs:312 src/ui/category/category_page.rs:78
+#: src/ui/window.rs:318 src/ui/category/category_page.rs:78
 #: src/ui/category/components/categories.rs:80
 msgid "Graphics"
 msgstr "Графика"
 
-#: src/ui/window.rs:313 src/ui/category/category_page.rs:80
+#: src/ui/window.rs:319 src/ui/category/category_page.rs:80
 #: src/ui/category/components/categories.rs:82
 msgid "Video"
 msgstr "Видео"
 
-#: src/ui/window.rs:314 src/ui/category/category_page.rs:79
+#: src/ui/window.rs:320 src/ui/category/category_page.rs:79
 #: src/ui/category/components/categories.rs:81
 msgid "Web"
 msgstr "Веб"
 
-#: src/ui/window.rs:315 src/ui/category/category_page.rs:84
+#: src/ui/window.rs:321 src/ui/category/category_page.rs:84
 #: src/ui/category/components/categories.rs:86
 msgid "Network"
 msgstr "Сеть"
 
-#: src/ui/window.rs:316 src/ui/category/category_page.rs:81
+#: src/ui/window.rs:322 src/ui/category/category_page.rs:81
 #: src/ui/category/components/categories.rs:83
 msgid "Education"
 msgstr "Образование"
 
-#: src/ui/window.rs:317 src/ui/category/category_page.rs:82
+#: src/ui/window.rs:323 src/ui/category/category_page.rs:82
 #: src/ui/category/components/categories.rs:84
 msgid "Science"
 msgstr "Наука"
 
-#: src/ui/window.rs:318 src/ui/category/category_page.rs:83
+#: src/ui/window.rs:324 src/ui/category/category_page.rs:83
 #: src/ui/category/components/categories.rs:85
 msgid "Office"
 msgstr "Офис"
 
-#: src/ui/window.rs:319 src/ui/category/category_page.rs:85
+#: src/ui/window.rs:325 src/ui/category/category_page.rs:85
 #: src/ui/category/components/categories.rs:87
 msgid "System"
 msgstr "Система"
 
-#: src/ui/window.rs:320 src/ui/category/category_page.rs:86
+#: src/ui/window.rs:326 src/ui/category/category_page.rs:86
 #: src/ui/category/components/categories.rs:88
 msgid "Utility"
 msgstr "Утилита"
 
-#: src/ui/window.rs:322 src/ui/installed/installed_page.rs:61
+#: src/ui/window.rs:328 src/ui/installed/installed_page.rs:61
 #: src/ui/package/package_page.rs:409 src/ui/package/package_page.rs:646
 #: src/ui/package/components/release_item.rs:59
 msgid "Installed"
 msgstr "Установлено"
 
-#: src/ui/window.rs:323 src/ui/window.rs:1077 src/ui/update/update_page.rs:100
+#: src/ui/window.rs:329 src/ui/window.rs:1136 src/ui/update/update_page.rs:100
 #: src/ui/update/update_page.rs:136
 msgid "Updates"
 msgstr "Обновления"
 
-#: src/ui/window.rs:334
+#: src/ui/window.rs:340 src/ui/shortcuts.rs:46
 msgid "Preferences"
 msgstr "Параметры"
 
-#: src/ui/window.rs:335
+#: src/ui/window.rs:341
 msgid "About"
 msgstr "О нас"
 
-#: src/ui/window.rs:1048
+#: src/ui/window.rs:1107
 msgid "NixOS System"
 msgstr "Система NixOS"
 
-#: src/ui/window.rs:1052
+#: src/ui/window.rs:1111
 msgid "NixOS internal packages and modules"
 msgstr "внутренние пакеты и модули NixOS"
 
@@ -223,16 +223,40 @@ msgstr "Ошибка при получении базы данных пакет�
 msgid "Retry"
 msgstr "Повторить"
 
-#: src/ui/windowloading.rs:600
+#: src/ui/windowloading.rs:600 src/ui/shortcuts.rs:53
 msgid "Quit"
 msgstr "Выйти"
+
+#: src/ui/shortcuts.rs:28
+msgid "Navigation"
+msgstr "Навигация"
+
+#: src/ui/shortcuts.rs:31
+msgid "Explore Page"
+msgstr "Исследовать"
+
+#: src/ui/shortcuts.rs:35
+msgid "Installed Page"
+msgstr "Страница установленных приложений"
+
+#: src/ui/shortcuts.rs:39
+msgid "Search Page"
+msgstr "Страница поиска"
+
+#: src/ui/shortcuts.rs:43
+msgid "General"
+msgstr "Общий"
+
+#: src/ui/shortcuts.rs:50
+msgid "Shortcuts"
+msgstr "Сочетания клавиш"
 
 #: src/ui/category/category_page.rs:77
 #: src/ui/category/components/categories.rs:79
 msgid "Games"
 msgstr "Игры"
 
-#: src/ui/category/category_page.rs:120 src/ui/explore/explore_page.rs:76
+#: src/ui/category/category_page.rs:120 src/ui/explore/explore_page.rs:85
 msgid "Recommended"
 msgstr "Рекомендуется"
 
@@ -471,6 +495,9 @@ msgstr "Пользовательские пакеты"
 #: src/ui/update/unavailable_dialog.rs:66
 msgid "System Packages"
 msgstr "Системные пакеты"
+
+#~ msgid "Open Preferences"
+#~ msgstr "Открыть настройки"
 
 #~ msgid "Categories"
 #~ msgstr "Категории"
