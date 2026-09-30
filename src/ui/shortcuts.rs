@@ -28,26 +28,26 @@ impl SimpleComponent for ShortcutsDialog {
         let navigation_section = adw::ShortcutsSection::new(Some(&gettext("Navigation")));
 
         navigation_section.add(adw::ShortcutsItem::new(
-            &gettext("Open Explore Page"),
+            &gettext("Explore Page"),
             "<Control>E",
         ));
         navigation_section.add(adw::ShortcutsItem::new(
-            &gettext("Open Installed Page"),
+            &gettext("Installed Page"),
             "<Control>D",
         ));
         navigation_section.add(adw::ShortcutsItem::new(
-            &gettext("Open Search Page"),
+            &gettext("Search Page"),
             "<Control>F",
         ));
 
         let general_section = adw::ShortcutsSection::new(Some(&gettext("General")));
 
         general_section.add(adw::ShortcutsItem::new(
-            &gettext("Open Preferences"),
+            &gettext("Preferences"),
             "<Control>comma",
         ));
         general_section.add(adw::ShortcutsItem::new(
-            &gettext("Open Shortcuts"),
+            &gettext("Shortcuts"),
             "<Control>question",
         ));
         general_section.add(adw::ShortcutsItem::new(&gettext("Quit"), "<Control>q"));
