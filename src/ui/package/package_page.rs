@@ -42,7 +42,7 @@ use crate::{
         windowloading::{APPSTREAM_DATA_STATE, PACKAGES_DB_STATE},
     },
     utils::{
-        online::{checkonline, checkonline_async},
+        online::check_online,
         packages::{AppData, LicenseEnum, PkgMaintainer, Platform},
         state,
     },
@@ -954,7 +954,7 @@ impl AsyncComponent for PackagePageModel {
         let config = NIX_DATA_CONFIG_STATE.read().clone();
         install_worker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
 
-        let online = checkonline_async().await;
+        let online = check_online().await;
 
         let installed_packages = INSTALLED_PACKAGES_STATE.read();
         let installed_system_packages = installed_packages
@@ -1314,7 +1314,7 @@ impl AsyncComponent for PackagePageModel {
                 self.carousel_page = page;
             }
             PackageMessage::Install => {
-                let online = checkonline();
+                let online = check_online().await;
                 if !online {
                     let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;

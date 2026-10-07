@@ -6,7 +6,7 @@ use relm4::{
     SharedState, WorkerController,
     actions::{AccelsPlus, RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
-    component::AsyncController,
+    component::{AsyncComponentController, AsyncController},
     gtk::{self},
     main_application,
     prelude::{AsyncComponent, AsyncComponentParts},
@@ -57,7 +57,7 @@ use crate::{
     utils::{
         cli,
         config::{editconfig, getconfig},
-        online::{checkonline, checkonline_async},
+        online::check_online,
         packages::AppData,
     },
 };
@@ -139,7 +139,7 @@ pub struct AppModel {
     #[tracker::no_eq]
     installed_page: Controller<InstalledPageModel>,
     #[tracker::no_eq]
-    update_page: Controller<UpdatePageModel>,
+    update_page: AsyncController<UpdatePageModel>,
 
     #[tracker::no_eq]
     package_page: Option<AsyncController<PackagePageModel>>,
@@ -405,7 +405,7 @@ impl AsyncComponent for AppModel {
 
         debug!("syspkgtype: {:?}", syspkgtype);
 
-        let online = checkonline();
+        let online = check_online().await;
 
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
@@ -1405,7 +1405,7 @@ impl AsyncComponent for AppModel {
                 let senderclone = sender.clone();
                 sender.oneshot_command(async move {
                     info!("AppMsg::CheckNetwork");
-                    let online = checkonline_async().await;
+                    let online = check_online().await;
                     if online && !selfonline {
                         senderclone.input(AppMsg::UpdateDB);
                     }
