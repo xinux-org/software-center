@@ -579,6 +579,9 @@ impl AsyncComponent for AppModel {
         }
 
         let widgets = view_output!();
+
+        root.set_visible(true);
+
         model.navigation = widgets.navigation.clone();
         model.viewstack = widgets.view_stack.clone();
 
