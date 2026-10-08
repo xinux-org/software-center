@@ -405,7 +405,9 @@ impl AsyncComponent for AppModel {
 
         debug!("syspkgtype: {:?}", syspkgtype);
 
-        let online = check_online().await;
+        let online = false;
+
+        sender.input(AppMsg::CheckNetwork);
 
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
