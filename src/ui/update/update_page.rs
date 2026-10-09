@@ -4,10 +4,13 @@ use gettextrs::gettext;
 use log::*;
 use nix_data_xinux::config::configfile::NixDataConfig;
 use relm4::{
-    Component, ComponentParts, ComponentSender, Controller, MessageBroker, RelmListBoxExt,
-    RelmWidgetExt, SimpleComponent, WorkerController,
+    AsyncComponentSender, Component, Controller, MessageBroker, RelmListBoxExt, RelmWidgetExt,
+    WorkerController,
     adw::{self, prelude::*},
-    component::{AsyncComponent, AsyncComponentController, AsyncController},
+    component::{
+        AsyncComponent, AsyncComponentController, AsyncComponentParts, AsyncController,
+        SimpleAsyncComponent,
+    },
     factory::FactoryVecDeque,
     gtk,
 };
@@ -16,9 +19,9 @@ use crate::{
     ui::{
         package::package_page::{InstallType, PackagePageInit, PackagePageModel},
         rebuild::rebuild_model::RebuildMsg,
-        window::{AppMsg, REBUILD_BROKER, SystemPkgs},
+        window::{AppMsg, ONLINE_STATE, REBUILD_BROKER, SystemPkgs},
     },
-    utils::online::checkonline,
+    utils::online::check_online,
 };
 
 use super::{
@@ -84,11 +87,10 @@ pub struct UpdatePageInit {
     pub window: gtk::Window,
     pub systype: SystemPkgs,
     pub config: NixDataConfig,
-    pub online: bool,
 }
 
-#[relm4::component(pub)]
-impl SimpleComponent for UpdatePageModel {
+#[relm4::component(pub, async)]
+impl SimpleAsyncComponent for UpdatePageModel {
     type Init = UpdatePageInit;
     type Input = UpdatePageMsg;
     type Output = AppMsg;
@@ -241,11 +243,17 @@ impl SimpleComponent for UpdatePageModel {
         },
     }
 
-    fn init(
+    async fn init(
         initparams: Self::Init,
         root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
+        sender: AsyncComponentSender<Self>,
+    ) -> AsyncComponentParts<Self> {
+        ONLINE_STATE.subscribe(sender.input_sender(), |online| {
+            UpdatePageMsg::UpdateOnline(*online)
+        });
+
+        let online = ONLINE_STATE.read().clone();
+
         let updateworker = UpdateAsyncHandler::builder()
             .detach_worker(UpdateAsyncHandlerInit {
                 syspkgs: initparams.systype.clone(),
@@ -273,7 +281,7 @@ impl SimpleComponent for UpdatePageModel {
             updateworker,
             unavailabledialog,
             package_page: None,
-            online: initparams.online,
+            online,
             tracker: 0,
         };
 
@@ -284,10 +292,10 @@ impl SimpleComponent for UpdatePageModel {
 
         model.navigation = widgets.navigation.clone();
 
-        ComponentParts { model, widgets }
+        AsyncComponentParts { model, widgets }
     }
 
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>) {
+    async fn update(&mut self, msg: Self::Input, sender: AsyncComponentSender<Self>) {
         self.reset();
         match msg {
             UpdatePageMsg::UpdateConfig(config) => {
@@ -346,7 +354,7 @@ impl SimpleComponent for UpdatePageModel {
                 self.set_package_page(Some(package_page));
             }
             UpdatePageMsg::UpdateSystem => {
-                let online = checkonline();
+                let online = check_online().await;
                 if !online {
                     let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
@@ -389,7 +397,7 @@ impl SimpleComponent for UpdatePageModel {
                 warn!("unimplemented");
             }
             UpdatePageMsg::UpdateAllUser => {
-                let online = checkonline();
+                let online = check_online().await;
                 if !online {
                     let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;
@@ -420,7 +428,7 @@ impl SimpleComponent for UpdatePageModel {
                     .emit(UpdateAsyncHandlerMsg::UpdateUserPkgsRemove(pkgs));
             }
             UpdatePageMsg::UpdateAll => {
-                let online = checkonline();
+                let online = check_online().await;
                 if !online {
                     let _ = sender.output(AppMsg::CheckNetwork);
                     self.online = false;

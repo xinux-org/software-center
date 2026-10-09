@@ -18,7 +18,7 @@ fn main() {
     setup_gettext();
 
     relm4_icons::initialize_icons(icon_names::GRESOURCE_BYTES, icon_names::RESOURCE_PREFIX);
-    
+
     if let Ok(res) = gio::Resource::load(RESOURCES_FILE) {
         info!("Resource loaded: {}", RESOURCES_FILE);
         gio::resources_register(&res);
@@ -38,7 +38,9 @@ fn main() {
     let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
     app.set_resource_base_path(Some("/uz/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
-    app.with_args(Vec::new()).run_async::<AppModel>(());
+    app.with_args(Vec::new())
+        .visible_on_activate(false)
+        .run_async::<AppModel>(());
 }
 
 fn setup_gettext() {
