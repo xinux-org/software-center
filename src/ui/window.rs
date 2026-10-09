@@ -49,10 +49,7 @@ use crate::{
             },
         },
         welcome::welcome_page::{WelcomeModel, WelcomeMsg},
-        windowloading::{
-            LoadErrorModel, LoadErrorMsg, PACKAGES_DB_STATE, WindowAsyncHandler,
-            WindowAsyncHandlerMsg,
-        },
+        windowloading::{PACKAGES_DB_STATE, WindowAsyncHandler, WindowAsyncHandlerMsg},
     },
     utils::{
         cli,
@@ -90,7 +87,6 @@ pub struct AppModel {
     #[tracker::no_eq]
     windowloading: WorkerController<WindowAsyncHandler>,
     #[tracker::no_eq]
-    loaderrordialog: Controller<LoadErrorModel>,
     busy: bool,
     // #[tracker::no_eq]
     // pkgs: HashMap<String, Package>,
@@ -151,6 +147,7 @@ pub struct AppModel {
     rebuild: Controller<RebuildModel>,
     #[tracker::no_eq]
     welcomepage: Controller<WelcomeModel>,
+    loaded: bool,
     online: bool,
     updates_count: usize,
 }
@@ -163,7 +160,7 @@ pub enum AppMsg {
     UpdateDB,
     LoadConfig(NixDataConfig),
     Close,
-    LoadError(String, String),
+    LoadError,
     Initialize(
         HashMap<String, AppData>,
         Vec<String>,
@@ -275,11 +272,11 @@ impl AsyncComponent for AppModel {
                 #[wrap(Some)]
                 set_content = &adw::NavigationPage {
                     #[wrap(Some)]
-                    set_child = if !model.busy {
+                    set_child = if model.loaded {
                         adw::ToolbarView {
                             set_content: Some(&view_stack),
                         }
-                    } else {
+                    } else if model.busy {
                         adw::ToolbarView {
                             add_top_bar = &adw::HeaderBar {},
                             gtk::Box {
@@ -301,6 +298,24 @@ impl AsyncComponent for AppModel {
                                     set_justify: gtk::Justification::Center,
                                     set_margin_bottom: 24,
                                     add_css_class: "title-3",
+                                },
+                            },
+                        }
+                    } else {
+                        adw::ToolbarView {
+                            add_top_bar = &adw::HeaderBar {},
+                            adw::StatusPage {
+                                set_icon_name: Some("horizontal-arrows-disabled-symbolic"),
+                                set_title: &gettext("No internet connection"),
+                                set_description: Some(&gettext("Please connect to the internet")),
+                                gtk::Button {
+                                    add_css_class: "pill",
+                                    set_halign: gtk::Align::Center,
+                                    set_icon_name: "arrow-circular-top-right-symbolic",
+                                    set_label: &gettext("Refresh"),
+                                    connect_clicked[sender] => move |_| {
+                                        sender.input(AppMsg::TryLoad);
+                                    },
                                 },
                             },
                         }
@@ -423,9 +438,6 @@ impl AsyncComponent for AppModel {
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
             .forward(sender.input_sender(), identity);
-        let loaderrordialog = LoadErrorModel::builder()
-            .launch(())
-            .forward(sender.input_sender(), identity);
         let preferencespage = PreferencesPageModel::builder()
             .launch(())
             .forward(sender.input_sender(), identity);
@@ -534,7 +546,6 @@ impl AsyncComponent for AppModel {
             mainwindow: root.clone(),
             config,
             windowloading,
-            loaderrordialog,
             busy: true,
             appdata: HashMap::new(),
             installeduserpkgs: HashMap::new(),
@@ -568,6 +579,7 @@ impl AsyncComponent for AppModel {
             rebuild,
             welcomepage,
             preferencespage,
+            loaded: false,
             online: false,
             updates_count: 0,
             tracker: 0,
@@ -766,9 +778,8 @@ impl AsyncComponent for AppModel {
             AppMsg::Close => {
                 relm4::main_application().quit();
             }
-            AppMsg::LoadError(msg, msg2) => {
+            AppMsg::LoadError => {
                 self.busy = false;
-                self.loaderrordialog.emit(LoadErrorMsg::Show(msg, msg2));
             }
             AppMsg::ShowPreferences => {
                 // Reload config from file before showing preferences
@@ -857,6 +868,9 @@ impl AsyncComponent for AppModel {
                 category_apps_all,
             ) => {
                 info!("AppMsg::Initialize");
+
+                self.set_loaded(true);
+
                 self.set_appdata(app_data);
                 self.set_recommended_apps(recommended_apps);
                 self.set_category_apps_recommended(category_apps_recommended);
@@ -1419,11 +1433,15 @@ impl AsyncComponent for AppModel {
             AppMsg::CheckNetwork => {
                 let selfonline = self.online;
                 let senderclone = sender.clone();
+                let loaded = self.loaded;
+
                 sender.oneshot_command(async move {
                     info!("AppMsg::CheckNetwork");
                     let online = check_online().await;
                     *ONLINE_STATE.write() = online;
-                    if online && !selfonline {
+                    if !loaded {
+                        senderclone.input(AppMsg::TryLoad);
+                    } else if online && !selfonline {
                         senderclone.input(AppMsg::UpdateDB);
                     }
                     AppAsyncMsg::SetNetwork(online)
