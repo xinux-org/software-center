@@ -21,7 +21,6 @@ use std::{
     collections::HashSet,
     convert::identity,
     env,
-    error::Error,
     fs::{self, File},
     io::{BufReader, Cursor},
     path::Path,
@@ -38,7 +37,9 @@ use crate::{
                 InstallAsyncHandler, InstallAsyncHandlerInit, InstallAsyncHandlerMsg,
             },
         },
-        window::{AppMsg, INSTALLED_PACKAGES_STATE, NIX_DATA_CONFIG_STATE, SystemPkgs},
+        window::{
+            AppMsg, INSTALLED_PACKAGES_STATE, NIX_DATA_CONFIG_STATE, ONLINE_STATE, SystemPkgs,
+        },
         windowloading::{APPSTREAM_DATA_STATE, PACKAGES_DB_STATE},
     },
     utils::{
@@ -925,6 +926,10 @@ impl AsyncComponent for PackagePageModel {
         root: Self::Root,
         sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
+        ONLINE_STATE.subscribe(sender.input_sender(), |online| {
+            PackageMessage::UpdateOnline(*online)
+        });
+
         INSTALLED_PACKAGES_STATE.subscribe(sender.input_sender(), |state| {
             PackageMessage::UpdateInstalledPackages {
                 system_packages: state.installed_system_packages.clone(),
@@ -954,7 +959,7 @@ impl AsyncComponent for PackagePageModel {
         let config = NIX_DATA_CONFIG_STATE.read().clone();
         install_worker.emit(InstallAsyncHandlerMsg::SetConfig(config.clone()));
 
-        let online = check_online().await;
+        let online = *ONLINE_STATE.read();
 
         let installed_packages = INSTALLED_PACKAGES_STATE.read();
         let installed_system_packages = installed_packages

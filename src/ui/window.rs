@@ -7,7 +7,7 @@ use relm4::{
     actions::{AccelsPlus, RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
     component::{AsyncComponentController, AsyncController},
-    gtk::{self},
+    gtk::{self, gio},
     main_application,
     prelude::{AsyncComponent, AsyncComponentParts},
 };
@@ -79,6 +79,8 @@ pub struct InstalledPackagesState {
 pub static INSTALLED_PACKAGES_STATE: SharedState<InstalledPackagesState> = SharedState::new();
 
 pub static NIX_DATA_CONFIG_STATE: SharedState<NixDataConfig> = SharedState::new();
+
+pub static ONLINE_STATE: SharedState<bool> = SharedState::new();
 
 #[tracker::track]
 pub struct AppModel {
@@ -381,6 +383,17 @@ impl AsyncComponent for AppModel {
 
         *NIX_DATA_CONFIG_STATE.write() = config.clone();
 
+        let network_monitor = gio::NetworkMonitor::default();
+
+        let sender1 = sender.clone();
+        network_monitor.connect_network_changed(move |_, available| {
+            if available {
+                sender1.input(AppMsg::CheckNetwork);
+            } else {
+                *ONLINE_STATE.write() = false;
+            }
+        });
+
         let nixos = Path::new("/etc/nixos").exists();
         let syspkgtype = if config.systemconfig.is_none() || !nixos {
             SystemPkgs::None
@@ -404,8 +417,6 @@ impl AsyncComponent for AppModel {
         };
 
         debug!("syspkgtype: {:?}", syspkgtype);
-
-        let online = false;
 
         sender.input(AppMsg::CheckNetwork);
 
@@ -509,7 +520,6 @@ impl AsyncComponent for AppModel {
                 window: root.clone().upcast(),
                 systype: syspkgtype.clone(),
                 config: config.clone(),
-                online,
             })
             .forward(sender.input_sender(), identity);
         let rebuild = RebuildModel::builder()
@@ -558,7 +568,7 @@ impl AsyncComponent for AppModel {
             rebuild,
             welcomepage,
             preferencespage,
-            online,
+            online: false,
             updates_count: 0,
             tracker: 0,
         };
@@ -1411,6 +1421,7 @@ impl AsyncComponent for AppModel {
                 sender.oneshot_command(async move {
                     info!("AppMsg::CheckNetwork");
                     let online = check_online().await;
+                    *ONLINE_STATE.write() = online;
                     if online && !selfonline {
                         senderclone.input(AppMsg::UpdateDB);
                     }

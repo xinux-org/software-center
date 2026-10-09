@@ -19,7 +19,7 @@ use crate::{
     ui::{
         package::package_page::{InstallType, PackagePageInit, PackagePageModel},
         rebuild::rebuild_model::RebuildMsg,
-        window::{AppMsg, REBUILD_BROKER, SystemPkgs},
+        window::{AppMsg, ONLINE_STATE, REBUILD_BROKER, SystemPkgs},
     },
     utils::online::check_online,
 };
@@ -87,7 +87,6 @@ pub struct UpdatePageInit {
     pub window: gtk::Window,
     pub systype: SystemPkgs,
     pub config: NixDataConfig,
-    pub online: bool,
 }
 
 #[relm4::component(pub, async)]
@@ -249,6 +248,12 @@ impl SimpleAsyncComponent for UpdatePageModel {
         root: Self::Root,
         sender: AsyncComponentSender<Self>,
     ) -> AsyncComponentParts<Self> {
+        ONLINE_STATE.subscribe(sender.input_sender(), |online| {
+            UpdatePageMsg::UpdateOnline(*online)
+        });
+
+        let online = ONLINE_STATE.read().clone();
+
         let updateworker = UpdateAsyncHandler::builder()
             .detach_worker(UpdateAsyncHandlerInit {
                 syspkgs: initparams.systype.clone(),
@@ -276,7 +281,7 @@ impl SimpleAsyncComponent for UpdatePageModel {
             updateworker,
             unavailabledialog,
             package_page: None,
-            online: initparams.online,
+            online,
             tracker: 0,
         };
 
