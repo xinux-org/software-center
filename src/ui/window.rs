@@ -592,6 +592,7 @@ impl AsyncComponent for AppModel {
 
         let widgets = view_output!();
 
+        // show window after widgets loaded
         root.set_visible(true);
 
         model.navigation = widgets.navigation.clone();
