@@ -1,5 +1,11 @@
 ## Unreleased
 
+- features
+  - [#69](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/69):
+    - feat: improve network error handling
+    - feat: check network conditions concurrently to reduce load times
+    - feat: react to network changes
+
 ## [0.5.0] - 2026-09-30
 
 - features

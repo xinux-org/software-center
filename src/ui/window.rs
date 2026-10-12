@@ -6,8 +6,8 @@ use relm4::{
     SharedState, WorkerController,
     actions::{AccelsPlus, RelmAction, RelmActionGroup},
     adw::{self, prelude::*},
-    component::AsyncController,
-    gtk::{self},
+    component::{AsyncComponentController, AsyncController},
+    gtk::{self, gio},
     main_application,
     prelude::{AsyncComponent, AsyncComponentParts},
 };
@@ -49,15 +49,12 @@ use crate::{
             },
         },
         welcome::welcome_page::{WelcomeModel, WelcomeMsg},
-        windowloading::{
-            LoadErrorModel, LoadErrorMsg, PACKAGES_DB_STATE, WindowAsyncHandler,
-            WindowAsyncHandlerMsg,
-        },
+        windowloading::{PACKAGES_DB_STATE, WindowAsyncHandler, WindowAsyncHandlerMsg},
     },
     utils::{
         cli,
         config::{editconfig, getconfig},
-        online::{checkonline, checkonline_async},
+        online::check_online,
         packages::AppData,
     },
 };
@@ -80,6 +77,8 @@ pub static INSTALLED_PACKAGES_STATE: SharedState<InstalledPackagesState> = Share
 
 pub static NIX_DATA_CONFIG_STATE: SharedState<NixDataConfig> = SharedState::new();
 
+pub static ONLINE_STATE: SharedState<bool> = SharedState::new();
+
 #[tracker::track]
 pub struct AppModel {
     navigation: adw::NavigationSplitView,
@@ -88,7 +87,6 @@ pub struct AppModel {
     #[tracker::no_eq]
     windowloading: WorkerController<WindowAsyncHandler>,
     #[tracker::no_eq]
-    loaderrordialog: Controller<LoadErrorModel>,
     busy: bool,
     // #[tracker::no_eq]
     // pkgs: HashMap<String, Package>,
@@ -139,7 +137,7 @@ pub struct AppModel {
     #[tracker::no_eq]
     installed_page: Controller<InstalledPageModel>,
     #[tracker::no_eq]
-    update_page: Controller<UpdatePageModel>,
+    update_page: AsyncController<UpdatePageModel>,
 
     #[tracker::no_eq]
     package_page: Option<AsyncController<PackagePageModel>>,
@@ -149,6 +147,7 @@ pub struct AppModel {
     rebuild: Controller<RebuildModel>,
     #[tracker::no_eq]
     welcomepage: Controller<WelcomeModel>,
+    loaded: bool,
     online: bool,
     updates_count: usize,
 }
@@ -161,7 +160,7 @@ pub enum AppMsg {
     UpdateDB,
     LoadConfig(NixDataConfig),
     Close,
-    LoadError(String, String),
+    LoadError,
     Initialize(
         HashMap<String, AppData>,
         Vec<String>,
@@ -273,11 +272,11 @@ impl AsyncComponent for AppModel {
                 #[wrap(Some)]
                 set_content = &adw::NavigationPage {
                     #[wrap(Some)]
-                    set_child = if !model.busy {
+                    set_child = if model.loaded {
                         adw::ToolbarView {
                             set_content: Some(&view_stack),
                         }
-                    } else {
+                    } else if model.busy {
                         adw::ToolbarView {
                             add_top_bar = &adw::HeaderBar {},
                             gtk::Box {
@@ -299,6 +298,24 @@ impl AsyncComponent for AppModel {
                                     set_justify: gtk::Justification::Center,
                                     set_margin_bottom: 24,
                                     add_css_class: "title-3",
+                                },
+                            },
+                        }
+                    } else {
+                        adw::ToolbarView {
+                            add_top_bar = &adw::HeaderBar {},
+                            adw::StatusPage {
+                                set_icon_name: Some("horizontal-arrows-disabled-symbolic"),
+                                set_title: &gettext("No internet connection"),
+                                set_description: Some(&gettext("Please connect to the internet")),
+                                gtk::Button {
+                                    add_css_class: "pill",
+                                    set_halign: gtk::Align::Center,
+                                    set_icon_name: "arrow-circular-top-right-symbolic",
+                                    set_label: &gettext("Refresh"),
+                                    connect_clicked[sender] => move |_| {
+                                        sender.input(AppMsg::TryLoad);
+                                    },
                                 },
                             },
                         }
@@ -381,6 +398,17 @@ impl AsyncComponent for AppModel {
 
         *NIX_DATA_CONFIG_STATE.write() = config.clone();
 
+        let network_monitor = gio::NetworkMonitor::default();
+
+        let sender1 = sender.clone();
+        network_monitor.connect_network_changed(move |_, available| {
+            if available {
+                sender1.input(AppMsg::CheckNetwork);
+            } else {
+                *ONLINE_STATE.write() = false;
+            }
+        });
+
         let nixos = Path::new("/etc/nixos").exists();
         let syspkgtype = if config.systemconfig.is_none() || !nixos {
             SystemPkgs::None
@@ -405,13 +433,10 @@ impl AsyncComponent for AppModel {
 
         debug!("syspkgtype: {:?}", syspkgtype);
 
-        let online = checkonline();
+        sender.input(AppMsg::CheckNetwork);
 
         let windowloading = WindowAsyncHandler::builder()
             .detach_worker(())
-            .forward(sender.input_sender(), identity);
-        let loaderrordialog = LoadErrorModel::builder()
-            .launch(())
             .forward(sender.input_sender(), identity);
         let preferencespage = PreferencesPageModel::builder()
             .launch(())
@@ -507,7 +532,6 @@ impl AsyncComponent for AppModel {
                 window: root.clone().upcast(),
                 systype: syspkgtype.clone(),
                 config: config.clone(),
-                online,
             })
             .forward(sender.input_sender(), identity);
         let rebuild = RebuildModel::builder()
@@ -522,7 +546,6 @@ impl AsyncComponent for AppModel {
             mainwindow: root.clone(),
             config,
             windowloading,
-            loaderrordialog,
             busy: true,
             appdata: HashMap::new(),
             installeduserpkgs: HashMap::new(),
@@ -556,7 +579,8 @@ impl AsyncComponent for AppModel {
             rebuild,
             welcomepage,
             preferencespage,
-            online,
+            loaded: false,
+            online: false,
             updates_count: 0,
             tracker: 0,
         };
@@ -579,6 +603,10 @@ impl AsyncComponent for AppModel {
         }
 
         let widgets = view_output!();
+
+        // show window after widgets loaded
+        root.set_visible(true);
+
         model.navigation = widgets.navigation.clone();
         model.viewstack = widgets.view_stack.clone();
 
@@ -750,9 +778,8 @@ impl AsyncComponent for AppModel {
             AppMsg::Close => {
                 relm4::main_application().quit();
             }
-            AppMsg::LoadError(msg, msg2) => {
+            AppMsg::LoadError => {
                 self.busy = false;
-                self.loaderrordialog.emit(LoadErrorMsg::Show(msg, msg2));
             }
             AppMsg::ShowPreferences => {
                 // Reload config from file before showing preferences
@@ -841,6 +868,9 @@ impl AsyncComponent for AppModel {
                 category_apps_all,
             ) => {
                 info!("AppMsg::Initialize");
+
+                self.set_loaded(true);
+
                 self.set_appdata(app_data);
                 self.set_recommended_apps(recommended_apps);
                 self.set_category_apps_recommended(category_apps_recommended);
@@ -1403,10 +1433,15 @@ impl AsyncComponent for AppModel {
             AppMsg::CheckNetwork => {
                 let selfonline = self.online;
                 let senderclone = sender.clone();
+                let loaded = self.loaded;
+
                 sender.oneshot_command(async move {
                     info!("AppMsg::CheckNetwork");
-                    let online = checkonline_async().await;
-                    if online && !selfonline {
+                    let online = check_online().await;
+                    *ONLINE_STATE.write() = online;
+                    if !loaded {
+                        senderclone.input(AppMsg::TryLoad);
+                    } else if online && !selfonline {
                         senderclone.input(AppMsg::UpdateDB);
                     }
                     AppAsyncMsg::SetNetwork(online)

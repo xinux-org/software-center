@@ -63,10 +63,7 @@ impl Worker for WindowAsyncHandler {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting NixOS pkgs: {}", e);
-                                let _ = sender.output(AppMsg::LoadError(
-                                    String::from("Error retrieving NixOS package database"),
-                                    e.to_string(),
-                                ));
+                                let _ = sender.output(AppMsg::LoadError);
                                 return;
                             }
                         }
@@ -75,10 +72,7 @@ impl Worker for WindowAsyncHandler {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting nixpkgs: {}", e);
-                                let _ = sender.output(AppMsg::LoadError(
-                                    String::from("Error retrieving nixpkgs package database"),
-                                    e.to_string(),
-                                ));
+                                let _ = sender.output(AppMsg::LoadError);
                                 return;
                             }
                         }
@@ -88,10 +82,7 @@ impl Worker for WindowAsyncHandler {
                         Ok(p) => p,
                         Err(e) => {
                             error!("Error connecting to pkgdb: {}", e);
-                            let _ = sender.output(AppMsg::LoadError(
-                                String::from("Error connecting to package database"),
-                                e.to_string(),
-                            ));
+                            let _ = sender.output(AppMsg::LoadError);
                             return;
                         }
                     };
@@ -116,10 +107,7 @@ impl Worker for WindowAsyncHandler {
                         Ok(x) => x,
                         Err(e) => {
                             error!("Error getting pkglist: {}", e);
-                            let _ = sender.output(AppMsg::LoadError(
-                                gettext("Malformed package database"),
-                                e.to_string(),
-                            ));
+                            let _ = sender.output(AppMsg::LoadError);
                             return;
                         }
                     };
@@ -134,10 +122,7 @@ impl Worker for WindowAsyncHandler {
                             Ok(x) => x,
                             Err(e) => {
                                 error!("Error getting package metadata: {}", e);
-                                let _ = sender.output(AppMsg::LoadError(
-                                    gettext("Malformed package database"),
-                                    e.to_string(),
-                                ));
+                                let _ = sender.output(AppMsg::LoadError);
                                 return;
                             }
                         };
@@ -146,10 +131,7 @@ impl Worker for WindowAsyncHandler {
                         Err(e) => {
                             error!("Error getting appdata: {}\n
                             You need to build nixos-upstread-data first, by doing: nix build .#nixos-appstream-data", e);
-                            let _ = sender.output(AppMsg::LoadError(
-                                gettext("Error retrieving appstream data"),
-                                e.to_string(),
-                            ));
+                            let _ = sender.output(AppMsg::LoadError);
                             return;
                         }
                     };
@@ -531,10 +513,7 @@ impl Worker for WindowAsyncHandler {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting NixOS pkgs: {}", e);
-                                let _ = sender.output(AppMsg::LoadError(
-                                    gettext("Error retrieving NixOS package database"),
-                                    e.to_string(),
-                                ));
+                                let _ = sender.output(AppMsg::LoadError);
                                 return;
                             }
                         }
@@ -543,10 +522,7 @@ impl Worker for WindowAsyncHandler {
                             Ok(p) => p,
                             Err(e) => {
                                 error!("Error getting nixpkgs: {}", e);
-                                let _ = sender.output(AppMsg::LoadError(
-                                    gettext("Error retrieving nixpkgs package database"),
-                                    e.to_string(),
-                                ));
+                                let _ = sender.output(AppMsg::LoadError);
                                 return;
                             }
                         }
@@ -560,96 +536,6 @@ impl Worker for WindowAsyncHandler {
                     };
                 });
             }
-        }
-    }
-}
-
-pub struct LoadErrorModel {
-    hidden: bool,
-    msg: String,
-    msg2: String,
-}
-
-#[derive(Debug)]
-pub enum LoadErrorMsg {
-    Show(String, String),
-    Retry,
-    Close,
-}
-
-#[relm4::component(pub)]
-impl Component for LoadErrorModel {
-    type Init = ();
-    type Input = LoadErrorMsg;
-    type Output = AppMsg;
-    type CommandOutput = ();
-
-    view! {
-        dialog = adw::AlertDialog {
-            #[watch]
-            set_visible: !model.hidden,
-            #[watch]
-            set_heading: Some(&model.msg),
-            #[watch]
-            set_body: &model.msg2,
-            // set_use_markup: true,
-            // set_secondary_use_markup: true,
-            add_response: ("Retry", &gettext("Retry")),
-            set_response_appearance: ("Retry", adw::ResponseAppearance::Destructive),
-            // add_button: ("Preferences", gtk::ResponseType::Help),
-            add_response: ("Quit", &gettext("Quit")),
-        }
-    }
-
-    fn init(
-        _parent_window: Self::Init,
-        root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
-        let model = LoadErrorModel {
-            hidden: true,
-            msg: String::default(),
-            msg2: String::default(),
-        };
-        let widgets = view_output!();
-        widgets.dialog.connect_response(None, move |_, resp| {
-            sender.input(match resp {
-                "Retry" => LoadErrorMsg::Retry,
-                "Quit" => LoadErrorMsg::Close,
-                // gtk::ResponseType::Help => LoadErrorMsg::Preferences,
-                _ => unreachable!(),
-            });
-        });
-        // let accept_widget = widgets
-        //     .dialog
-        //     .widget_for_response(gtk::ResponseType::Accept)
-        //     .expect("No button for accept response set");
-        // accept_widget.add_css_class("warning");
-        // let pref_widget = widgets
-        //     .dialog
-        //     .widget_for_response(gtk::ResponseType::Help)
-        //     .expect("No button for help response set");
-        // pref_widget.add_css_class("suggested-action");
-        ComponentParts { model, widgets }
-    }
-
-    fn update(&mut self, msg: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
-        match msg {
-            LoadErrorMsg::Show(s, s2) => {
-                self.hidden = false;
-                self.msg = s;
-                self.msg2 = s2;
-
-                let window = relm4::main_application().active_window();
-                root.present(window.as_ref());
-            }
-            LoadErrorMsg::Retry => {
-                self.hidden = true;
-                let _ = sender.output(AppMsg::TryLoad);
-            }
-            LoadErrorMsg::Close => {
-                let _ = sender.output(AppMsg::Close);
-            } // LoadErrorMsg::Preferences => sender.output(AppMsg::ShowPrefMenu),
         }
     }
 }

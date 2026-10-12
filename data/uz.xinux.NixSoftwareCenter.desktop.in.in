@@ -11,3 +11,4 @@ Keywords=Nix;Nixos;nix;nixos;software;package;install;store;app;
 Icon=@icon@
 StartupNotify=true
 MimeType=x-scheme-handler/appstream;x-scheme-handler/nixpkg;
+SingleMainWindow=true
