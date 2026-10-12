@@ -6,6 +6,9 @@
   - [#65](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/65): feat: implement featured apps carousel on explorer page
   - [#66](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/66): feat: add shortcuts
 
+- other
+  - [#70](https://git.oss.uzinfocom.uz/xinux/software-center/pulls/70): single main window
+
 ## [0.4.0] - 2026-09-24 (GMT+5)
 
 <!--start release-notes-assistant-->
