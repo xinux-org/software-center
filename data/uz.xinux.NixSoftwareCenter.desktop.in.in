@@ -12,3 +12,4 @@ Icon=@icon@
 StartupNotify=true
 MimeType=x-scheme-handler/appstream;x-scheme-handler/nixpkg;
 SingleMainWindow=true
+DBusActivatable=true
