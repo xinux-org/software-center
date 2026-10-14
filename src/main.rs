@@ -35,7 +35,7 @@ fn main() {
         error!("Failed to load resources");
     }
     gtk::Window::set_default_icon_name(APP_ID);
-    let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::empty());
+    let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::HANDLES_OPEN);
     app.set_resource_base_path(Some("/uz/xinux/NixSoftwareCenter"));
     let app = RelmApp::from_app(app);
     app.with_args(Vec::new())
