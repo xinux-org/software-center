@@ -66,6 +66,8 @@ stdenv.mkDerivation {
     wayland
     adwaita-icon-theme
     desktop-file-utils
+    aws-lc
+    sqlite
     nixos-appstream-data
   ];
 
